@@ -50,7 +50,6 @@ import {
   RefreshCw,
   Edit,
   Trash2,
-  FolderOpen,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -1123,7 +1122,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   );
 }
 
-// ─── Module Viewer (Updated to show video content) ────────────────────────────
+// ─── Module Viewer ────────────────────────────────────────────────────────────
 
 function ModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
@@ -1566,7 +1565,7 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
   );
 }
 
-// ─── Admin Courses (with FULL CRUD + Video Upload) ────────────────────────────
+// ─── Admin Courses (with CRUD + Video Upload) ─────────────────────────────────
 
 function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseUpdate, onCourseDelete, onModuleAdd, onModuleDelete, onModuleContentAdd, onModuleContentDelete }: { 
   courses: Course[]; 
@@ -1781,7 +1780,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
           <Textarea label="Description" value={courseForm.description} onChange={(v) => setCourseForm((p) => ({ ...p, description: v }))} placeholder="What will students learn?" required />
           
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-foreground">Course Thumbnail {!editingCourse && "*"}</label>
+            <label className="block text-sm font-medium text-foreground">Course Thumbnail</label>
             <div 
               className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-accent transition-colors cursor-pointer"
               onClick={() => document.getElementById("thumbnail-upload")?.click()}
@@ -1952,7 +1951,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
   );
 }
 
-// ─── Admin Students ───────────────────────────────────────────────────────────
+// ─── Admin Students (FIXED) ───────────────────────────────────────────────────
 
 function AdminStudents({ students }: { students: Profile[] }) {
   const [search, setSearch] = useState("");
@@ -1991,7 +1990,7 @@ function AdminStudents({ students }: { students: Profile[] }) {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Joined</th>
-              </table>
+              </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((s) => (
@@ -2622,7 +2621,6 @@ export default function App() {
   };
 
   const handleDeleteCourse = async (id: string) => {
-    // First delete all modules (cascade will handle module_contents)
     await supabase.from("modules").delete().eq("course_id", id);
     await supabase.from("courses").delete().eq("id", id);
     await fetchCourses();
