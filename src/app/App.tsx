@@ -318,7 +318,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               <GraduationCap className="w-5 h-5 text-accent" />
             </div>
             <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Academia
+              Pruta Academy
             </span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -521,9 +521,9 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
               <GraduationCap className="w-4 h-4 text-accent" />
             </div>
-            <span className="font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Academia</span>
+            <span className="font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Pruta Academy</span>
           </div>
-          <p className="text-sm text-muted-foreground">© 2024 Academia LMS. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2024 Pruta Academy LMS. All rights reserved.</p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Shield className="w-3.5 h-3.5" />
             <span>Content Protected</span>
@@ -559,7 +559,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         id: userId,
         email: userEmail,
         full_name: userName,
-        role: userEmail === 'admin@academia.com' ? 'admin' : 'student',
+        role: userEmail === 'admin@Pruta Academy.com' ? 'admin' : 'student',
       })
       .select()
       .single();
@@ -643,7 +643,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
               <GraduationCap className="w-5 h-5 text-primary" />
             </div>
             <span className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Academia
+              Pruta Academy
             </span>
           </div>
           <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -661,11 +661,11 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
                 <GraduationCap className="w-5 h-5 text-accent" />
               </div>
               <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Academia
+                Pruta Academy
               </span>
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-              {mode === "login" ? "Welcome back" : "Join Academia"}
+              {mode === "login" ? "Welcome back" : "Join Pruta Academy"}
             </h1>
             <p className="text-muted-foreground">
               {mode === "login" ? "Sign in to continue your learning journey." : "Create your account and start learning today."}
@@ -708,7 +708,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
 
           <div className="mt-8 p-4 bg-muted rounded-xl border border-border">
             <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Demo Credentials</p>
-            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Admin:</span> admin@academia.com</p>
+            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Admin:</span> admin@Pruta Academy.com</p>
             <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Student:</span> any email (auto-register)</p>
             <p className="text-xs text-muted-foreground mt-2">⚡ Admin users are redirected to Admin Dashboard</p>
           </div>
@@ -763,7 +763,7 @@ function Sidebar({
         </div>
         {!collapsed && (
           <span className="font-bold text-sidebar-foreground text-lg" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Academia
+            Pruta Academy
           </span>
         )}
         <button
@@ -2080,7 +2080,7 @@ export default function App() {
         id: userId,
         email: userEmail,
         full_name: userName,
-        role: userEmail === 'admin@academia.com' ? 'admin' : 'student',
+        role: userEmail === 'admin@Pruta Academy.com' ? 'admin' : 'student',
       })
       .select()
       .single();
