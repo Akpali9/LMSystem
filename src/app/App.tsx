@@ -48,6 +48,9 @@ import {
   ClipboardList,
   XCircle,
   RefreshCw,
+  Edit,
+  Trash2,
+  FolderOpen,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -99,7 +102,7 @@ function formatNaira(amount: number) {
   }).format(amount);
 }
 
-// ─── Secure Video Player (DRM Protected - Cannot be downloaded or shared) ───
+// ─── Secure Video Player (DRM Protected) ─────────────────────────────────────
 
 function SecureVideoPlayer({ url, title }: { url: string; title: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -110,15 +113,12 @@ function SecureVideoPlayer({ url, title }: { url: string; title: string }) {
     const container = containerRef.current;
     if (!video || !container) return;
 
-    // Disable context menu (right-click)
     const disableContextMenu = (e: Event) => {
       e.preventDefault();
       return false;
     };
 
-    // Disable keyboard shortcuts for saving
     const disableKeyboardShortcuts = (e: KeyboardEvent) => {
-      // Disable Ctrl+S, Ctrl+U, Ctrl+P, Ctrl+Shift+I, F12, PrintScreen
       if (
         (e.ctrlKey && (e.key === 's' || e.key === 'u' || e.key === 'p' || e.key === 'c')) ||
         (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'C' || e.key === 'J')) ||
@@ -130,21 +130,6 @@ function SecureVideoPlayer({ url, title }: { url: string; title: string }) {
       }
     };
 
-    // Disable video download attempts
-    const disableVideoDownload = () => {
-      // Remove download attribute from source
-      const sources = video.querySelectorAll('source');
-      sources.forEach(source => {
-        source.removeAttribute('download');
-      });
-      
-      // Prevent saving as
-      video.addEventListener('contextmenu', disableContextMenu);
-      video.addEventListener('dragstart', disableContextMenu);
-      video.addEventListener('selectstart', disableContextMenu);
-    };
-
-    // Add custom styles to block right-click on video
     const style = document.createElement('style');
     style.textContent = `
       video::-webkit-media-controls-download-button {
@@ -156,37 +141,17 @@ function SecureVideoPlayer({ url, title }: { url: string; title: string }) {
       video::-internal-media-controls-download-button {
         display: none;
       }
-      video::-webkit-media-controls-panel {
-        -webkit-appearance: none;
-      }
-      video {
-        pointer-events: auto;
-      }
     `;
     document.head.appendChild(style);
 
-    // Apply all protections
-    disableVideoDownload();
     container.addEventListener('contextmenu', disableContextMenu);
     document.addEventListener('keydown', disableKeyboardShortcuts);
-    
-    // Block print screen
-    document.addEventListener('keyup', (e) => {
-      if (e.key === 'PrintScreen') {
-        e.preventDefault();
-        return false;
-      }
-    });
 
-    // Watermark overlay that moves with video position
     const watermark = document.createElement('div');
     watermark.className = 'video-watermark';
     watermark.innerHTML = `
       <div style="position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; pointer-events: none; z-index: 10;">
-        🔒 PROTECTED · ${new Date().toLocaleDateString()}
-      </div>
-      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.1; font-size: 40px; font-weight: bold; white-space: nowrap; pointer-events: none; z-index: 10; color: white;">
-        ${title}
+        🔒 PROTECTED
       </div>
     `;
     container.style.position = 'relative';
@@ -206,12 +171,6 @@ function SecureVideoPlayer({ url, title }: { url: string; title: string }) {
       className="relative rounded-xl overflow-hidden bg-black select-none"
       style={{ userSelect: "none", WebkitUserSelect: "none" }}
     >
-      <div
-        className="absolute inset-0 z-10 pointer-events-none"
-        style={{
-          background: "linear-gradient(135deg, transparent 40%, rgba(14,42,71,0.04) 100%)",
-        }}
-      />
       <div className="absolute top-3 right-3 z-20 opacity-70 pointer-events-none select-none">
         <span className="bg-black/50 text-white text-xs px-2 py-1 rounded font-mono backdrop-blur-sm">
           🔒 PROTECTED
@@ -226,15 +185,7 @@ function SecureVideoPlayer({ url, title }: { url: string; title: string }) {
           disablePictureInPicture
           onContextMenu={(e) => e.preventDefault()}
           className="w-full h-full object-contain"
-          style={{ pointerEvents: 'auto' }}
-        >
-          <track kind="captions" />
-        </video>
-      </div>
-      <div className="bg-[#0d1117] px-4 py-3 flex items-center gap-3">
-        <div className="flex-1 text-center">
-          <span className="text-white/40 text-xs">Protected Content — Download disabled</span>
-        </div>
+        />
       </div>
     </div>
   );
@@ -1193,7 +1144,6 @@ function ModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate
       const module = modules[enrollment.current_module_index] || modules[0];
       setCurrentModule(module);
       
-      // Find content for this module
       const content = moduleContents.find(c => c.module_id === module.id);
       setCurrentContent(content || null);
     }
@@ -1616,18 +1566,24 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
   );
 }
 
-// ─── Admin Courses (UPDATED with Video & Thumbnail Upload) ───────────────────
+// ─── Admin Courses (with FULL CRUD + Video Upload) ────────────────────────────
 
-function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd, onModuleContentAdd }: { 
+function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseUpdate, onCourseDelete, onModuleAdd, onModuleDelete, onModuleContentAdd, onModuleContentDelete }: { 
   courses: Course[]; 
   modules: Record<string, Module[]>;
+  moduleContents: ModuleContent[];
   onCourseAdd: (course: Omit<Course, "id" | "created_at">, thumbnailFile?: File) => Promise<void>;
+  onCourseUpdate: (id: string, updates: Partial<Course>, thumbnailFile?: File) => Promise<void>;
+  onCourseDelete: (id: string) => Promise<void>;
   onModuleAdd: (module: Omit<Module, "id" | "created_at">) => Promise<void>;
+  onModuleDelete: (moduleId: string, courseId: string) => Promise<void>;
   onModuleContentAdd: (content: Omit<ModuleContent, "id" | "created_at">, videoFile?: File) => Promise<void>;
+  onModuleContentDelete: (contentId: string) => Promise<void>;
 }) {
-  const [showModal, setShowModal] = useState(false);
+  const [showCourseModal, setShowCourseModal] = useState(false);
   const [showModuleModal, setShowModuleModal] = useState(false);
   const [showContentModal, setShowContentModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [activeCourse, setActiveCourse] = useState<Course | null>(null);
   const [activeModule, setActiveModule] = useState<Module | null>(null);
   const [courseForm, setCourseForm] = useState({ title: "", description: "", price: "", duration_months: "3" });
@@ -1636,96 +1592,68 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd, onModuleCont
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: string; title: string } | null>(null);
 
-  const handleAddCourse = async () => {
-    setLoading(true);
-    setUploadProgress(0);
-    
-    let thumbnailUrl = null;
-    
-    if (thumbnailFile) {
-      const fileExt = thumbnailFile.name.split('.').pop();
-      const fileName = `course-${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from("course-thumbnails")
-        .upload(fileName, thumbnailFile);
-      
-      if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage
-          .from("course-thumbnails")
-          .getPublicUrl(fileName);
-        thumbnailUrl = publicUrl;
-      }
-      setUploadProgress(50);
-    }
-    
-    await onCourseAdd({
-      title: courseForm.title,
-      description: courseForm.description,
-      price: parseFloat(courseForm.price),
-      duration_months: parseInt(courseForm.duration_months),
-      currency: "NGN",
-      is_active: true,
-      thumbnail_url: thumbnailUrl,
-    });
-    
-    setShowModal(false);
+  const openCreateCourse = () => {
+    setEditingCourse(null);
     setCourseForm({ title: "", description: "", price: "", duration_months: "3" });
     setThumbnailFile(null);
-    setUploadProgress(0);
-    setLoading(false);
+    setShowCourseModal(true);
   };
 
-  const handleAddModule = async () => {
-    if (!activeCourse) return;
-    setLoading(true);
-    await onModuleAdd({
-      course_id: activeCourse.id,
-      title: moduleForm.title,
-      description: moduleForm.description,
-      order_index: (modules[activeCourse.id]?.length || 0),
-      pass_score: parseInt(moduleForm.pass_score),
+  const openEditCourse = (course: Course) => {
+    setEditingCourse(course);
+    setCourseForm({
+      title: course.title,
+      description: course.description || "",
+      price: course.price.toString(),
+      duration_months: course.duration_months.toString(),
     });
-    setShowModuleModal(false);
-    setModuleForm({ title: "", description: "", pass_score: "75" });
-    setLoading(false);
+    setThumbnailFile(null);
+    setShowCourseModal(true);
   };
 
-  const handleAddContent = async () => {
-    if (!activeModule) return;
+  const handleSaveCourse = async () => {
     setLoading(true);
-    
-    let videoUrl = null;
-    
-    if (videoFile && contentForm.content_type === "video") {
-      const fileExt = videoFile.name.split('.').pop();
-      const fileName = `module-${activeModule.id}-${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from("module-videos")
-        .upload(fileName, videoFile);
-      
-      if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage
-          .from("module-videos")
-          .getPublicUrl(fileName);
-        videoUrl = publicUrl;
-      }
+    if (editingCourse) {
+      await onCourseUpdate(editingCourse.id, {
+        title: courseForm.title,
+        description: courseForm.description,
+        price: parseFloat(courseForm.price),
+        duration_months: parseInt(courseForm.duration_months),
+      }, thumbnailFile || undefined);
+    } else {
+      await onCourseAdd({
+        title: courseForm.title,
+        description: courseForm.description,
+        price: parseFloat(courseForm.price),
+        duration_months: parseInt(courseForm.duration_months),
+        currency: "NGN",
+        is_active: true,
+      }, thumbnailFile || undefined);
     }
-    
-    await onModuleContentAdd({
-      module_id: activeModule.id,
-      title: contentForm.title,
-      content_type: contentForm.content_type as "video" | "document" | "text",
-      content_url: videoUrl,
-      content_text: contentForm.content_type === "text" ? contentForm.content_text : undefined,
-      order_index: 0,
-    });
-    
-    setShowContentModal(false);
-    setContentForm({ title: "", content_type: "video", content_text: "" });
-    setVideoFile(null);
+    setShowCourseModal(false);
     setLoading(false);
+  };
+
+  const handleDeleteCourse = async () => {
+    if (!deleteConfirm) return;
+    setLoading(true);
+    await onCourseDelete(deleteConfirm.id);
+    setDeleteConfirm(null);
+    setLoading(false);
+  };
+
+  const handleDeleteModule = async (moduleId: string, courseId: string) => {
+    if (confirm("Are you sure you want to delete this module? All content will be lost.")) {
+      await onModuleDelete(moduleId, courseId);
+    }
+  };
+
+  const handleDeleteContent = async (contentId: string) => {
+    if (confirm("Are you sure you want to delete this content?")) {
+      await onModuleContentDelete(contentId);
+    }
   };
 
   return (
@@ -1738,7 +1666,7 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd, onModuleCont
           <p className="text-muted-foreground mt-1">Manage your course catalog, modules, and video content.</p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openCreateCourse}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
         >
           <Plus className="w-4 h-4" /> New Course
@@ -1777,24 +1705,66 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd, onModuleCont
                     >
                       <Plus className="w-3.5 h-3.5" /> Add Module
                     </button>
+                    <button
+                      onClick={() => openEditCourse(course)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-lg hover:bg-blue-200 transition-colors"
+                    >
+                      <Edit className="w-3.5 h-3.5" /> Edit
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm({ type: 'course', id: course.id, title: course.title })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 text-xs font-medium rounded-lg hover:bg-red-200 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
                   </div>
                   {courseModules.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      {courseModules.map((m) => (
-                        <div key={m.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2">
-                          <div className="flex items-center gap-2">
-                            <BookOpen className="w-3.5 h-3.5 text-accent" />
-                            <span className="text-xs text-foreground">{m.title}</span>
-                            <Badge variant="info">Pass: {m.pass_score}%</Badge>
+                      {courseModules.map((m) => {
+                        const content = moduleContents.find(c => c.module_id === m.id);
+                        return (
+                          <div key={m.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2">
+                            <div className="flex items-center gap-2 flex-1">
+                              {content?.content_type === "video" ? (
+                                <Video className="w-3.5 h-3.5 text-accent" />
+                              ) : (
+                                <FileText className="w-3.5 h-3.5 text-accent" />
+                              )}
+                              <span className="text-xs text-foreground">{m.title}</span>
+                              <Badge variant="info">Pass: {m.pass_score}%</Badge>
+                              {content && (
+                                <Badge variant={content.content_type === "video" ? "success" : "muted"}>
+                                  {content.content_type === "video" ? "🎬 Video" : "📄 Text"}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {!content && (
+                                <button
+                                  onClick={() => { setActiveModule(m); setShowContentModal(true); }}
+                                  className="flex items-center gap-1 px-2 py-1 bg-accent/15 text-accent text-xs rounded-lg hover:bg-accent/25 transition-colors"
+                                >
+                                  <Video className="w-3 h-3" /> Add Video
+                                </button>
+                              )}
+                              {content && (
+                                <button
+                                  onClick={() => handleDeleteContent(content.id)}
+                                  className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200 transition-colors"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Remove Content
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteModule(m.id, course.id)}
+                                className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200 transition-colors"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            onClick={() => { setActiveModule(m); setShowContentModal(true); }}
-                            className="flex items-center gap-1 px-2 py-1 bg-accent/15 text-accent text-xs rounded-lg hover:bg-accent/25 transition-colors"
-                          >
-                            <Video className="w-3 h-3" /> Add Video/Content
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1804,14 +1774,14 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd, onModuleCont
         })}
       </div>
 
-      {/* Create Course Modal */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Create New Course">
+      {/* Course Modal (Create/Edit) */}
+      <Modal open={showCourseModal} onClose={() => setShowCourseModal(false)} title={editingCourse ? "Edit Course" : "Create New Course"}>
         <div className="space-y-4">
           <Input label="Course Title" value={courseForm.title} onChange={(v) => setCourseForm((p) => ({ ...p, title: v }))} placeholder="e.g. Advanced Data Science" required />
           <Textarea label="Description" value={courseForm.description} onChange={(v) => setCourseForm((p) => ({ ...p, description: v }))} placeholder="What will students learn?" required />
           
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-foreground">Course Thumbnail</label>
+            <label className="block text-sm font-medium text-foreground">Course Thumbnail {!editingCourse && "*"}</label>
             <div 
               className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-accent transition-colors cursor-pointer"
               onClick={() => document.getElementById("thumbnail-upload")?.click()}
@@ -1827,6 +1797,8 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd, onModuleCont
                     <X className="w-4 h-4" />
                   </button>
                 </div>
+              ) : editingCourse ? (
+                <p className="text-sm text-muted-foreground">Leave empty to keep current thumbnail</p>
               ) : (
                 <>
                   <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
@@ -1849,21 +1821,12 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd, onModuleCont
             <Input label="Duration (months)" type="number" value={courseForm.duration_months} onChange={(v) => setCourseForm((p) => ({ ...p, duration_months: v }))} required />
           </div>
           
-          {uploadProgress > 0 && (
-            <div className="space-y-1">
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
-              </div>
-              <p className="text-xs text-muted-foreground text-center">Uploading... {uploadProgress}%</p>
-            </div>
-          )}
-          
           <button
-            onClick={handleAddCourse}
+            onClick={handleSaveCourse}
             disabled={loading || !courseForm.title || !courseForm.price}
             className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Create Course"}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (editingCourse ? "Update Course" : "Create Course")}
           </button>
         </div>
       </Modal>
@@ -1875,7 +1838,20 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd, onModuleCont
           <Textarea label="Module Description" value={moduleForm.description} onChange={(v) => setModuleForm((p) => ({ ...p, description: v }))} placeholder="Brief overview of this module..." />
           <Input label="Pass Score (%)" type="number" value={moduleForm.pass_score} onChange={(v) => setModuleForm((p) => ({ ...p, pass_score: v }))} placeholder="75" required />
           <button
-            onClick={handleAddModule}
+            onClick={async () => {
+              if (!activeCourse) return;
+              setLoading(true);
+              await onModuleAdd({
+                course_id: activeCourse.id,
+                title: moduleForm.title,
+                description: moduleForm.description,
+                order_index: (modules[activeCourse.id]?.length || 0),
+                pass_score: parseInt(moduleForm.pass_score),
+              });
+              setShowModuleModal(false);
+              setModuleForm({ title: "", description: "", pass_score: "75" });
+              setLoading(false);
+            }}
             disabled={loading || !moduleForm.title}
             className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
           >
@@ -1885,80 +1861,91 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd, onModuleCont
       </Modal>
 
       {/* Add Module Content Modal */}
-      <Modal open={showContentModal} onClose={() => setShowContentModal(false)} title={`Add Content — ${activeModule?.title}`}>
+      <Modal open={showContentModal} onClose={() => setShowContentModal(false)} title={`Add Video — ${activeModule?.title}`}>
         <div className="space-y-4">
-          <Input label="Content Title" value={contentForm.title} onChange={(v) => setContentForm((p) => ({ ...p, title: v }))} placeholder="e.g. Introduction Video" required />
+          <Input label="Video Title" value={contentForm.title} onChange={(v) => setContentForm((p) => ({ ...p, title: v }))} placeholder="e.g. Introduction Video" required />
           
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-foreground">Content Type</label>
-            <select
-              value={contentForm.content_type}
-              onChange={(e) => setContentForm((p) => ({ ...p, content_type: e.target.value }))}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+            <label className="block text-sm font-medium text-foreground">Upload Video (DRM Protected)</label>
+            <div 
+              className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-accent transition-colors cursor-pointer"
+              onClick={() => document.getElementById("video-upload")?.click()}
             >
-              <option value="video">Video (DRM Protected)</option>
-              <option value="text">Text Lesson</option>
-              <option value="document">Document</option>
-            </select>
+              {videoFile ? (
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span className="text-sm text-foreground">{videoFile.name}</span>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setVideoFile(null); }}
+                    className="text-destructive hover:text-destructive/80"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Video className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Click to upload module video</p>
+                  <p className="text-xs text-muted-foreground">MP4, MOV · Max 500MB · DRM Protected</p>
+                </>
+              )}
+              <input
+                id="video-upload"
+                type="file"
+                className="hidden"
+                accept="video/*"
+                onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+              />
+            </div>
+            <p className="text-xs text-amber-600 flex items-center gap-1">
+              <Shield className="w-3 h-3" /> Videos are protected - Students cannot download or share
+            </p>
           </div>
           
-          {contentForm.content_type === "video" && (
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-foreground">Upload Video (Protected - Cannot be downloaded)</label>
-              <div 
-                className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-accent transition-colors cursor-pointer"
-                onClick={() => document.getElementById("video-upload")?.click()}
-              >
-                {videoFile ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                    <span className="text-sm text-foreground">{videoFile.name}</span>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setVideoFile(null); }}
-                      className="text-destructive hover:text-destructive/80"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <Video className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Click to upload module video</p>
-                    <p className="text-xs text-muted-foreground">MP4, MOV · Max 500MB · DRM Protected</p>
-                  </>
-                )}
-                <input
-                  id="video-upload"
-                  type="file"
-                  className="hidden"
-                  accept="video/*"
-                  onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                />
-              </div>
-              <p className="text-xs text-amber-600 flex items-center gap-1">
-                <Shield className="w-3 h-3" /> Videos are protected - Students cannot download or share
-              </p>
-            </div>
-          )}
-          
-          {contentForm.content_type === "text" && (
-            <Textarea 
-              label="Lesson Content" 
-              value={contentForm.content_text} 
-              onChange={(v) => setContentForm((p) => ({ ...p, content_text: v }))} 
-              placeholder="Write your lesson content here..." 
-              rows={6} 
-              required 
-            />
-          )}
-          
           <button
-            onClick={handleAddContent}
-            disabled={loading || !contentForm.title || (contentForm.content_type === "video" && !videoFile) || (contentForm.content_type === "text" && !contentForm.content_text)}
+            onClick={async () => {
+              if (!activeModule) return;
+              setLoading(true);
+              await onModuleContentAdd({
+                module_id: activeModule.id,
+                title: contentForm.title,
+                content_type: "video",
+                order_index: 0,
+              }, videoFile || undefined);
+              setShowContentModal(false);
+              setContentForm({ title: "", content_type: "video", content_text: "" });
+              setVideoFile(null);
+              setLoading(false);
+            }}
+            disabled={loading || !contentForm.title || !videoFile}
             className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Add Content"}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Upload Video"}
           </button>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Confirm Delete">
+        <div className="space-y-4">
+          <p className="text-foreground">
+            Are you sure you want to delete <strong>{deleteConfirm?.title}</strong>?
+            {deleteConfirm?.type === 'course' && " This will also delete all modules and enrollments for this course."}
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeleteConfirm(null)}
+              className="flex-1 py-2 bg-secondary text-secondary-foreground font-medium rounded-xl hover:bg-secondary/80 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteCourse}
+              className="flex-1 py-2 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
@@ -2004,7 +1991,7 @@ function AdminStudents({ students }: { students: Profile[] }) {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Joined</th>
-              </tr>
+              </table>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((s) => (
@@ -2609,8 +2596,45 @@ export default function App() {
     await fetchCourses();
   };
 
+  const handleUpdateCourse = async (id: string, updates: Partial<Course>, thumbnailFile?: File) => {
+    let thumbnailUrl = updates.thumbnail_url;
+    
+    if (thumbnailFile) {
+      const fileExt = thumbnailFile.name.split('.').pop();
+      const fileName = `course-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("course-thumbnails")
+        .upload(fileName, thumbnailFile);
+      
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from("course-thumbnails")
+          .getPublicUrl(fileName);
+        thumbnailUrl = publicUrl;
+      }
+    }
+    
+    await supabase
+      .from("courses")
+      .update({ ...updates, thumbnail_url: thumbnailUrl })
+      .eq("id", id);
+    await fetchCourses();
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    // First delete all modules (cascade will handle module_contents)
+    await supabase.from("modules").delete().eq("course_id", id);
+    await supabase.from("courses").delete().eq("id", id);
+    await fetchCourses();
+  };
+
   const handleAddModule = async (module: Omit<Module, "id" | "created_at">) => {
     await supabase.from("modules").insert(module);
+    await fetchModules();
+  };
+
+  const handleDeleteModule = async (moduleId: string, courseId: string) => {
+    await supabase.from("modules").delete().eq("id", moduleId);
     await fetchModules();
   };
 
@@ -2636,6 +2660,11 @@ export default function App() {
       ...content,
       content_url: contentUrl,
     });
+    await fetchModuleContents();
+  };
+
+  const handleDeleteModuleContent = async (contentId: string) => {
+    await supabase.from("module_contents").delete().eq("id", contentId);
     await fetchModuleContents();
   };
 
@@ -2673,10 +2702,15 @@ export default function App() {
         case "admin-courses":
           return <AdminCourses 
             courses={courses} 
-            modules={modulesByCourse} 
-            onCourseAdd={handleAddCourse} 
+            modules={modulesByCourse}
+            moduleContents={moduleContents}
+            onCourseAdd={handleAddCourse}
+            onCourseUpdate={handleUpdateCourse}
+            onCourseDelete={handleDeleteCourse}
             onModuleAdd={handleAddModule}
+            onModuleDelete={handleDeleteModule}
             onModuleContentAdd={handleAddModuleContent}
+            onModuleContentDelete={handleDeleteModuleContent}
           />;
         case "admin-students":
           return <AdminStudents students={students} />;
