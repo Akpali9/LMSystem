@@ -50,6 +50,9 @@ import {
   RefreshCw,
   Edit,
   Trash2,
+  User,
+  Camera,
+  Send,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -62,11 +65,13 @@ type View =
   | "student-module"
   | "student-assignments"
   | "student-payment"
+  | "student-profile"
   | "admin-dashboard"
   | "admin-courses"
   | "admin-students"
   | "admin-payments"
-  | "admin-assignments";
+  | "admin-assignments"
+  | "admin-student-profile";
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -192,8 +197,17 @@ function SecureVideoPlayer({ url, title }: { url: string; title: string }) {
 
 // ─── Components ───────────────────────────────────────────────────────────────
 
-function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
+function Avatar({ name, size = "md", src }: { name: string; size?: "sm" | "md" | "lg"; src?: string }) {
   const sizes = { sm: "w-7 h-7 text-xs", md: "w-9 h-9 text-sm", lg: "w-14 h-14 text-lg" };
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        className={cn("rounded-full object-cover shrink-0", sizes[size])}
+      />
+    );
+  }
   return (
     <div className={cn("rounded-full bg-accent flex items-center justify-center font-semibold text-primary shrink-0", sizes[size])}>
       {getInitials(name)}
@@ -293,9 +307,9 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
   );
 }
 
-function Input({ label, type = "text", value, onChange, placeholder, required, accept }: {
+function Input({ label, type = "text", value, onChange, placeholder, required, accept, disabled }: {
   label: string; type?: string; value?: string; onChange?: (v: string) => void;
-  placeholder?: string; required?: boolean; accept?: string;
+  placeholder?: string; required?: boolean; accept?: string; disabled?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
@@ -309,7 +323,8 @@ function Input({ label, type = "text", value, onChange, placeholder, required, a
         placeholder={placeholder}
         required={required}
         accept={accept}
-        className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground"
+        disabled={disabled}
+        className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
       />
     </div>
   );
@@ -767,6 +782,7 @@ function Sidebar({
     { view: "student-courses" as View, icon: BookOpen, label: "My Courses" },
     { view: "student-assignments" as View, icon: ClipboardList, label: "Assignments" },
     { view: "student-payment" as View, icon: DollarSign, label: "Payments" },
+    { view: "student-profile" as View, icon: User, label: "My Profile" },
   ];
 
   const adminNav = [
@@ -823,9 +839,7 @@ function Sidebar({
 
       <div className="p-3 border-t border-sidebar-border space-y-1">
         <div className={cn("flex items-center gap-3 px-3 py-2.5", collapsed && "justify-center")}>
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-primary text-xs font-bold shrink-0">
-            {getInitials(profile.full_name)}
-          </div>
+          <Avatar name={profile.full_name} size="sm" src={profile.avatar_url} />
           {!collapsed && (
             <div className="min-w-0">
               <p className="text-sm font-semibold text-sidebar-foreground truncate">{profile.full_name}</p>
@@ -845,6 +859,184 @@ function Sidebar({
         </button>
       </div>
     </aside>
+  );
+}
+
+// ─── Student Profile Page ────────────────────────────────────────────────────
+
+function StudentProfile({ profile, onUpdate }: { profile: Profile; onUpdate: (updates: Partial<Profile>, avatarFile?: File) => Promise<void> }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [fullName, setFullName] = useState(profile.full_name);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatar_url || null);
+  const [loading, setLoading] = useState(false);
+  const [bio, setBio] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+
+  useEffect(() => {
+    fetchStudentProfile();
+  }, [profile.id]);
+
+  const fetchStudentProfile = async () => {
+    const { data } = await supabase
+      .from("student_profiles")
+      .select("*")
+      .eq("user_id", profile.id)
+      .single();
+    if (data) {
+      setBio(data.bio || "");
+      setPhone(data.phone || "");
+      setAddress(data.address || "");
+      setDateOfBirth(data.date_of_birth || "");
+    }
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const preview = URL.createObjectURL(file);
+      setAvatarPreview(preview);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    
+    await onUpdate({ full_name: fullName }, avatarFile || undefined);
+    
+    await supabase
+      .from("student_profiles")
+      .upsert({
+        user_id: profile.id,
+        bio,
+        phone,
+        address,
+        date_of_birth: dateOfBirth || null,
+        updated_at: new Date().toISOString(),
+      });
+    
+    setIsEditing(false);
+    setLoading(false);
+  };
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          My Profile
+        </h1>
+        <p className="text-muted-foreground mt-1">Manage your personal information and profile picture</p>
+      </div>
+
+      <Card className="p-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Avatar Section */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <Avatar name={fullName} size="lg" src={avatarPreview || undefined} />
+              {isEditing && (
+                <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-accent flex items-center justify-center cursor-pointer hover:bg-accent/80 transition-colors">
+                  <Camera className="w-4 h-4 text-primary" />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                  />
+                </label>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              {isEditing ? "Click camera icon to change photo" : "Profile picture"}
+            </p>
+          </div>
+
+          {/* Profile Info Section */}
+          <div className="flex-1 space-y-4">
+            {isEditing ? (
+              <>
+                <Input
+                  label="Full Name"
+                  value={fullName}
+                  onChange={setFullName}
+                  placeholder="Your full name"
+                  required
+                />
+                <Input label="Email" value={profile.email} disabled />
+                <Textarea label="Bio" value={bio} onChange={setBio} placeholder="Tell us about yourself..." rows={3} />
+                <Input label="Phone Number" value={phone} onChange={setPhone} placeholder="+234 XXX XXX XXXX" />
+                <Textarea label="Address" value={address} onChange={setAddress} placeholder="Your address" rows={2} />
+                <Input label="Date of Birth" type="date" value={dateOfBirth} onChange={setDateOfBirth} />
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={handleSave}
+                    disabled={loading}
+                    className="px-6 py-2 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Save Changes"}
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="px-6 py-2 bg-secondary text-secondary-foreground font-medium rounded-xl hover:bg-secondary/80 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="border-b border-border pb-4">
+                  <p className="text-sm text-muted-foreground">Full Name</p>
+                  <p className="text-lg font-semibold text-foreground">{profile.full_name}</p>
+                </div>
+                <div className="border-b border-border pb-4">
+                  <p className="text-sm text-muted-foreground">Email Address</p>
+                  <p className="text-lg font-semibold text-foreground">{profile.email}</p>
+                </div>
+                {bio && (
+                  <div className="border-b border-border pb-4">
+                    <p className="text-sm text-muted-foreground">Bio</p>
+                    <p className="text-foreground">{bio}</p>
+                  </div>
+                )}
+                {phone && (
+                  <div className="border-b border-border pb-4">
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p className="text-foreground">{phone}</p>
+                  </div>
+                )}
+                {address && (
+                  <div className="border-b border-border pb-4">
+                    <p className="text-sm text-muted-foreground">Address</p>
+                    <p className="text-foreground">{address}</p>
+                  </div>
+                )}
+                {dateOfBirth && (
+                  <div className="border-b border-border pb-4">
+                    <p className="text-sm text-muted-foreground">Date of Birth</p>
+                    <p className="text-foreground">{formatDate(dateOfBirth)}</p>
+                  </div>
+                )}
+                <div className="pt-4">
+                  <p className="text-sm text-muted-foreground">Member Since</p>
+                  <p className="text-foreground">{formatDate(profile.created_at)}</p>
+                </div>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="mt-4 px-6 py-2 bg-accent/15 text-accent font-medium rounded-xl hover:bg-accent/25 transition-colors flex items-center gap-2 w-fit"
+                >
+                  <Edit className="w-4 h-4" /> Edit Profile
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </Card>
+    </div>
   );
 }
 
@@ -1369,6 +1561,30 @@ function StudentAssignments({ profile }: { profile: Profile }) {
     if (data) setAssignments(data as StudentAssignment[]);
   };
 
+  const handleSubmitAssignment = async (assignmentId: string, file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${profile.id}-${assignmentId}-${Date.now()}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage
+      .from("assignments")
+      .upload(fileName, file);
+    
+    if (uploadError) {
+      alert("Failed to upload assignment");
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("assignments")
+      .getPublicUrl(fileName);
+
+    await supabase
+      .from("student_assignments")
+      .update({ status: "submitted", submission_url: publicUrl, submitted_at: new Date().toISOString() })
+      .eq("id", assignmentId);
+    
+    fetchAssignments();
+  };
+
   return (
     <div className="p-8 space-y-6 max-w-4xl">
       <div>
@@ -1401,11 +1617,25 @@ function StudentAssignments({ profile }: { profile: Profile }) {
                 )}
                 {sa.status === "pending" && (
                   <div className="mt-4">
-                    <div className="border-2 border-dashed border-border rounded-xl p-4 text-center cursor-pointer hover:border-accent transition-colors">
+                    <div 
+                      className="border-2 border-dashed border-border rounded-xl p-4 text-center cursor-pointer hover:border-accent transition-colors"
+                      onClick={() => document.getElementById(`assignment-${sa.id}`)?.click()}
+                    >
                       <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-1.5" />
                       <p className="text-xs font-medium text-foreground">Click to upload your submission</p>
                       <p className="text-xs text-muted-foreground">PDF, DOCX, ZIP</p>
                     </div>
+                    <input
+                      id={`assignment-${sa.id}`}
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.docx,.zip"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          handleSubmitAssignment(sa.id, e.target.files[0]);
+                        }
+                      }}
+                    />
                   </div>
                 )}
               </div>
@@ -1545,7 +1775,7 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
             {[
               { label: "Add new course", view: "admin-courses" as View, icon: Plus },
               { label: "Review payments", view: "admin-payments" as View, icon: DollarSign },
-              { label: "Send assignment", view: "admin-assignments" as View, icon: ClipboardList },
+              { label: "Create assignment", view: "admin-assignments" as View, icon: ClipboardList },
               { label: "Manage students", view: "admin-students" as View, icon: Users },
             ].map(({ label, view, icon: Icon }) => (
               <button
@@ -1565,7 +1795,7 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
   );
 }
 
-// ─── Admin Courses (with CRUD + Video Upload) ─────────────────────────────────
+// ─── Admin Courses (with Video Upload) ────────────────────────────────────────
 
 function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseUpdate, onCourseDelete, onModuleAdd, onModuleDelete, onModuleContentAdd, onModuleContentDelete }: { 
   courses: Course[]; 
@@ -1859,7 +2089,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         </div>
       </Modal>
 
-      {/* Add Module Content Modal */}
+      {/* Add Module Content Modal - Video Upload */}
       <Modal open={showContentModal} onClose={() => setShowContentModal(false)} title={`Add Video — ${activeModule?.title}`}>
         <div className="space-y-4">
           <Input label="Video Title" value={contentForm.title} onChange={(v) => setContentForm((p) => ({ ...p, title: v }))} placeholder="e.g. Introduction Video" required />
@@ -1951,10 +2181,37 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
   );
 }
 
-// ─── Admin Students (FIXED) ───────────────────────────────────────────────────
+// ─── Admin Students (with View Profile and Send Assignment) ───────────────────
 
-function AdminStudents({ students }: { students: Profile[] }) {
+function AdminStudents({ students, onSendAssignment, onViewProfile }: { 
+  students: Profile[];
+  onSendAssignment: (studentId: string, studentName: string, assignmentData: any) => Promise<void>;
+  onViewProfile: (student: Profile) => void;
+}) {
   const [search, setSearch] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<Profile | null>(null);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [assignmentData, setAssignmentData] = useState({
+    title: "",
+    description: "",
+    module_id: "",
+    due_days: "7",
+    max_score: "100",
+  });
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchCoursesAndModules();
+  }, []);
+
+  const fetchCoursesAndModules = async () => {
+    const { data: coursesData } = await supabase.from("courses").select("*");
+    const { data: modulesData } = await supabase.from("modules").select("*");
+    if (coursesData) setCourses(coursesData);
+    if (modulesData) setModules(modulesData);
+  };
 
   const filtered = students.filter(
     (s) =>
@@ -1962,13 +2219,24 @@ function AdminStudents({ students }: { students: Profile[] }) {
       s.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleSendAssignment = async () => {
+    if (!selectedStudent) return;
+    setLoading(true);
+    await onSendAssignment(selectedStudent.id, selectedStudent.full_name, assignmentData);
+    setShowAssignmentModal(false);
+    setAssignmentData({ title: "", description: "", module_id: "", due_days: "7", max_score: "100" });
+    setLoading(false);
+  };
+
+  const availableModules = modules.filter(m => m.course_id === assignmentData.module_id);
+
   return (
     <div className="p-8 space-y-6 max-w-6xl">
       <div>
         <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Students
         </h1>
-        <p className="text-muted-foreground mt-1">View and manage enrolled students.</p>
+        <p className="text-muted-foreground mt-1">View, manage, and send assignments to students.</p>
       </div>
 
       <div className="relative max-w-sm">
@@ -1990,6 +2258,7 @@ function AdminStudents({ students }: { students: Profile[] }) {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Joined</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -1997,20 +2266,185 @@ function AdminStudents({ students }: { students: Profile[] }) {
                 <tr key={s.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <Avatar name={s.full_name} size="sm" />
+                      <Avatar name={s.full_name} size="sm" src={s.avatar_url} />
                       <p className="text-sm font-semibold text-foreground">{s.full_name}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">{s.email}</td>
                   <td className="px-6 py-4"><Badge variant="default">{s.role}</Badge></td>
                   <td className="px-6 py-4 text-xs text-muted-foreground font-mono">{formatDate(s.created_at)}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onViewProfile(s)}
+                        className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors"
+                      >
+                        <Eye className="w-3 h-3" /> View
+                      </button>
+                      <button
+                        onClick={() => { setSelectedStudent(s); setShowAssignmentModal(true); }}
+                        className="flex items-center gap-1 px-2 py-1 bg-accent/15 text-accent text-xs rounded-lg hover:bg-accent/25 transition-colors"
+                      >
+                        <Send className="w-3 h-3" /> Send Assignment
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      {/* Send Assignment Modal */}
+      <Modal open={showAssignmentModal} onClose={() => setShowAssignmentModal(false)} title={`Send Assignment to ${selectedStudent?.full_name}`}>
+        <div className="space-y-4">
+          <div className="p-3 bg-muted rounded-xl flex items-center gap-3">
+            <Avatar name={selectedStudent?.full_name || ""} size="sm" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">{selectedStudent?.full_name}</p>
+              <p className="text-xs text-muted-foreground">{selectedStudent?.email}</p>
+            </div>
+          </div>
+          
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-foreground">Course / Module</label>
+            <select
+              value={assignmentData.module_id}
+              onChange={(e) => setAssignmentData(p => ({ ...p, module_id: e.target.value }))}
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+            >
+              <option value="">Select module...</option>
+              {courses.map(course => (
+                <optgroup key={course.id} label={course.title}>
+                  {modules.filter(m => m.course_id === course.id).map(module => (
+                    <option key={module.id} value={module.id}>{module.title}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          
+          <Input 
+            label="Assignment Title" 
+            value={assignmentData.title} 
+            onChange={(v) => setAssignmentData(p => ({ ...p, title: v }))} 
+            placeholder="e.g. Python Data Structures Project" 
+            required 
+          />
+          
+          <Textarea 
+            label="Instructions" 
+            value={assignmentData.description} 
+            onChange={(v) => setAssignmentData(p => ({ ...p, description: v }))} 
+            placeholder="Detailed assignment instructions..." 
+            rows={4} 
+            required 
+          />
+          
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label="Max Score" 
+              type="number" 
+              value={assignmentData.max_score} 
+              onChange={(v) => setAssignmentData(p => ({ ...p, max_score: v }))} 
+              placeholder="100" 
+              required 
+            />
+            <Input 
+              label="Due Days" 
+              type="number" 
+              value={assignmentData.due_days} 
+              onChange={(v) => setAssignmentData(p => ({ ...p, due_days: v }))} 
+              placeholder="7" 
+              required 
+            />
+          </div>
+          
+          <button
+            onClick={handleSendAssignment}
+            disabled={loading || !assignmentData.title || !assignmentData.module_id}
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Send Assignment</>}
+          </button>
+        </div>
+      </Modal>
     </div>
+  );
+}
+
+// ─── Admin Student Profile View ──────────────────────────────────────────────
+
+function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: () => void }) {
+  const [studentProfile, setStudentProfile] = useState<any>(null);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+
+  useEffect(() => {
+    fetchStudentDetails();
+  }, [student.id]);
+
+  const fetchStudentDetails = async () => {
+    const [profileRes, enrollmentsRes] = await Promise.all([
+      supabase.from("student_profiles").select("*").eq("user_id", student.id).single(),
+      supabase.from("enrollments").select("*, course:course_id(*)").eq("student_id", student.id),
+    ]);
+    if (profileRes.data) setStudentProfile(profileRes.data);
+    if (enrollmentsRes.data) setEnrollments(enrollmentsRes.data as Enrollment[]);
+  };
+
+  return (
+    <Modal open={true} onClose={onClose} title={`Student Profile: ${student.full_name}`}>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 pb-4 border-b border-border">
+          <Avatar name={student.full_name} size="lg" src={student.avatar_url} />
+          <div>
+            <h3 className="font-semibold text-foreground">{student.full_name}</h3>
+            <p className="text-sm text-muted-foreground">{student.email}</p>
+            <p className="text-xs text-muted-foreground mt-1">Member since {formatDate(student.created_at)}</p>
+          </div>
+        </div>
+        
+        {studentProfile && (
+          <div className="space-y-3">
+            <h4 className="font-semibold text-foreground text-sm">Personal Information</h4>
+            {studentProfile.bio && (
+              <div>
+                <p className="text-xs text-muted-foreground">Bio</p>
+                <p className="text-sm text-foreground">{studentProfile.bio}</p>
+              </div>
+            )}
+            {studentProfile.phone && (
+              <div>
+                <p className="text-xs text-muted-foreground">Phone</p>
+                <p className="text-sm text-foreground">{studentProfile.phone}</p>
+              </div>
+            )}
+            {studentProfile.address && (
+              <div>
+                <p className="text-xs text-muted-foreground">Address</p>
+                <p className="text-sm text-foreground">{studentProfile.address}</p>
+              </div>
+            )}
+          </div>
+        )}
+        
+        <div>
+          <h4 className="font-semibold text-foreground text-sm mb-2">Enrolled Courses</h4>
+          <div className="space-y-2">
+            {enrollments.map((e) => (
+              <div key={e.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                <span className="text-sm text-foreground">{e.course?.title}</span>
+                <StatusBadge status={e.status} />
+              </div>
+            ))}
+            {enrollments.length === 0 && (
+              <p className="text-sm text-muted-foreground">No enrolled courses</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -2152,91 +2586,72 @@ function AdminPayments() {
   );
 }
 
-// ─── Admin Assignments ────────────────────────────────────────────────────────
+// ─── Admin Assignments (Create and Grade) ─────────────────────────────────────
 
-function AdminAssignments() {
+function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignment }: { 
+  courses: Course[];
+  modules: Module[];
+  onCreateAssignment: (assignmentData: any) => Promise<void>;
+  onGradeAssignment: (assignmentId: string, score: number, feedback: string) => Promise<void>;
+}) {
   const [showCreate, setShowCreate] = useState(false);
-  const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [modules, setModules] = useState<Module[]>([]);
+  const [submissions, setSubmissions] = useState<StudentAssignment[]>([]);
   const [gradeModal, setGradeModal] = useState<StudentAssignment | null>(null);
   const [gradeForm, setGradeForm] = useState({ score: "", feedback: "" });
-  const [newAssignment, setNewAssignment] = useState({ course_id: "", module_id: "", title: "", description: "", max_score: "100", due_days: "7" });
+  const [newAssignment, setNewAssignment] = useState({ 
+    course_id: "", 
+    module_id: "", 
+    title: "", 
+    description: "", 
+    max_score: "100", 
+    due_days: "7",
+    assign_to_all: true,
+    student_id: "",
+  });
+  const [students, setStudents] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchData();
-    
-    const subscription = supabase
-      .channel("admin-assignments")
-      .on("postgres_changes", { event: "*", schema: "public", table: "student_assignments" }, () => fetchData())
-      .subscribe();
-
-    return () => { subscription.unsubscribe(); };
+    fetchSubmissions();
+    fetchStudents();
   }, []);
 
-  const fetchData = async () => {
-    const [assignmentsRes, coursesRes, modulesRes] = await Promise.all([
-      supabase.from("student_assignments").select("*, assignment:assignment_id(*)"),
-      supabase.from("courses").select("*"),
-      supabase.from("modules").select("*"),
-    ]);
-    if (assignmentsRes.data) setAssignments(assignmentsRes.data as StudentAssignment[]);
-    if (coursesRes.data) setCourses(coursesRes.data as Course[]);
-    if (modulesRes.data) setModules(modulesRes.data as Module[]);
+  const fetchSubmissions = async () => {
+    const { data } = await supabase
+      .from("student_assignments")
+      .select("*, assignment:assignment_id(*), profiles:student_id(full_name, email)")
+      .eq("status", "submitted")
+      .order("submitted_at", { ascending: false });
+    if (data) setSubmissions(data as StudentAssignment[]);
+  };
+
+  const fetchStudents = async () => {
+    const { data } = await supabase.from("profiles").select("*").eq("role", "student");
+    if (data) setStudents(data as Profile[]);
   };
 
   const handleCreateAssignment = async () => {
-    const { data: assignment } = await supabase
-      .from("assignments")
-      .insert({
-        module_id: newAssignment.module_id,
-        title: newAssignment.title,
-        description: newAssignment.description,
-        due_days: parseInt(newAssignment.due_days),
-        max_score: parseInt(newAssignment.max_score),
-      })
-      .select()
-      .single();
-
-    if (assignment) {
-      const { data: enrollments } = await supabase
-        .from("enrollments")
-        .select("id, student_id")
-        .eq("course_id", newAssignment.course_id)
-        .eq("status", "active");
-
-      if (enrollments) {
-        const studentAssignments = enrollments.map(e => ({
-          assignment_id: assignment.id,
-          student_id: e.student_id,
-          enrollment_id: e.id,
-          status: "pending",
-        }));
-        await supabase.from("student_assignments").insert(studentAssignments);
-      }
-    }
-
+    setLoading(true);
+    await onCreateAssignment(newAssignment);
     setShowCreate(false);
-    setNewAssignment({ course_id: "", module_id: "", title: "", description: "", max_score: "100", due_days: "7" });
-    fetchData();
+    setNewAssignment({ course_id: "", module_id: "", title: "", description: "", max_score: "100", due_days: "7", assign_to_all: true, student_id: "" });
+    setLoading(false);
   };
 
   const handleGrade = async () => {
     if (!gradeModal) return;
-    await supabase
-      .from("student_assignments")
-      .update({ status: "graded", score: parseInt(gradeForm.score), feedback: gradeForm.feedback })
-      .eq("id", gradeModal.id);
-    
+    setLoading(true);
+    await onGradeAssignment(gradeModal.id, parseInt(gradeForm.score), gradeForm.feedback);
     setGradeModal(null);
     setGradeForm({ score: "", feedback: "" });
-    fetchData();
+    setLoading(false);
+    fetchSubmissions();
   };
 
   const availableModules = modules.filter(m => m.course_id === newAssignment.course_id);
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-8 space-y-6 max-w-6xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -2253,41 +2668,76 @@ function AdminAssignments() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="font-semibold text-foreground">Student Submissions</h2>
-        {assignments.map((sa) => (
+        <h2 className="font-semibold text-foreground">Pending Submissions</h2>
+        {submissions.map((sa) => (
           <Card key={sa.id} className="p-5">
             <div className="flex items-center gap-4">
-              <Avatar name={sa.student_id.slice(0, 8)} size="sm" />
+              <Avatar name={sa.profiles?.full_name || sa.student_id.slice(0, 8)} size="sm" />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground text-sm">Student ID: {sa.student_id.slice(0, 8)}...</p>
+                <p className="font-semibold text-foreground text-sm">{sa.profiles?.full_name || "Unknown"}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{sa.assignment?.title}</p>
-                {sa.score !== undefined && (
-                  <p className="text-xs text-green-700 font-medium mt-0.5">Score: {sa.score}/100</p>
+                {sa.submitted_at && (
+                  <p className="text-xs text-muted-foreground mt-0.5">Submitted: {formatDate(sa.submitted_at)}</p>
                 )}
               </div>
               <div className="flex items-center gap-3">
                 <StatusBadge status={sa.status} />
-                {sa.status === "submitted" && (
-                  <button
-                    onClick={() => { setGradeModal(sa); setGradeForm({ score: "", feedback: "" }); }}
-                    className="px-3 py-1.5 bg-accent/15 text-accent text-xs font-medium rounded-lg hover:bg-accent/25 transition-colors"
-                  >
-                    Grade
-                  </button>
-                )}
+                <button
+                  onClick={() => { setGradeModal(sa); setGradeForm({ score: "", feedback: "" }); }}
+                  className="px-3 py-1.5 bg-accent/15 text-accent text-xs font-medium rounded-lg hover:bg-accent/25 transition-colors"
+                >
+                  Grade
+                </button>
               </div>
             </div>
-            {sa.feedback && (
-              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
-                Feedback: {sa.feedback}
+            {sa.submission_url && (
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <a href={sa.submission_url} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline flex items-center gap-1">
+                  <Eye className="w-3 h-3" /> View Submission
+                </a>
               </div>
             )}
           </Card>
         ))}
+        {submissions.length === 0 && (
+          <Card className="p-8 text-center">
+            <ClipboardList className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">No pending submissions to grade.</p>
+          </Card>
+        )}
       </div>
 
+      {/* Create Assignment Modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Assignment">
         <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-foreground">Assign to</label>
+            <select
+              value={newAssignment.assign_to_all ? "all" : "specific"}
+              onChange={(e) => setNewAssignment(p => ({ ...p, assign_to_all: e.target.value === "all" }))}
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+            >
+              <option value="all">All Students in Course</option>
+              <option value="specific">Specific Student</option>
+            </select>
+          </div>
+
+          {!newAssignment.assign_to_all && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-foreground">Select Student</label>
+              <select
+                value={newAssignment.student_id}
+                onChange={(e) => setNewAssignment(p => ({ ...p, student_id: e.target.value }))}
+                className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+              >
+                <option value="">Select student...</option>
+                {students.map(s => (
+                  <option key={s.id} value={s.id}>{s.full_name} ({s.email})</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-foreground">Course</label>
             <select
@@ -2299,6 +2749,7 @@ function AdminAssignments() {
               {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
           </div>
+          
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-foreground">Module</label>
             <select
@@ -2310,37 +2761,83 @@ function AdminAssignments() {
               {availableModules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
             </select>
           </div>
-          <Input label="Assignment Title" value={newAssignment.title} onChange={(v) => setNewAssignment(p => ({ ...p, title: v }))} placeholder="e.g. Python Data Structures Project" required />
-          <Textarea label="Instructions" value={newAssignment.description} onChange={(v) => setNewAssignment(p => ({ ...p, description: v }))} placeholder="Detailed assignment instructions..." rows={4} required />
+          
+          <Input 
+            label="Assignment Title" 
+            value={newAssignment.title} 
+            onChange={(v) => setNewAssignment(p => ({ ...p, title: v }))} 
+            placeholder="e.g. Python Data Structures Project" 
+            required 
+          />
+          
+          <Textarea 
+            label="Instructions" 
+            value={newAssignment.description} 
+            onChange={(v) => setNewAssignment(p => ({ ...p, description: v }))} 
+            placeholder="Detailed assignment instructions..." 
+            rows={4} 
+            required 
+          />
+          
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Max Score" type="number" value={newAssignment.max_score} onChange={(v) => setNewAssignment(p => ({ ...p, max_score: v }))} placeholder="100" required />
-            <Input label="Due Days" type="number" value={newAssignment.due_days} onChange={(v) => setNewAssignment(p => ({ ...p, due_days: v }))} placeholder="7" required />
+            <Input 
+              label="Max Score" 
+              type="number" 
+              value={newAssignment.max_score} 
+              onChange={(v) => setNewAssignment(p => ({ ...p, max_score: v }))} 
+              placeholder="100" 
+              required 
+            />
+            <Input 
+              label="Due Days" 
+              type="number" 
+              value={newAssignment.due_days} 
+              onChange={(v) => setNewAssignment(p => ({ ...p, due_days: v }))} 
+              placeholder="7" 
+              required 
+            />
           </div>
+          
           <button
             onClick={handleCreateAssignment}
-            disabled={!newAssignment.course_id || !newAssignment.module_id || !newAssignment.title}
+            disabled={loading || !newAssignment.course_id || !newAssignment.module_id || !newAssignment.title}
             className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
           >
-            Create Assignment
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Create Assignment"}
           </button>
         </div>
       </Modal>
 
+      {/* Grade Modal */}
       <Modal open={!!gradeModal} onClose={() => setGradeModal(null)} title={`Grade — ${gradeModal?.assignment?.title}`}>
         {gradeModal && (
           <div className="space-y-4">
             <div className="p-3 bg-muted rounded-xl">
-              <p className="text-sm text-muted-foreground">Student ID: {gradeModal.student_id}</p>
+              <p className="text-sm font-semibold text-foreground">{gradeModal.profiles?.full_name}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Submitted: {gradeModal.submitted_at ? formatDate(gradeModal.submitted_at) : "—"}</p>
             </div>
-            <Input label="Score (out of 100)" type="number" value={gradeForm.score} onChange={(v) => setGradeForm((p) => ({ ...p, score: v }))} placeholder="85" required />
-            <Textarea label="Feedback" value={gradeForm.feedback} onChange={(v) => setGradeForm((p) => ({ ...p, feedback: v }))} placeholder="Detailed feedback for the student..." rows={3} required />
+            <Input 
+              label={`Score (out of ${gradeModal.assignment?.max_score || 100})`} 
+              type="number" 
+              value={gradeForm.score} 
+              onChange={(v) => setGradeForm((p) => ({ ...p, score: v }))} 
+              placeholder="85" 
+              required 
+            />
+            <Textarea 
+              label="Feedback" 
+              value={gradeForm.feedback} 
+              onChange={(v) => setGradeForm((p) => ({ ...p, feedback: v }))} 
+              placeholder="Detailed feedback for the student..." 
+              rows={3} 
+              required 
+            />
             <button
               onClick={handleGrade}
-              disabled={!gradeForm.score || !gradeForm.feedback}
+              disabled={!gradeForm.score || !gradeForm.feedback || loading}
               className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
             >
-              Submit Grade
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Submit Grade"}
             </button>
           </div>
         )}
@@ -2361,6 +2858,7 @@ export default function App() {
   const [progress, setProgress] = useState<ModuleProgress[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingStudent, setViewingStudent] = useState<Profile | null>(null);
 
   const ensureProfile = async (userId: string, userEmail: string, userName: string) => {
     const { data: existing } = await supabase
@@ -2666,6 +3164,114 @@ export default function App() {
     await fetchModuleContents();
   };
 
+  const handleUpdateProfile = async (updates: Partial<Profile>, avatarFile?: File) => {
+    let avatarUrl = updates.avatar_url;
+    
+    if (avatarFile) {
+      const fileExt = avatarFile.name.split('.').pop();
+      const fileName = `${profile?.id}-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, avatarFile);
+      
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(fileName);
+        avatarUrl = publicUrl;
+      }
+    }
+    
+    await supabase
+      .from("profiles")
+      .update({ ...updates, avatar_url: avatarUrl })
+      .eq("id", profile?.id);
+    
+    setProfile(prev => prev ? { ...prev, ...updates, avatar_url: avatarUrl } : null);
+  };
+
+  const handleSendAssignment = async (studentId: string, studentName: string, assignmentData: any) => {
+    // Create assignment template
+    const { data: assignment } = await supabase
+      .from("assignments")
+      .insert({
+        module_id: assignmentData.module_id,
+        title: assignmentData.title,
+        description: assignmentData.description,
+        due_days: parseInt(assignmentData.due_days),
+        max_score: parseInt(assignmentData.max_score),
+      })
+      .select()
+      .single();
+
+    if (assignment) {
+      // Get enrollment for this student in the course
+      const moduleInfo = modules.find(m => m.id === assignmentData.module_id);
+      const { data: enrollment } = await supabase
+        .from("enrollments")
+        .select("id")
+        .eq("student_id", studentId)
+        .eq("course_id", moduleInfo?.course_id)
+        .single();
+
+      if (enrollment) {
+        await supabase.from("student_assignments").insert({
+          assignment_id: assignment.id,
+          student_id: studentId,
+          enrollment_id: enrollment.id,
+          status: "pending",
+        });
+      }
+    }
+    alert(`Assignment sent to ${studentName}`);
+  };
+
+  const handleCreateAssignment = async (assignmentData: any) => {
+    // Create assignment
+    const { data: assignment } = await supabase
+      .from("assignments")
+      .insert({
+        module_id: assignmentData.module_id,
+        title: assignmentData.title,
+        description: assignmentData.description,
+        due_days: parseInt(assignmentData.due_days),
+        max_score: parseInt(assignmentData.max_score),
+      })
+      .select()
+      .single();
+
+    if (assignment) {
+      let query = supabase
+        .from("enrollments")
+        .select("id, student_id")
+        .eq("course_id", assignmentData.course_id)
+        .eq("status", "active");
+
+      if (!assignmentData.assign_to_all && assignmentData.student_id) {
+        query = query.eq("student_id", assignmentData.student_id);
+      }
+
+      const { data: enrollments } = await query;
+
+      if (enrollments) {
+        const studentAssignments = enrollments.map(e => ({
+          assignment_id: assignment.id,
+          student_id: e.student_id,
+          enrollment_id: e.id,
+          status: "pending",
+        }));
+        await supabase.from("student_assignments").insert(studentAssignments);
+      }
+    }
+  };
+
+  const handleGradeAssignment = async (assignmentId: string, score: number, feedback: string) => {
+    await supabase
+      .from("student_assignments")
+      .update({ status: "graded", score, feedback })
+      .eq("id", assignmentId);
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -2711,11 +3317,20 @@ export default function App() {
             onModuleContentDelete={handleDeleteModuleContent}
           />;
         case "admin-students":
-          return <AdminStudents students={students} />;
+          return <AdminStudents 
+            students={students} 
+            onSendAssignment={handleSendAssignment}
+            onViewProfile={(student) => setViewingStudent(student)}
+          />;
         case "admin-payments":
           return <AdminPayments />;
         case "admin-assignments":
-          return <AdminAssignments />;
+          return <AdminAssignments 
+            courses={courses}
+            modules={modules}
+            onCreateAssignment={handleCreateAssignment}
+            onGradeAssignment={handleGradeAssignment}
+          />;
         default:
           return <AdminDashboard onNavigate={setView} stats={{ students: 0, courses: 0, pendingPayments: 0, submittedAssignments: 0 }} />;
       }
@@ -2739,6 +3354,8 @@ export default function App() {
           return <StudentAssignments profile={profile} />;
         case "student-payment":
           return <StudentPayments profile={profile} />;
+        case "student-profile":
+          return <StudentProfile profile={profile} onUpdate={handleUpdateProfile} />;
         default:
           return <StudentDashboard profile={profile} onNavigate={setView} enrollments={enrollments} progress={progress} />;
       }
@@ -2751,6 +3368,12 @@ export default function App() {
       <main className="flex-1 overflow-y-auto">
         {renderView()}
       </main>
+      {viewingStudent && (
+        <AdminStudentProfile 
+          student={viewingStudent} 
+          onClose={() => setViewingStudent(null)} 
+        />
+      )}
     </div>
   );
 }
