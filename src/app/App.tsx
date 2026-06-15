@@ -318,7 +318,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               <GraduationCap className="w-5 h-5 text-accent" />
             </div>
             <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Academia
+              Pruta Academy
             </span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -521,9 +521,9 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
               <GraduationCap className="w-4 h-4 text-accent" />
             </div>
-            <span className="font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Academia</span>
+            <span className="font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Pruta Academy</span>
           </div>
-          <p className="text-sm text-muted-foreground">© 2024 Academia LMS. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2024 Pruta Academy LMS. All rights reserved.</p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Shield className="w-3.5 h-3.5" />
             <span>Content Protected</span>
@@ -544,100 +544,96 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const ensureProfile = async (userId: string, userEmail: string, userName: string) => {
+    // First try to get existing profile
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    
+    if (existing) return existing;
+    
+    // Create new profile
+    const { data: newProfile, error: insertError } = await supabase
+      .from("profiles")
+      .insert({
+        id: userId,
+        email: userEmail,
+        full_name: userName,
+        role: userEmail === 'admin@Pruta Academy.com' ? 'admin' : 'student',
+      })
+      .select()
+      .single();
+    
+    if (insertError) {
+      console.error("Profile creation error:", insertError);
+      return null;
+    }
+    
+    return newProfile;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    if (mode === "login") {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (signInError) {
-        setError(signInError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data.user) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      if (mode === "login") {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         
-        let { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", data.user.id)
-          .single();
+        if (signInError) throw signInError;
         
-        if (profileError || !profile) {
-          const { data: newProfile, error: insertError } = await supabase
-            .from("profiles")
-            .insert({
-              id: data.user.id,
-              email: data.user.email,
-              full_name: data.user.user_metadata?.full_name || email.split('@')[0],
-              role: email === 'admin@academia.com' ? 'admin' : 'student',
-            })
-            .select()
-            .single();
+        if (data.user) {
+          const profile = await ensureProfile(
+            data.user.id,
+            data.user.email!,
+            data.user.user_metadata?.full_name || email.split('@')[0]
+          );
           
-          if (newProfile) {
-            profile = newProfile;
+          if (profile) {
+            onLogin(profile as Profile);
+          } else {
+            throw new Error("Could not create or find profile");
           }
         }
+      } else {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: name },
+          },
+        });
         
-        if (profile) {
-          onLogin(profile as Profile);
-        } else {
-          setError("Failed to load user profile");
-        }
-      }
-    } else {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: name },
-        },
-      });
-      
-      if (signUpError) {
-        setError(signUpError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data.user) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        if (signUpError) throw signUpError;
         
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", data.user.id)
-          .single();
-        
-        if (profile) {
-          onLogin(profile as Profile);
-        } else {
-          const { data: newProfile } = await supabase
-            .from("profiles")
-            .insert({
-              id: data.user.id,
-              email: data.user.email,
-              full_name: name,
-              role: 'student',
-            })
-            .select()
-            .single();
+        if (data.user) {
+          // Wait a bit for the trigger, then ensure profile exists
+          await new Promise(resolve => setTimeout(resolve, 2000));
           
-          if (newProfile) {
-            onLogin(newProfile as Profile);
+          const profile = await ensureProfile(
+            data.user.id,
+            data.user.email!,
+            name
+          );
+          
+          if (profile) {
+            onLogin(profile as Profile);
+          } else {
+            throw new Error("Could not create profile");
           }
         }
       }
+    } catch (err: any) {
+      setError(err.message || "Authentication failed");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -654,7 +650,9 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
             <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center">
               <GraduationCap className="w-5 h-5 text-primary" />
             </div>
-            <span className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>Academia</span>
+            <span className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Pruta Academy
+            </span>
           </div>
           <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
             "Education is the most powerful weapon you can use to change the world."
@@ -670,10 +668,12 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
               <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-accent" />
               </div>
-              <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Academia</span>
+              <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Pruta Academy
+              </span>
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-              {mode === "login" ? "Welcome back" : "Join Academia"}
+              {mode === "login" ? "Welcome back" : "Join Pruta Academy"}
             </h1>
             <p className="text-muted-foreground">
               {mode === "login" ? "Sign in to continue your learning journey." : "Create your account and start learning today."}
@@ -716,7 +716,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
 
           <div className="mt-8 p-4 bg-muted rounded-xl border border-border">
             <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Demo Credentials</p>
-            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Admin:</span> admin@academia.com</p>
+            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Admin:</span> admin@Pruta Academy.com</p>
             <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Student:</span> any email (auto-register)</p>
             <p className="text-xs text-muted-foreground mt-2">⚡ Admin users are redirected to Admin Dashboard</p>
           </div>
@@ -771,7 +771,7 @@ function Sidebar({
         </div>
         {!collapsed && (
           <span className="font-bold text-sidebar-foreground text-lg" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Academia
+            Pruta Academy
           </span>
         )}
         <button
@@ -1710,15 +1710,15 @@ function AdminStudents({ students }: { students: Profile[] }) {
                   <td className="px-6 py-4 text-sm text-muted-foreground">{s.email}</td>
                   <td className="px-6 py-4"><Badge variant="default">{s.role}</Badge></td>
                   <td className="px-6 py-4 text-xs text-muted-foreground font-mono">{formatDate(s.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
-}
+                  
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
 // ─── Admin Payments ───────────────────────────────────────────────────────────
 
@@ -2063,6 +2063,29 @@ export default function App() {
   const [students, setStudents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const ensureProfile = async (userId: string, userEmail: string, userName: string) => {
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    
+    if (existing) return existing;
+    
+    const { data: newProfile } = await supabase
+      .from("profiles")
+      .insert({
+        id: userId,
+        email: userEmail,
+        full_name: userName,
+        role: userEmail === 'admin@Pruta Academy.com' ? 'admin' : 'student',
+      })
+      .select()
+      .single();
+    
+    return newProfile;
+  };
+
   // Check session on mount
   useEffect(() => {
     const checkSession = async () => {
@@ -2070,14 +2093,14 @@ export default function App() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
+          const profile = await ensureProfile(
+            session.user.id,
+            session.user.email!,
+            session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
+          );
           
-          if (!profileError && profileData) {
-            const userProfile = profileData as Profile;
+          if (profile) {
+            const userProfile = profile as Profile;
             setProfile(userProfile);
             setView(userProfile.role === "admin" ? "admin-dashboard" : "student-dashboard");
           }
@@ -2094,14 +2117,14 @@ export default function App() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
+        const profile = await ensureProfile(
+          session.user.id,
+          session.user.email!,
+          session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
+        );
         
-        if (profileData) {
-          const userProfile = profileData as Profile;
+        if (profile) {
+          const userProfile = profile as Profile;
           setProfile(userProfile);
           setView(userProfile.role === "admin" ? "admin-dashboard" : "student-dashboard");
         }
