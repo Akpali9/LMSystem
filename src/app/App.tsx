@@ -66,109 +66,6 @@ type View =
   | "admin-payments"
   | "admin-assignments";
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_COURSES: Course[] = [
-  {
-    id: "c1",
-    title: "Advanced Data Science & Machine Learning",
-    description:
-      "Master statistical modeling, Python ML frameworks, and real-world data pipelines used by top tech companies.",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
-    duration_months: 3,
-    price: 599,
-    currency: "USD",
-    is_active: true,
-    created_at: "2024-01-01",
-  },
-  {
-    id: "c2",
-    title: "Full-Stack Web Development",
-    description:
-      "Build production-grade applications with React, Node.js, PostgreSQL, and cloud deployment strategies.",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=600&h=340&fit=crop&auto=format",
-    duration_months: 3,
-    price: 499,
-    currency: "USD",
-    is_active: true,
-    created_at: "2024-01-01",
-  },
-  {
-    id: "c3",
-    title: "Cybersecurity & Ethical Hacking",
-    description:
-      "Learn penetration testing, network security, and ethical hacking methodologies from industry experts.",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&h=340&fit=crop&auto=format",
-    duration_months: 3,
-    price: 649,
-    currency: "USD",
-    is_active: true,
-    created_at: "2024-01-01",
-  },
-  {
-    id: "c4",
-    title: "Digital Marketing & Growth Strategy",
-    description:
-      "SEO, paid acquisition, content strategy, and analytics to grow any digital product from zero to scale.",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=340&fit=crop&auto=format",
-    duration_months: 3,
-    price: 399,
-    currency: "USD",
-    is_active: true,
-    created_at: "2024-01-01",
-  },
-];
-
-const MOCK_MODULES: Record<string, Module[]> = {
-  c1: [
-    { id: "m1", course_id: "c1", title: "Python & Statistics Foundations", description: "Core Python, NumPy, pandas, and probability theory.", order_index: 0, pass_score: 75, created_at: "" },
-    { id: "m2", course_id: "c1", title: "Exploratory Data Analysis", description: "Visualisation, feature engineering, and insight extraction.", order_index: 1, pass_score: 75, created_at: "" },
-    { id: "m3", course_id: "c1", title: "Supervised Learning", description: "Regression, classification, cross-validation, and hyperparameter tuning.", order_index: 2, pass_score: 80, created_at: "" },
-    { id: "m4", course_id: "c1", title: "Neural Networks & Deep Learning", description: "PyTorch fundamentals, CNNs, RNNs, and transfer learning.", order_index: 3, pass_score: 80, created_at: "" },
-    { id: "m5", course_id: "c1", title: "ML in Production", description: "MLOps, model deployment, monitoring, and pipelines.", order_index: 4, pass_score: 75, created_at: "" },
-  ],
-};
-
-const MOCK_STUDENTS: Profile[] = [
-  { id: "s1", email: "amara.okonkwo@email.com", full_name: "Amara Okonkwo", role: "student", created_at: "2024-02-01" },
-  { id: "s2", email: "james.whitfield@email.com", full_name: "James Whitfield", role: "student", created_at: "2024-02-10" },
-  { id: "s3", email: "sofia.reyes@email.com", full_name: "Sofia Reyes", role: "student", created_at: "2024-02-15" },
-  { id: "s4", email: "kwame.asante@email.com", full_name: "Kwame Asante", role: "student", created_at: "2024-03-01" },
-];
-
-const MOCK_ENROLLMENTS: Enrollment[] = [
-  { id: "e1", student_id: "s1", course_id: "c1", status: "active", enrolled_at: "2024-02-02", expires_at: "2024-05-02", current_module_index: 1, created_at: "2024-02-01", course: MOCK_COURSES[0] },
-  { id: "e2", student_id: "s2", course_id: "c2", status: "payment_submitted", current_module_index: 0, created_at: "2024-02-11" },
-  { id: "e3", student_id: "s3", course_id: "c1", status: "pending_payment", current_module_index: 0, created_at: "2024-02-15" },
-];
-
-const MOCK_PAYMENTS: PaymentReceipt[] = [
-  { id: "p1", enrollment_id: "e2", student_id: "s2", receipt_url: "receipt_james.pdf", amount: 499, status: "pending", submitted_at: "2024-02-12" },
-  { id: "p2", enrollment_id: "e1", student_id: "s1", receipt_url: "receipt_amara.pdf", amount: 599, status: "approved", submitted_at: "2024-02-02" },
-];
-
-const MOCK_ASSIGNMENTS: Assignment[] = [
-  { id: "a1", module_id: "m1", title: "Python Data Structures Project", description: "Build a data pipeline using pandas and NumPy to clean and analyze a real dataset.", due_days: 7, max_score: 100, created_at: "" },
-  { id: "a2", module_id: "m2", title: "EDA Report Submission", description: "Submit a full exploratory analysis report with visualisations.", due_days: 10, max_score: 100, created_at: "" },
-];
-
-const MOCK_STUDENT_ASSIGNMENTS: StudentAssignment[] = [
-  { id: "sa1", assignment_id: "a1", student_id: "s1", enrollment_id: "e1", status: "graded", score: 88, feedback: "Excellent pipeline design. Review error handling in edge cases.", assigned_at: "2024-02-05", submitted_at: "2024-02-11", assignment: MOCK_ASSIGNMENTS[0] },
-  { id: "sa2", assignment_id: "a2", student_id: "s1", enrollment_id: "e1", status: "pending", assigned_at: "2024-02-20", assignment: MOCK_ASSIGNMENTS[1] },
-];
-
-const MOCK_PROGRESS: ModuleProgress[] = [
-  { id: "pr1", enrollment_id: "e1", module_id: "m1", status: "passed", score: 88, completed_at: "2024-02-15" },
-  { id: "pr2", enrollment_id: "e1", module_id: "m2", status: "in_progress" },
-  { id: "pr3", enrollment_id: "e1", module_id: "m3", status: "locked" },
-  { id: "pr4", enrollment_id: "e1", module_id: "m4", status: "locked" },
-  { id: "pr5", enrollment_id: "e1", module_id: "m5", status: "locked" },
-];
-
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
 function cn(...classes: (string | undefined | false | null)[]) {
@@ -176,6 +73,7 @@ function cn(...classes: (string | undefined | false | null)[]) {
 }
 
 function formatDate(dateStr: string) {
+  if (!dateStr) return "N/A";
   return new Date(dateStr).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -328,7 +226,7 @@ function StatCard({ icon: Icon, label, value, trend }: { icon: any; label: strin
 }
 
 function ProgressBar({ value, max, className }: { value: number; max: number; className?: string }) {
-  const pct = Math.round((value / max) * 100);
+  const pct = Math.min(Math.round((value / max) * 100), 100);
   return (
     <div className={cn("h-2 bg-muted rounded-full overflow-hidden", className)}>
       <div
@@ -401,10 +299,9 @@ function Textarea({ label, value, onChange, placeholder, rows = 3, required }: {
 
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
-function LandingPage({ onAuth }: { onAuth: () => void }) {
+function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Navbar */}
       <nav className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -429,7 +326,6 @@ function LandingPage({ onAuth }: { onAuth: () => void }) {
         </div>
       </nav>
 
-      {/* Hero */}
       <section className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 grid lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-8">
           <div className="inline-flex items-center gap-2 bg-accent/15 border border-accent/30 rounded-full px-4 py-1.5">
@@ -470,11 +366,10 @@ function LandingPage({ onAuth }: { onAuth: () => void }) {
           <div className="rounded-3xl overflow-hidden shadow-2xl shadow-primary/10 border border-border">
             <img
               src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format"
-              alt="Students learning in a modern classroom"
+              alt="Students learning"
               className="w-full object-cover"
             />
           </div>
-          {/* Floating card */}
           <div className="absolute -bottom-6 -left-6 bg-card rounded-2xl border border-border shadow-xl p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-green-600" />
@@ -491,7 +386,6 @@ function LandingPage({ onAuth }: { onAuth: () => void }) {
         </div>
       </section>
 
-      {/* Courses */}
       <section id="courses" className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-primary mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -502,7 +396,7 @@ function LandingPage({ onAuth }: { onAuth: () => void }) {
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {MOCK_COURSES.map((course) => (
+          {courses.map((course) => (
             <div
               key={course.id}
               className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-lg hover:shadow-primary/8 hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
@@ -510,7 +404,7 @@ function LandingPage({ onAuth }: { onAuth: () => void }) {
             >
               <div className="relative h-40 bg-muted overflow-hidden">
                 <img
-                  src={course.thumbnail_url}
+                  src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"}
                   alt={course.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
@@ -537,7 +431,6 @@ function LandingPage({ onAuth }: { onAuth: () => void }) {
         </div>
       </section>
 
-      {/* How it works */}
       <section id="how" className="bg-primary py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
@@ -572,7 +465,6 @@ function LandingPage({ onAuth }: { onAuth: () => void }) {
         </div>
       </section>
 
-      {/* Why us */}
       <section id="why" className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-8">
@@ -607,14 +499,13 @@ function LandingPage({ onAuth }: { onAuth: () => void }) {
           <div className="rounded-3xl overflow-hidden shadow-xl border border-border">
             <img
               src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=700&h=550&fit=crop&auto=format"
-              alt="Student studying with laptop in a well-lit room"
+              alt="Student studying"
               className="w-full object-cover"
             />
           </div>
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
@@ -648,11 +539,59 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    await new Promise((r) => setTimeout(r, 800));
-    if (email === "admin@academia.com") {
-      onLogin({ id: "admin", email, full_name: "Admin", role: "admin", created_at: "" });
+
+    if (mode === "login") {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (signInError) {
+        setError(signInError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", data.user.id)
+          .single();
+        
+        if (profile) {
+          onLogin(profile as Profile);
+        }
+      }
     } else {
-      onLogin({ id: "s1", email, full_name: name || "Amara Okonkwo", role: "student", created_at: "" });
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name },
+        },
+      });
+      
+      if (signUpError) {
+        setError(signUpError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        // Wait for profile to be created via trigger
+        setTimeout(async () => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", data.user!.id)
+            .single();
+          
+          if (profile) {
+            onLogin(profile as Profile);
+          }
+        }, 1000);
+      }
     }
     setLoading(false);
   };
@@ -729,12 +668,6 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
               {mode === "login" ? "Don't have an account? " : "Already have an account? "}
               <span className="text-accent font-semibold">{mode === "login" ? "Register" : "Sign In"}</span>
             </button>
-          </div>
-
-          <div className="mt-8 p-4 bg-muted rounded-xl border border-border">
-            <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Demo Credentials</p>
-            <p className="text-xs text-muted-foreground">Admin: <span className="font-mono text-foreground">admin@academia.com</span></p>
-            <p className="text-xs text-muted-foreground">Student: any other email</p>
           </div>
         </div>
       </div>
@@ -845,10 +778,15 @@ function Sidebar({
 
 // ─── Student Dashboard ────────────────────────────────────────────────────────
 
-function StudentDashboard({ profile, onNavigate }: { profile: Profile; onNavigate: (v: View) => void }) {
-  const enrollments = MOCK_ENROLLMENTS.filter((e) => e.student_id === profile.id);
-  const assignments = MOCK_STUDENT_ASSIGNMENTS.filter((a) => a.student_id === profile.id);
-  const pending = assignments.filter((a) => a.status === "pending").length;
+function StudentDashboard({ profile, onNavigate, enrollments, progress }: { 
+  profile: Profile; 
+  onNavigate: (v: View) => void;
+  enrollments: Enrollment[];
+  progress: ModuleProgress[];
+}) {
+  const activeEnrollment = enrollments.find(e => e.status === "active");
+  const passedCount = progress.filter(p => p.status === "passed").length;
+  const pendingAssignments = 0; // Fetch from assignments
 
   return (
     <div className="p-8 space-y-8 max-w-6xl">
@@ -860,87 +798,39 @@ function StudentDashboard({ profile, onNavigate }: { profile: Profile; onNavigat
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard icon={BookOpen} label="Enrolled Courses" value={enrollments.length || 1} />
-        <StatCard icon={CheckCircle} label="Modules Passed" value={1} trend="+1 this week" />
-        <StatCard icon={ClipboardList} label="Assignments Due" value={pending} />
-        <StatCard icon={Award} label="Certificates Earned" value={0} />
+        <StatCard icon={BookOpen} label="Enrolled Courses" value={enrollments.length} />
+        <StatCard icon={CheckCircle} label="Modules Passed" value={passedCount} />
+        <StatCard icon={ClipboardList} label="Assignments Due" value={pendingAssignments} />
+        <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
       </div>
 
-      {/* Active Course */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="p-6">
-            <h2 className="font-semibold text-foreground mb-5" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Active Course Progress
-            </h2>
-            <div className="flex gap-4 mb-5">
-              <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
-                <img src={MOCK_COURSES[0].thumbnail_url} alt="" className="w-full h-full object-cover" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-foreground">{MOCK_COURSES[0].title}</p>
-                <p className="text-sm text-muted-foreground mt-0.5">Module 2 of 5 · Expires May 2, 2024</p>
-                <StatusBadge status="active" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              {(MOCK_MODULES["c1"] || []).map((mod, i) => {
-                const prog = MOCK_PROGRESS[i];
-                return (
-                  <div key={mod.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors">
-                    <div className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
-                      prog.status === "passed" ? "bg-green-100 text-green-700" :
-                      prog.status === "in_progress" ? "bg-blue-100 text-blue-700" :
-                      "bg-muted text-muted-foreground"
-                    )}>
-                      {prog.status === "passed" ? <Check className="w-4 h-4" /> :
-                       prog.status === "in_progress" ? <Play className="w-3.5 h-3.5" /> :
-                       <Lock className="w-3.5 h-3.5" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn("text-sm font-medium truncate", prog.status === "locked" ? "text-muted-foreground" : "text-foreground")}>
-                        {mod.title}
-                      </p>
-                      {prog.score && <p className="text-xs text-muted-foreground">Score: {prog.score}%</p>}
-                    </div>
-                    <StatusBadge status={prog.status} />
-                    {prog.status === "in_progress" && (
-                      <button
-                        onClick={() => onNavigate("student-module")}
-                        className="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
-                      >
-                        Continue
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        </div>
-
-        <div className="space-y-5">
-          <Card className="p-5">
-            <h3 className="font-semibold text-foreground mb-4 text-sm">Upcoming Assignments</h3>
-            {MOCK_STUDENT_ASSIGNMENTS.slice(0, 3).map((a) => (
-              <div key={a.id} className="flex items-start gap-3 mb-3 last:mb-0">
-                <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-accent" />
+      {activeEnrollment && activeEnrollment.course && (
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Card className="p-6">
+              <h2 className="font-semibold text-foreground mb-5" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Active Course Progress
+              </h2>
+              <div className="flex gap-4 mb-5">
+                <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
+                  <img src={activeEnrollment.course.thumbnail_url} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{a.assignment?.title}</p>
-                  <StatusBadge status={a.status} />
+                  <p className="font-semibold text-foreground">{activeEnrollment.course.title}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Module {activeEnrollment.current_module_index + 1} · Expires {formatDate(activeEnrollment.expires_at || "")}
+                  </p>
+                  <StatusBadge status={activeEnrollment.status} />
                 </div>
               </div>
-            ))}
-            <button
-              onClick={() => onNavigate("student-assignments")}
-              className="mt-3 w-full text-xs text-accent font-medium hover:underline flex items-center gap-1 justify-center"
-            >
-              View all <ChevronRight className="w-3 h-3" />
-            </button>
-          </Card>
+              <button
+                onClick={() => onNavigate("student-module")}
+                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Play className="w-3.5 h-3.5" /> Continue Learning
+              </button>
+            </Card>
+          </div>
 
           <Card className="p-5">
             <h3 className="font-semibold text-foreground mb-4 text-sm">Certificate Status</h3>
@@ -948,24 +838,81 @@ function StudentDashboard({ profile, onNavigate }: { profile: Profile; onNavigat
               <Award className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">Complete all modules to receive your certificate via email.</p>
             </div>
-            <ProgressBar value={1} max={5} />
-            <p className="text-xs text-muted-foreground text-center mt-2">1 of 5 modules passed</p>
+            <ProgressBar value={passedCount} max={5} />
+            <p className="text-xs text-muted-foreground text-center mt-2">{passedCount} of 5 modules passed</p>
           </Card>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 // ─── Student Courses ──────────────────────────────────────────────────────────
 
-function StudentCourses({ profile, onNavigate }: { profile: Profile; onNavigate: (v: View) => void }) {
+function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }: { 
+  profile: Profile; 
+  onNavigate: (v: View) => void;
+  courses: Course[];
+  enrollments: Enrollment[];
+  onEnroll: (courseId: string) => Promise<void>;
+}) {
   const [showEnroll, setShowEnroll] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
-  const handleEnroll = (course: Course) => {
-    setSelectedCourse(course);
-    setShowEnroll(true);
+  const enrolledCourseIds = enrollments.map(e => e.course_id);
+  const availableCourses = courses.filter(c => !enrolledCourseIds.includes(c.id));
+  const activeEnrollment = enrollments.find(e => e.status === "active");
+
+  const handleEnrollSubmit = async () => {
+    if (!selectedCourse || !receiptFile) return;
+    setUploading(true);
+    
+    // Upload receipt to storage
+    const fileExt = receiptFile.name.split('.').pop();
+    const fileName = `${profile.id}-${selectedCourse.id}-${Date.now()}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage
+      .from("receipts")
+      .upload(fileName, receiptFile);
+    
+    if (uploadError) {
+      alert("Failed to upload receipt");
+      setUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("receipts")
+      .getPublicUrl(fileName);
+
+    // Create enrollment and payment receipt
+    const { data: enrollment } = await supabase
+      .from("enrollments")
+      .insert({
+        student_id: profile.id,
+        course_id: selectedCourse.id,
+        status: "pending_payment",
+        current_module_index: 0,
+      })
+      .select()
+      .single();
+
+    if (enrollment) {
+      await supabase.from("payment_receipts").insert({
+        enrollment_id: enrollment.id,
+        student_id: profile.id,
+        receipt_url: publicUrl,
+        amount: selectedCourse.price,
+        status: "pending",
+      });
+    }
+
+    await onEnroll(selectedCourse.id);
+    setShowEnroll(false);
+    setSelectedCourse(null);
+    setReceiptFile(null);
+    setUploading(false);
   };
 
   return (
@@ -983,66 +930,68 @@ function StudentCourses({ profile, onNavigate }: { profile: Profile; onNavigate:
         </button>
       </div>
 
-      {/* Active enrollment */}
-      <div>
-        <h2 className="text-lg font-semibold text-foreground mb-4">Active Enrollments</h2>
-        <Card className="p-6">
-          <div className="flex gap-5">
-            <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
-              <img src={MOCK_COURSES[0].thumbnail_url} alt="" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-bold text-foreground">{MOCK_COURSES[0].title}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Enrolled: Feb 2, 2024 · Expires: May 2, 2024</p>
+      {activeEnrollment && activeEnrollment.course && (
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Active Enrollments</h2>
+          <Card className="p-6">
+            <div className="flex gap-5">
+              <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                <img src={activeEnrollment.course.thumbnail_url} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-foreground">{activeEnrollment.course.title}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Enrolled: {formatDate(activeEnrollment.enrolled_at || "")} · Expires: {formatDate(activeEnrollment.expires_at || "")}
+                    </p>
+                  </div>
+                  <StatusBadge status={activeEnrollment.status} />
                 </div>
-                <StatusBadge status="active" />
-              </div>
-              <ProgressBar value={1} max={5} className="mt-4" />
-              <p className="text-xs text-muted-foreground mt-1">1 of 5 modules completed</p>
-              <button
-                onClick={() => onNavigate("student-module")}
-                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                <Play className="w-3.5 h-3.5" /> Continue Learning
-              </button>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Available courses */}
-      <div>
-        <h2 className="text-lg font-semibold text-foreground mb-4">Explore Programs</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {MOCK_COURSES.slice(1).map((course) => (
-            <div key={course.id} className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-lg transition-shadow">
-              <div className="h-44 bg-muted overflow-hidden">
-                <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              </div>
-              <div className="p-5">
-                <h3 className="font-semibold text-foreground mb-1 leading-snug">{course.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>${course.price}</span>
-                  <button
-                    onClick={() => handleEnroll(course)}
-                    className="px-4 py-2 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
-                  >
-                    Enroll
-                  </button>
-                </div>
+                <button
+                  onClick={() => onNavigate("student-module")}
+                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Play className="w-3.5 h-3.5" /> Continue Learning
+                </button>
               </div>
             </div>
-          ))}
+          </Card>
         </div>
-      </div>
+      )}
 
-      <Modal open={showEnroll} onClose={() => { setShowEnroll(false); setSelectedCourse(null); }} title="Enroll in a Course">
+      {availableCourses.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Explore Programs</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {availableCourses.map((course) => (
+              <div key={course.id} className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-lg transition-shadow">
+                <div className="h-44 bg-muted overflow-hidden">
+                  <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                </div>
+                <div className="p-5">
+                  <h3 className="font-semibold text-foreground mb-1 leading-snug">{course.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>${course.price}</span>
+                    <button
+                      onClick={() => { setSelectedCourse(course); setShowEnroll(true); }}
+                      className="px-4 py-2 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
+                    >
+                      Enroll
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Modal open={showEnroll} onClose={() => { setShowEnroll(false); setSelectedCourse(null); setReceiptFile(null); }} title="Enroll in a Course">
         {!selectedCourse ? (
           <div className="space-y-3">
-            {MOCK_COURSES.map((c) => (
+            {availableCourses.map((c) => (
               <button
                 key={c.id}
                 onClick={() => setSelectedCourse(c)}
@@ -1073,14 +1022,27 @@ function StudentCourses({ profile, onNavigate }: { profile: Profile; onNavigate:
               </div>
               <p className="text-xs text-muted-foreground">After payment, upload your receipt below. Admin will confirm within 24 hours.</p>
             </div>
-            <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-accent transition-colors cursor-pointer">
+            <div 
+              className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-accent transition-colors cursor-pointer"
+              onClick={() => document.getElementById("receipt-upload")?.click()}
+            >
               <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm font-medium text-foreground">Upload Payment Receipt</p>
+              <p className="text-sm font-medium text-foreground">{receiptFile ? receiptFile.name : "Upload Payment Receipt"}</p>
               <p className="text-xs text-muted-foreground mt-1">PDF, JPG, or PNG · Max 10MB</p>
-              <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" />
+              <input
+                id="receipt-upload"
+                type="file"
+                className="hidden"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+              />
             </div>
-            <button className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm">
-              Submit Receipt & Request Enrollment
+            <button
+              onClick={handleEnrollSubmit}
+              disabled={!receiptFile || uploading}
+              className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Submit Receipt & Request Enrollment"}
             </button>
           </div>
         )}
@@ -1091,11 +1053,32 @@ function StudentCourses({ profile, onNavigate }: { profile: Profile; onNavigate:
 
 // ─── Module Viewer ────────────────────────────────────────────────────────────
 
-function ModuleViewer({ profile, onNavigate }: { profile: Profile; onNavigate: (v: View) => void }) {
+function ModuleViewer({ profile, enrollment, modules, onNavigate, onProgressUpdate }: { 
+  profile: Profile;
+  enrollment: Enrollment | null;
+  modules: Module[];
+  onNavigate: (v: View) => void;
+  onProgressUpdate: (moduleId: string, status: string, score: number) => Promise<void>;
+}) {
   const [activeTab, setActiveTab] = useState<"content" | "quiz" | "assignment">("content");
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
-  const module = MOCK_MODULES["c1"]?.[1];
+  const [currentModule, setCurrentModule] = useState<Module | null>(null);
+
+  useEffect(() => {
+    if (enrollment && modules.length > 0) {
+      setCurrentModule(modules[enrollment.current_module_index] || modules[0]);
+    }
+  }, [enrollment, modules]);
+
+  if (!enrollment || !currentModule) {
+    return (
+      <div className="p-8 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+        <p className="text-muted-foreground mt-4">Loading module...</p>
+      </div>
+    );
+  }
 
   const questions = [
     { q: "Which library is used for numerical computing in Python?", opts: ["Matplotlib", "NumPy", "Seaborn", "Scikit-learn"], correct: 1 },
@@ -1107,6 +1090,15 @@ function ModuleViewer({ profile, onNavigate }: { profile: Profile; onNavigate: (
   const score = quizSubmitted
     ? Math.round((questions.filter((q, i) => quizAnswers[i] === q.correct).length / questions.length) * 100)
     : 0;
+
+  const handleSubmitQuiz = async () => {
+    setQuizSubmitted(true);
+    if (score >= currentModule.pass_score) {
+      await onProgressUpdate(currentModule.id, "passed", score);
+    } else {
+      await onProgressUpdate(currentModule.id, "failed", score);
+    }
+  };
 
   return (
     <div className="p-8 space-y-6 max-w-5xl">
@@ -1121,16 +1113,14 @@ function ModuleViewer({ profile, onNavigate }: { profile: Profile; onNavigate: (
 
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <Badge variant="info">Module 2 of 5</Badge>
-          <StatusBadge status="in_progress" />
+          <Badge variant="info">Module {enrollment.current_module_index + 1} of {modules.length}</Badge>
         </div>
         <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-          {module?.title}
+          {currentModule.title}
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">Pass with ≥{module?.pass_score}% to unlock the next module.</p>
+        <p className="text-muted-foreground text-sm mt-1">Pass with ≥{currentModule.pass_score}% to unlock the next module.</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
         {(["content", "quiz", "assignment"] as const).map((tab) => (
           <button
@@ -1148,14 +1138,12 @@ function ModuleViewer({ profile, onNavigate }: { profile: Profile; onNavigate: (
 
       {activeTab === "content" && (
         <div className="space-y-6">
-          <SecureVideoPlayer url="https://example.com/video" title="Exploratory Data Analysis — Introduction" />
+          <SecureVideoPlayer url="" title={currentModule.title} />
           <Card className="p-6 space-y-4">
             <h3 className="font-semibold text-foreground">Module Overview</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              In this module, you will learn how to perform systematic exploratory data analysis using Python. We cover distribution analysis, correlation matrices, outlier detection, and creating publication-quality visualisations.
-            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{currentModule.description}</p>
             <div className="grid sm:grid-cols-2 gap-4 pt-2">
-              {["Pandas profiling & describe()", "Seaborn and Matplotlib visualisation", "Correlation & heatmaps", "Handling missing data"].map((item) => (
+              {["Core concepts explained", "Practical examples", "Hands-on exercises", "Best practices"].map((item) => (
                 <div key={item} className="flex items-center gap-2.5">
                   <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
                   <span className="text-sm text-foreground">{item}</span>
@@ -1178,7 +1166,7 @@ function ModuleViewer({ profile, onNavigate }: { profile: Profile; onNavigate: (
         <div className="space-y-5">
           <Card className="p-6">
             <h3 className="font-semibold text-foreground mb-1">Module Assessment</h3>
-            <p className="text-sm text-muted-foreground mb-6">Answer all questions. You need {module?.pass_score}% to pass and unlock the next module.</p>
+            <p className="text-sm text-muted-foreground mb-6">Answer all questions. You need {currentModule.pass_score}% to pass and unlock the next module.</p>
             <div className="space-y-6">
               {questions.map((q, qi) => (
                 <div key={qi}>
@@ -1213,22 +1201,22 @@ function ModuleViewer({ profile, onNavigate }: { profile: Profile; onNavigate: (
             {quizSubmitted ? (
               <div className={cn(
                 "mt-6 p-5 rounded-xl flex items-center gap-4",
-                score >= (module?.pass_score || 75) ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+                score >= currentModule.pass_score ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
               )}>
-                {score >= (module?.pass_score || 75)
+                {score >= currentModule.pass_score
                   ? <CheckCircle className="w-8 h-8 text-green-600 shrink-0" />
                   : <XCircle className="w-8 h-8 text-red-600 shrink-0" />}
                 <div>
-                  <p className={cn("font-bold text-lg", score >= (module?.pass_score || 75) ? "text-green-800" : "text-red-800")}>
-                    {score}% — {score >= (module?.pass_score || 75) ? "Module Passed! 🎉" : "Not Passed"}
+                  <p className={cn("font-bold text-lg", score >= currentModule.pass_score ? "text-green-800" : "text-red-800")}>
+                    {score}% — {score >= currentModule.pass_score ? "Module Passed! 🎉" : "Not Passed"}
                   </p>
-                  <p className={cn("text-sm mt-0.5", score >= (module?.pass_score || 75) ? "text-green-700" : "text-red-700")}>
-                    {score >= (module?.pass_score || 75)
+                  <p className={cn("text-sm mt-0.5", score >= currentModule.pass_score ? "text-green-700" : "text-red-700")}>
+                    {score >= currentModule.pass_score
                       ? "The next module has been unlocked. Great work!"
-                      : `You need ${module?.pass_score}% to pass. Review the content and try again.`}
+                      : `You need ${currentModule.pass_score}% to pass. Review the content and try again.`}
                   </p>
                 </div>
-                {score < (module?.pass_score || 75) && (
+                {score < currentModule.pass_score && (
                   <button
                     onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); }}
                     className="ml-auto flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg"
@@ -1239,7 +1227,7 @@ function ModuleViewer({ profile, onNavigate }: { profile: Profile; onNavigate: (
               </div>
             ) : (
               <button
-                onClick={() => setQuizSubmitted(true)}
+                onClick={handleSubmitQuiz}
                 disabled={Object.keys(quizAnswers).length < questions.length}
                 className="mt-6 w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 text-sm"
               >
@@ -1252,30 +1240,9 @@ function ModuleViewer({ profile, onNavigate }: { profile: Profile; onNavigate: (
 
       {activeTab === "assignment" && (
         <div className="space-y-5">
-          {MOCK_STUDENT_ASSIGNMENTS.map((sa) => (
-            <Card key={sa.id} className="p-6">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div>
-                  <h3 className="font-semibold text-foreground">{sa.assignment?.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{sa.assignment?.description}</p>
-                </div>
-                <StatusBadge status={sa.status} />
-              </div>
-              {sa.status === "graded" && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2">
-                  <p className="text-sm font-semibold text-green-800">Score: {sa.score}/100</p>
-                  <p className="text-sm text-green-700">Feedback: {sa.feedback}</p>
-                </div>
-              )}
-              {sa.status === "pending" && (
-                <div className="border-2 border-dashed border-border rounded-xl p-5 text-center hover:border-accent cursor-pointer transition-colors">
-                  <Upload className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">Upload Submission</p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF, ZIP, or DOCX · Max 25MB</p>
-                </div>
-              )}
-            </Card>
-          ))}
+          <Card className="p-6">
+            <p className="text-center text-muted-foreground py-8">Assignments will appear here when created by your instructor.</p>
+          </Card>
         </div>
       )}
     </div>
@@ -1285,7 +1252,27 @@ function ModuleViewer({ profile, onNavigate }: { profile: Profile; onNavigate: (
 // ─── Student Assignments ──────────────────────────────────────────────────────
 
 function StudentAssignments({ profile }: { profile: Profile }) {
-  const assignments = MOCK_STUDENT_ASSIGNMENTS.filter((a) => a.student_id === profile.id);
+  const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
+
+  useEffect(() => {
+    fetchAssignments();
+    
+    const subscription = supabase
+      .channel("student-assignments")
+      .on("postgres_changes", { event: "*", schema: "public", table: "student_assignments", filter: `student_id=eq.${profile.id}` }, 
+        () => fetchAssignments())
+      .subscribe();
+
+    return () => { subscription.unsubscribe(); };
+  }, [profile.id]);
+
+  const fetchAssignments = async () => {
+    const { data } = await supabase
+      .from("student_assignments")
+      .select("*, assignment:assignment_id(*)")
+      .eq("student_id", profile.id);
+    if (data) setAssignments(data as StudentAssignment[]);
+  };
 
   return (
     <div className="p-8 space-y-6 max-w-4xl">
@@ -1330,6 +1317,12 @@ function StudentAssignments({ profile }: { profile: Profile }) {
             </div>
           </Card>
         ))}
+        {assignments.length === 0 && (
+          <Card className="p-8 text-center">
+            <ClipboardList className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">No assignments yet.</p>
+          </Card>
+        )}
       </div>
     </div>
   );
@@ -1338,22 +1331,33 @@ function StudentAssignments({ profile }: { profile: Profile }) {
 // ─── Student Payments ─────────────────────────────────────────────────────────
 
 function StudentPayments({ profile }: { profile: Profile }) {
-  const [showUpload, setShowUpload] = useState(false);
-  const payments = MOCK_PAYMENTS.filter((p) => p.student_id === profile.id);
+  const [payments, setPayments] = useState<PaymentReceipt[]>([]);
+
+  useEffect(() => {
+    fetchPayments();
+    
+    const subscription = supabase
+      .channel("student-payments")
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_receipts", filter: `student_id=eq.${profile.id}` },
+        () => fetchPayments())
+      .subscribe();
+
+    return () => { subscription.unsubscribe(); };
+  }, [profile.id]);
+
+  const fetchPayments = async () => {
+    const { data } = await supabase
+      .from("payment_receipts")
+      .select("*")
+      .eq("student_id", profile.id);
+    if (data) setPayments(data as PaymentReceipt[]);
+  };
 
   return (
     <div className="p-8 space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Payments</h1>
-          <p className="text-muted-foreground mt-1">Manage your payment receipts and enrollment status.</p>
-        </div>
-        <button
-          onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl"
-        >
-          <Upload className="w-4 h-4" /> Upload Receipt
-        </button>
+      <div>
+        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Payments</h1>
+        <p className="text-muted-foreground mt-1">Manage your payment receipts and enrollment status.</p>
       </div>
 
       <Card className="p-6">
@@ -1402,34 +1406,13 @@ function StudentPayments({ profile }: { profile: Profile }) {
           ))
         )}
       </div>
-
-      <Modal open={showUpload} onClose={() => setShowUpload(false)} title="Upload Payment Receipt">
-        <div className="space-y-4">
-          <div className="p-4 bg-muted rounded-xl">
-            <p className="text-sm font-semibold text-foreground mb-2">Bank Transfer Details</p>
-            <div className="font-mono text-sm space-y-1 text-muted-foreground">
-              <p><span className="text-foreground">Bank:</span> First National Bank</p>
-              <p><span className="text-foreground">Account:</span> 0123 4567 89</p>
-              <p><span className="text-foreground">Name:</span> Academia LMS Ltd.</p>
-            </div>
-          </div>
-          <div className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-accent transition-colors">
-            <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="font-medium text-foreground">Drop receipt here or click to browse</p>
-            <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG — Max 10MB</p>
-          </div>
-          <button className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm">
-            Submit Receipt
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }
 
 // ─── Admin Dashboard ──────────────────────────────────────────────────────────
 
-function AdminDashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
+function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; stats: { students: number; courses: number; pendingPayments: number; submittedAssignments: number } }) {
   return (
     <div className="p-8 space-y-8 max-w-6xl">
       <div>
@@ -1438,14 +1421,13 @@ function AdminDashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard icon={Users} label="Total Students" value={MOCK_STUDENTS.length} trend="+2 this month" />
-        <StatCard icon={BookOpen} label="Active Courses" value={MOCK_COURSES.length} />
-        <StatCard icon={DollarSign} label="Pending Payments" value={MOCK_PAYMENTS.filter((p) => p.status === "pending").length} />
-        <StatCard icon={ClipboardList} label="Open Assignments" value={MOCK_STUDENT_ASSIGNMENTS.filter((a) => a.status === "submitted").length} />
+        <StatCard icon={Users} label="Total Students" value={stats.students} />
+        <StatCard icon={BookOpen} label="Active Courses" value={stats.courses} />
+        <StatCard icon={DollarSign} label="Pending Payments" value={stats.pendingPayments} />
+        <StatCard icon={ClipboardList} label="Open Assignments" value={stats.submittedAssignments} />
       </div>
 
-      {/* Pending payments alert */}
-      {MOCK_PAYMENTS.filter((p) => p.status === "pending").length > 0 && (
+      {stats.pendingPayments > 0 && (
         <div
           className="flex items-center gap-4 p-5 bg-amber-50 border border-amber-200 rounded-2xl cursor-pointer hover:bg-amber-100 transition-colors"
           onClick={() => onNavigate("admin-payments")}
@@ -1453,31 +1435,13 @@ function AdminDashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
           <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
           <div className="flex-1">
             <p className="font-semibold text-amber-900">Payment Receipts Awaiting Approval</p>
-            <p className="text-sm text-amber-700">
-              {MOCK_PAYMENTS.filter((p) => p.status === "pending").length} student(s) are waiting for payment confirmation.
-            </p>
+            <p className="text-sm text-amber-700">{stats.pendingPayments} student(s) are waiting for payment confirmation.</p>
           </div>
           <ChevronRight className="w-5 h-5 text-amber-600" />
         </div>
       )}
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h2 className="font-semibold text-foreground mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>Recent Students</h2>
-          <div className="space-y-3">
-            {MOCK_STUDENTS.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 p-3 hover:bg-muted/50 rounded-xl transition-colors">
-                <Avatar name={s.full_name} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{s.full_name}</p>
-                  <p className="text-xs text-muted-foreground">{s.email}</p>
-                </div>
-                <span className="text-xs text-muted-foreground">{formatDate(s.created_at)}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
         <Card className="p-6">
           <h2 className="font-semibold text-foreground mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>Quick Actions</h2>
           <div className="space-y-2">
@@ -1506,12 +1470,48 @@ function AdminDashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
 
 // ─── Admin Courses ────────────────────────────────────────────────────────────
 
-function AdminCourses() {
+function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd }: { 
+  courses: Course[]; 
+  modules: Record<string, Module[]>;
+  onCourseAdd: (course: Omit<Course, "id" | "created_at">) => Promise<void>;
+  onModuleAdd: (module: Omit<Module, "id" | "created_at">) => Promise<void>;
+}) {
   const [showModal, setShowModal] = useState(false);
   const [showModuleModal, setShowModuleModal] = useState(false);
   const [activeCourse, setActiveCourse] = useState<Course | null>(null);
   const [courseForm, setCourseForm] = useState({ title: "", description: "", price: "", duration_months: "3" });
   const [moduleForm, setModuleForm] = useState({ title: "", description: "", pass_score: "75" });
+  const [loading, setLoading] = useState(false);
+
+  const handleAddCourse = async () => {
+    setLoading(true);
+    await onCourseAdd({
+      title: courseForm.title,
+      description: courseForm.description,
+      price: parseFloat(courseForm.price),
+      duration_months: parseInt(courseForm.duration_months),
+      currency: "USD",
+      is_active: true,
+    });
+    setShowModal(false);
+    setCourseForm({ title: "", description: "", price: "", duration_months: "3" });
+    setLoading(false);
+  };
+
+  const handleAddModule = async () => {
+    if (!activeCourse) return;
+    setLoading(true);
+    await onModuleAdd({
+      course_id: activeCourse.id,
+      title: moduleForm.title,
+      description: moduleForm.description,
+      order_index: (modules[activeCourse.id]?.length || 0),
+      pass_score: parseInt(moduleForm.pass_score),
+    });
+    setShowModuleModal(false);
+    setModuleForm({ title: "", description: "", pass_score: "75" });
+    setLoading(false);
+  };
 
   return (
     <div className="p-8 space-y-6 max-w-6xl">
@@ -1529,8 +1529,8 @@ function AdminCourses() {
       </div>
 
       <div className="space-y-4">
-        {MOCK_COURSES.map((course) => {
-          const modules = MOCK_MODULES[course.id] || [];
+        {courses.map((course) => {
+          const courseModules = modules[course.id] || [];
           return (
             <Card key={course.id} className="p-6">
               <div className="flex gap-5">
@@ -1549,20 +1549,17 @@ function AdminCourses() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 mt-3">
-                    <span className="text-xs text-muted-foreground">{modules.length} modules</span>
+                    <span className="text-xs text-muted-foreground">{courseModules.length} modules</span>
                     <button
                       onClick={() => { setActiveCourse(course); setShowModuleModal(true); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground text-xs font-medium rounded-lg hover:bg-secondary/80 transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add Module
                     </button>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground text-xs font-medium rounded-lg hover:bg-secondary/80 transition-colors">
-                      <Eye className="w-3.5 h-3.5" /> View Modules
-                    </button>
                   </div>
-                  {modules.length > 0 && (
+                  {courseModules.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {modules.map((m) => (
+                      {courseModules.map((m) => (
                         <span key={m.id} className="inline-flex items-center gap-1.5 bg-muted text-muted-foreground text-xs px-2.5 py-1 rounded-lg">
                           <BookOpen className="w-3 h-3" /> {m.title}
                         </span>
@@ -1584,9 +1581,12 @@ function AdminCourses() {
             <Input label="Price (USD)" type="number" value={courseForm.price} onChange={(v) => setCourseForm((p) => ({ ...p, price: v }))} placeholder="499" required />
             <Input label="Duration (months)" type="number" value={courseForm.duration_months} onChange={(v) => setCourseForm((p) => ({ ...p, duration_months: v }))} required />
           </div>
-          <Input label="Thumbnail Image" type="file" accept="image/*" label="Course Thumbnail" />
-          <button className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm">
-            Create Course
+          <button
+            onClick={handleAddCourse}
+            disabled={loading || !courseForm.title || !courseForm.price}
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Create Course"}
           </button>
         </div>
       </Modal>
@@ -1596,18 +1596,12 @@ function AdminCourses() {
           <Input label="Module Title" value={moduleForm.title} onChange={(v) => setModuleForm((p) => ({ ...p, title: v }))} placeholder="e.g. Python Foundations" required />
           <Textarea label="Module Description" value={moduleForm.description} onChange={(v) => setModuleForm((p) => ({ ...p, description: v }))} placeholder="Brief overview of this module..." />
           <Input label="Pass Score (%)" type="number" value={moduleForm.pass_score} onChange={(v) => setModuleForm((p) => ({ ...p, pass_score: v }))} placeholder="75" required />
-          <div className="border-2 border-dashed border-border rounded-xl p-5 text-center cursor-pointer hover:border-accent transition-colors">
-            <Video className="w-7 h-7 text-muted-foreground mx-auto mb-1.5" />
-            <p className="text-xs font-medium text-foreground">Upload Module Video</p>
-            <p className="text-xs text-muted-foreground">MP4, MOV · Encrypted on upload</p>
-          </div>
-          <div className="border-2 border-dashed border-border rounded-xl p-5 text-center cursor-pointer hover:border-accent transition-colors">
-            <FileText className="w-7 h-7 text-muted-foreground mx-auto mb-1.5" />
-            <p className="text-xs font-medium text-foreground">Upload Module Materials</p>
-            <p className="text-xs text-muted-foreground">PDF, DOCX · DRM-protected</p>
-          </div>
-          <button className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm">
-            Add Module
+          <button
+            onClick={handleAddModule}
+            disabled={loading || !moduleForm.title}
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Add Module"}
           </button>
         </div>
       </Modal>
@@ -1617,13 +1611,10 @@ function AdminCourses() {
 
 // ─── Admin Students ───────────────────────────────────────────────────────────
 
-function AdminStudents() {
+function AdminStudents({ students }: { students: Profile[] }) {
   const [search, setSearch] = useState("");
-  const [showAssign, setShowAssign] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Profile | null>(null);
-  const [assignForm, setAssignForm] = useState({ course_id: "", assignment_id: "", due_date: "" });
 
-  const filtered = MOCK_STUDENTS.filter(
+  const filtered = students.filter(
     (s) =>
       s.full_name.toLowerCase().includes(search.toLowerCase()) ||
       s.email.toLowerCase().includes(search.toLowerCase())
@@ -1652,86 +1643,29 @@ function AdminStudents() {
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Student</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Enrollments</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Joined</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
-              </tr>
+               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((s) => {
-                const enrs = MOCK_ENROLLMENTS.filter((e) => e.student_id === s.id);
-                const activeEnr = enrs.find((e) => e.status === "active");
-                return (
-                  <tr key={s.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={s.full_name} size="sm" />
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{s.full_name}</p>
-                          <p className="text-xs text-muted-foreground">{s.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{enrs.length} course(s)</td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={activeEnr?.status || "pending_payment"} />
-                    </td>
-                    <td className="px-6 py-4 text-xs text-muted-foreground font-mono">{formatDate(s.created_at)}</td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => { setSelectedStudent(s); setShowAssign(true); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/15 text-accent text-xs font-medium rounded-lg hover:bg-accent/25 transition-colors"
-                      >
-                        <ClipboardList className="w-3.5 h-3.5" /> Send Assignment
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filtered.map((s) => (
+                <tr key={s.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={s.full_name} size="sm" />
+                      <p className="text-sm font-semibold text-foreground">{s.full_name}</p>
+                    </div>
+                   </td>
+                  <td className="px-6 py-4 text-sm text-muted-foreground">{s.email}</td>
+                  <td className="px-6 py-4"><Badge variant="default">{s.role}</Badge></td>
+                  <td className="px-6 py-4 text-xs text-muted-foreground font-mono">{formatDate(s.created_at)}</td>
+                 </tr>
+              ))}
             </tbody>
-          </table>
+           </table>
         </div>
       </Card>
-
-      <Modal open={showAssign} onClose={() => setShowAssign(false)} title={`Send Assignment — ${selectedStudent?.full_name}`}>
-        <div className="space-y-4">
-          <div className="p-3 bg-muted rounded-xl flex items-center gap-3">
-            <Avatar name={selectedStudent?.full_name || ""} size="sm" />
-            <div>
-              <p className="text-sm font-semibold text-foreground">{selectedStudent?.full_name}</p>
-              <p className="text-xs text-muted-foreground">{selectedStudent?.email}</p>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-foreground">Course <span className="text-destructive">*</span></label>
-            <select
-              value={assignForm.course_id}
-              onChange={(e) => setAssignForm((p) => ({ ...p, course_id: e.target.value }))}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-            >
-              <option value="">Select course...</option>
-              {MOCK_COURSES.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-foreground">Assignment <span className="text-destructive">*</span></label>
-            <select
-              value={assignForm.assignment_id}
-              onChange={(e) => setAssignForm((p) => ({ ...p, assignment_id: e.target.value }))}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-            >
-              <option value="">Select assignment...</option>
-              {MOCK_ASSIGNMENTS.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
-            </select>
-          </div>
-          <Input label="Due Date" type="date" value={assignForm.due_date} onChange={(v) => setAssignForm((p) => ({ ...p, due_date: v }))} required />
-          <Textarea label="Additional Notes (optional)" placeholder="Any specific instructions for this student..." rows={3} />
-          <button className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm flex items-center justify-center gap-2">
-            <Mail className="w-4 h-4" /> Send Assignment
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }
@@ -1739,22 +1673,48 @@ function AdminStudents() {
 // ─── Admin Payments ───────────────────────────────────────────────────────────
 
 function AdminPayments() {
-  const [payments, setPayments] = useState(MOCK_PAYMENTS);
+  const [payments, setPayments] = useState<PaymentReceipt[]>([]);
   const [viewReceipt, setViewReceipt] = useState<PaymentReceipt | null>(null);
   const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleAction = (id: string, action: "approved" | "rejected") => {
-    setPayments((prev) =>
-      prev.map((p) => p.id === id ? { ...p, status: action, admin_notes: notes } : p)
-    );
-    setViewReceipt(null);
-    setNotes("");
+  useEffect(() => {
+    fetchPayments();
+    
+    const subscription = supabase
+      .channel("admin-payments")
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_receipts" }, () => fetchPayments())
+      .subscribe();
+
+    return () => { subscription.unsubscribe(); };
+  }, []);
+
+  const fetchPayments = async () => {
+    const { data } = await supabase.from("payment_receipts").select("*, enrollment:enrollment_id(*)");
+    if (data) setPayments(data as PaymentReceipt[]);
   };
 
-  const studentName = (studentId: string) => MOCK_STUDENTS.find((s) => s.id === studentId)?.full_name || "Unknown";
-  const courseName = (enrollmentId: string) => {
-    const enr = MOCK_ENROLLMENTS.find((e) => e.id === enrollmentId);
-    return MOCK_COURSES.find((c) => c.id === enr?.course_id)?.title || "Unknown";
+  const handleAction = async (id: string, action: "approved" | "rejected") => {
+    setLoading(true);
+    await supabase
+      .from("payment_receipts")
+      .update({ status: action, admin_notes: notes })
+      .eq("id", id);
+    
+    if (action === "approved") {
+      const payment = payments.find(p => p.id === id);
+      if (payment) {
+        await supabase
+          .from("enrollments")
+          .update({ status: "active", enrolled_at: new Date().toISOString(), expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() })
+          .eq("id", payment.enrollment_id);
+      }
+    }
+    
+    setViewReceipt(null);
+    setNotes("");
+    setLoading(false);
+    fetchPayments();
   };
 
   return (
@@ -1778,8 +1738,8 @@ function AdminPayments() {
                 <FileText className="w-5 h-5 text-accent" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground">{studentName(p.student_id)}</p>
-                <p className="text-sm text-muted-foreground">{courseName(p.enrollment_id)} · ${p.amount}</p>
+                <p className="font-semibold text-foreground">Student ID: {p.student_id.slice(0, 8)}...</p>
+                <p className="text-sm text-muted-foreground">${p.amount}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Submitted: {formatDate(p.submitted_at)}</p>
               </div>
               <div className="flex items-center gap-3">
@@ -1808,38 +1768,35 @@ function AdminPayments() {
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="bg-muted rounded-xl p-3">
-                <p className="text-xs text-muted-foreground">Student</p>
-                <p className="font-semibold mt-0.5">{studentName(viewReceipt.student_id)}</p>
+                <p className="text-xs text-muted-foreground">Student ID</p>
+                <p className="font-semibold mt-0.5 text-xs">{viewReceipt.student_id}</p>
               </div>
               <div className="bg-muted rounded-xl p-3">
                 <p className="text-xs text-muted-foreground">Amount</p>
                 <p className="font-semibold mt-0.5">${viewReceipt.amount}</p>
               </div>
-              <div className="bg-muted rounded-xl p-3 col-span-2">
-                <p className="text-xs text-muted-foreground">Course</p>
-                <p className="font-semibold mt-0.5">{courseName(viewReceipt.enrollment_id)}</p>
-              </div>
             </div>
             <div className="bg-muted rounded-xl p-6 text-center">
               <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm font-medium text-foreground">{viewReceipt.receipt_url}</p>
-              <button className="mt-2 text-xs text-accent hover:underline flex items-center gap-1 mx-auto">
+              <a href={viewReceipt.receipt_url} target="_blank" rel="noopener noreferrer" className="mt-2 text-xs text-accent hover:underline flex items-center gap-1 mx-auto justify-center">
                 <Eye className="w-3 h-3" /> View Receipt
-              </button>
+              </a>
             </div>
             <Textarea label="Admin Notes (optional)" value={notes} onChange={setNotes} placeholder="Reason for approval or rejection..." rows={2} />
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleAction(viewReceipt.id, "rejected")}
+                disabled={loading}
                 className="py-2.5 bg-destructive/10 text-destructive border border-destructive/20 font-semibold rounded-xl hover:bg-destructive/20 transition-colors text-sm flex items-center justify-center gap-2"
               >
                 <XCircle className="w-4 h-4" /> Reject
               </button>
               <button
                 onClick={() => handleAction(viewReceipt.id, "approved")}
+                disabled={loading}
                 className="py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
               >
-                <CheckCircle className="w-4 h-4" /> Approve
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Approve</>}
               </button>
             </div>
           </div>
@@ -1853,22 +1810,85 @@ function AdminPayments() {
 
 function AdminAssignments() {
   const [showCreate, setShowCreate] = useState(false);
-  const [assignments, setAssignments] = useState(MOCK_STUDENT_ASSIGNMENTS);
+  const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [gradeModal, setGradeModal] = useState<StudentAssignment | null>(null);
   const [gradeForm, setGradeForm] = useState({ score: "", feedback: "" });
+  const [newAssignment, setNewAssignment] = useState({ course_id: "", module_id: "", title: "", description: "", max_score: "100", due_days: "7" });
 
-  const studentName = (id: string) => MOCK_STUDENTS.find((s) => s.id === id)?.full_name || "Unknown";
+  useEffect(() => {
+    fetchData();
+    
+    const subscription = supabase
+      .channel("admin-assignments")
+      .on("postgres_changes", { event: "*", schema: "public", table: "student_assignments" }, () => fetchData())
+      .subscribe();
 
-  const handleGrade = () => {
+    return () => { subscription.unsubscribe(); };
+  }, []);
+
+  const fetchData = async () => {
+    const [assignmentsRes, coursesRes, modulesRes] = await Promise.all([
+      supabase.from("student_assignments").select("*, assignment:assignment_id(*)"),
+      supabase.from("courses").select("*"),
+      supabase.from("modules").select("*"),
+    ]);
+    if (assignmentsRes.data) setAssignments(assignmentsRes.data as StudentAssignment[]);
+    if (coursesRes.data) setCourses(coursesRes.data as Course[]);
+    if (modulesRes.data) setModules(modulesRes.data as Module[]);
+  };
+
+  const handleCreateAssignment = async () => {
+    const { data: assignment } = await supabase
+      .from("assignments")
+      .insert({
+        module_id: newAssignment.module_id,
+        title: newAssignment.title,
+        description: newAssignment.description,
+        due_days: parseInt(newAssignment.due_days),
+        max_score: parseInt(newAssignment.max_score),
+      })
+      .select()
+      .single();
+
+    if (assignment) {
+      // Create assignments for all enrolled students in this course
+      const { data: enrollments } = await supabase
+        .from("enrollments")
+        .select("id, student_id")
+        .eq("course_id", newAssignment.course_id)
+        .eq("status", "active");
+
+      if (enrollments) {
+        const studentAssignments = enrollments.map(e => ({
+          assignment_id: assignment.id,
+          student_id: e.student_id,
+          enrollment_id: e.id,
+          status: "pending",
+        }));
+        await supabase.from("student_assignments").insert(studentAssignments);
+      }
+    }
+
+    setShowCreate(false);
+    setNewAssignment({ course_id: "", module_id: "", title: "", description: "", max_score: "100", due_days: "7" });
+    fetchData();
+  };
+
+  const handleGrade = async () => {
     if (!gradeModal) return;
-    setAssignments((prev) =>
-      prev.map((a) => a.id === gradeModal.id
-        ? { ...a, status: "graded" as const, score: Number(gradeForm.score), feedback: gradeForm.feedback }
-        : a)
-    );
+    await supabase
+      .from("student_assignments")
+      .update({ status: "graded", score: parseInt(gradeForm.score), feedback: gradeForm.feedback })
+      .eq("id", gradeModal.id);
+    
     setGradeModal(null);
     setGradeForm({ score: "", feedback: "" });
+    fetchData();
   };
+
+  const availableModules = modules.filter(m => m.course_id === newAssignment.course_id);
 
   return (
     <div className="p-8 space-y-6 max-w-5xl">
@@ -1890,9 +1910,9 @@ function AdminAssignments() {
         {assignments.map((sa) => (
           <Card key={sa.id} className="p-5">
             <div className="flex items-center gap-4">
-              <Avatar name={studentName(sa.student_id)} size="sm" />
+              <Avatar name={sa.student_id.slice(0, 8)} size="sm" />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground text-sm">{studentName(sa.student_id)}</p>
+                <p className="font-semibold text-foreground text-sm">Student ID: {sa.student_id.slice(0, 8)}...</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{sa.assignment?.title}</p>
                 {sa.score !== undefined && (
                   <p className="text-xs text-green-700 font-medium mt-0.5">Score: {sa.score}/100</p>
@@ -1922,29 +1942,38 @@ function AdminAssignments() {
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Assignment">
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-foreground">Course <span className="text-destructive">*</span></label>
-            <select className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50">
+            <label className="block text-sm font-medium text-foreground">Course</label>
+            <select
+              value={newAssignment.course_id}
+              onChange={(e) => setNewAssignment(p => ({ ...p, course_id: e.target.value, module_id: "" }))}
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+            >
               <option value="">Select course...</option>
-              {MOCK_COURSES.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+              {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-foreground">Module <span className="text-destructive">*</span></label>
-            <select className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50">
+            <label className="block text-sm font-medium text-foreground">Module</label>
+            <select
+              value={newAssignment.module_id}
+              onChange={(e) => setNewAssignment(p => ({ ...p, module_id: e.target.value }))}
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+            >
               <option value="">Select module...</option>
-              {(MOCK_MODULES["c1"] || []).map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
+              {availableModules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
             </select>
           </div>
-          <Input label="Assignment Title" placeholder="e.g. Python Data Structures Project" required />
-          <Textarea label="Instructions" placeholder="Detailed assignment instructions..." rows={4} required />
-          <Input label="Max Score" type="number" placeholder="100" required />
-          <Input label="Due Days (from assignment date)" type="number" placeholder="7" required />
-          <div className="border-2 border-dashed border-border rounded-xl p-5 text-center cursor-pointer hover:border-accent transition-colors">
-            <Upload className="w-7 h-7 text-muted-foreground mx-auto mb-1.5" />
-            <p className="text-xs font-medium text-foreground">Attach Resources (optional)</p>
-            <p className="text-xs text-muted-foreground">PDF, DOCX</p>
+          <Input label="Assignment Title" value={newAssignment.title} onChange={(v) => setNewAssignment(p => ({ ...p, title: v }))} placeholder="e.g. Python Data Structures Project" required />
+          <Textarea label="Instructions" value={newAssignment.description} onChange={(v) => setNewAssignment(p => ({ ...p, description: v }))} placeholder="Detailed assignment instructions..." rows={4} required />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Max Score" type="number" value={newAssignment.max_score} onChange={(v) => setNewAssignment(p => ({ ...p, max_score: v }))} placeholder="100" required />
+            <Input label="Due Days" type="number" value={newAssignment.due_days} onChange={(v) => setNewAssignment(p => ({ ...p, due_days: v }))} placeholder="7" required />
           </div>
-          <button className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm">
+          <button
+            onClick={handleCreateAssignment}
+            disabled={!newAssignment.course_id || !newAssignment.module_id || !newAssignment.title}
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+          >
             Create Assignment
           </button>
         </div>
@@ -1953,23 +1982,12 @@ function AdminAssignments() {
       <Modal open={!!gradeModal} onClose={() => setGradeModal(null)} title={`Grade — ${gradeModal?.assignment?.title}`}>
         {gradeModal && (
           <div className="space-y-4">
-            <div className="p-3 bg-muted rounded-xl flex items-center gap-3">
-              <Avatar name={studentName(gradeModal.student_id)} size="sm" />
-              <div>
-                <p className="text-sm font-semibold">{studentName(gradeModal.student_id)}</p>
-                <p className="text-xs text-muted-foreground">Submitted: {gradeModal.submitted_at ? formatDate(gradeModal.submitted_at) : "—"}</p>
-              </div>
-            </div>
-            <div className="bg-muted rounded-xl p-4 text-center">
-              <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-1.5" />
-              <p className="text-xs font-medium text-foreground">View Submission</p>
+            <div className="p-3 bg-muted rounded-xl">
+              <p className="text-sm text-muted-foreground">Student ID: {gradeModal.student_id}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Submitted: {gradeModal.submitted_at ? formatDate(gradeModal.submitted_at) : "—"}</p>
             </div>
             <Input label="Score (out of 100)" type="number" value={gradeForm.score} onChange={(v) => setGradeForm((p) => ({ ...p, score: v }))} placeholder="85" required />
             <Textarea label="Feedback" value={gradeForm.feedback} onChange={(v) => setGradeForm((p) => ({ ...p, feedback: v }))} placeholder="Detailed feedback for the student..." rows={3} required />
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
-              <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              After submission, remember to email the student their grade and next steps manually if needed.
-            </div>
             <button
               onClick={handleGrade}
               disabled={!gradeForm.score || !gradeForm.feedback}
@@ -1989,39 +2007,225 @@ function AdminAssignments() {
 export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [view, setView] = useState<View>("landing");
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [progress, setProgress] = useState<ModuleProgress[]>([]);
+  const [students, setStudents] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch initial data
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+        if (profileData) {
+          setProfile(profileData as Profile);
+          setView(profileData.role === "admin" ? "admin-dashboard" : "student-dashboard");
+        }
+      }
+      setLoading(false);
+    };
+    checkSession();
+  }, []);
+
+  // Real-time subscriptions
+  useEffect(() => {
+    if (!profile) return;
+
+    // Courses subscription
+    const coursesSub = supabase
+      .channel("courses-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "courses" }, () => fetchCourses())
+      .subscribe();
+
+    // Modules subscription
+    const modulesSub = supabase
+      .channel("modules-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "modules" }, () => fetchModules())
+      .subscribe();
+
+    // Enrollments subscription (student-specific)
+    let enrollmentsSub;
+    if (profile.role === "student") {
+      enrollmentsSub = supabase
+        .channel("enrollments-changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "enrollments", filter: `student_id=eq.${profile.id}` }, () => fetchEnrollments())
+        .subscribe();
+    }
+
+    // Progress subscription
+    const progressSub = supabase
+      .channel("progress-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "module_progress", filter: `enrollment_id=in.(${enrollments.map(e => e.id).join(",")})` }, () => fetchProgress())
+      .subscribe();
+
+    fetchCourses();
+    fetchModules();
+    fetchEnrollments();
+
+    return () => {
+      coursesSub.unsubscribe();
+      modulesSub.unsubscribe();
+      if (enrollmentsSub) enrollmentsSub.unsubscribe();
+      progressSub.unsubscribe();
+    };
+  }, [profile]);
+
+  const fetchCourses = async () => {
+    const { data } = await supabase.from("courses").select("*").eq("is_active", true);
+    if (data) setCourses(data as Course[]);
+  };
+
+  const fetchModules = async () => {
+    const { data } = await supabase.from("modules").select("*");
+    if (data) setModules(data as Module[]);
+  };
+
+  const fetchEnrollments = async () => {
+    if (!profile) return;
+    let query = supabase.from("enrollments").select("*, course:course_id(*)");
+    if (profile.role === "student") {
+      query = query.eq("student_id", profile.id);
+    }
+    const { data } = await query;
+    if (data) setEnrollments(data as Enrollment[]);
+  };
+
+  const fetchProgress = async () => {
+    const enrollmentIds = enrollments.map(e => e.id);
+    if (enrollmentIds.length === 0) return;
+    const { data } = await supabase
+      .from("module_progress")
+      .select("*")
+      .in("enrollment_id", enrollmentIds);
+    if (data) setProgress(data as ModuleProgress[]);
+  };
+
+  const fetchStudents = async () => {
+    const { data } = await supabase.from("profiles").select("*").eq("role", "student");
+    if (data) setStudents(data as Profile[]);
+  };
 
   const handleLogin = (p: Profile) => {
     setProfile(p);
     setView(p.role === "admin" ? "admin-dashboard" : "student-dashboard");
+    if (p.role === "admin") fetchStudents();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setProfile(null);
     setView("landing");
   };
 
-  if (view === "landing") return <LandingPage onAuth={() => setView("auth")} />;
+  const handleEnroll = async (courseId: string) => {
+    await fetchEnrollments();
+  };
+
+  const handleProgressUpdate = async (moduleId: string, status: string, score: number) => {
+    const enrollment = enrollments.find(e => e.status === "active");
+    if (!enrollment) return;
+
+    const existingProgress = progress.find(p => p.module_id === moduleId && p.enrollment_id === enrollment.id);
+    
+    if (existingProgress) {
+      await supabase
+        .from("module_progress")
+        .update({ status, score, completed_at: status === "passed" ? new Date().toISOString() : undefined })
+        .eq("id", existingProgress.id);
+    } else {
+      await supabase
+        .from("module_progress")
+        .insert({ enrollment_id: enrollment.id, module_id: moduleId, status, score });
+    }
+
+    if (status === "passed") {
+      const currentModuleIndex = modules.findIndex(m => m.id === moduleId);
+      if (currentModuleIndex === enrollment.current_module_index && currentModuleIndex + 1 < modules.filter(m => m.course_id === enrollment.course_id).length) {
+        await supabase
+          .from("enrollments")
+          .update({ current_module_index: currentModuleIndex + 1 })
+          .eq("id", enrollment.id);
+      }
+    }
+
+    await fetchProgress();
+    await fetchEnrollments();
+  };
+
+  const handleAddCourse = async (course: Omit<Course, "id" | "created_at">) => {
+    await supabase.from("courses").insert(course);
+    await fetchCourses();
+  };
+
+  const handleAddModule = async (module: Omit<Module, "id" | "created_at">) => {
+    await supabase.from("modules").insert(module);
+    await fetchModules();
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (view === "landing") return <LandingPage onAuth={() => setView("auth")} courses={courses} />;
   if (view === "auth") return <AuthPage onLogin={handleLogin} />;
   if (!profile) return <AuthPage onLogin={handleLogin} />;
+
+  const modulesByCourse = modules.reduce((acc, m) => {
+    if (!acc[m.course_id]) acc[m.course_id] = [];
+    acc[m.course_id].push(m);
+    return acc;
+  }, {} as Record<string, Module[]>);
 
   const renderView = () => {
     if (profile.role === "admin") {
       switch (view) {
-        case "admin-dashboard": return <AdminDashboard onNavigate={setView} />;
-        case "admin-courses": return <AdminCourses />;
-        case "admin-students": return <AdminStudents />;
-        case "admin-payments": return <AdminPayments />;
-        case "admin-assignments": return <AdminAssignments />;
-        default: return <AdminDashboard onNavigate={setView} />;
+        case "admin-dashboard":
+          return <AdminDashboard 
+            onNavigate={setView} 
+            stats={{
+              students: students.length,
+              courses: courses.length,
+              pendingPayments: 0, // Fetch from DB
+              submittedAssignments: 0, // Fetch from DB
+            }} 
+          />;
+        case "admin-courses":
+          return <AdminCourses courses={courses} modules={modulesByCourse} onCourseAdd={handleAddCourse} onModuleAdd={handleAddModule} />;
+        case "admin-students":
+          return <AdminStudents students={students} />;
+        case "admin-payments":
+          return <AdminPayments />;
+        case "admin-assignments":
+          return <AdminAssignments />;
+        default:
+          return <AdminDashboard onNavigate={setView} stats={{ students: 0, courses: 0, pendingPayments: 0, submittedAssignments: 0 }} />;
       }
     } else {
+      const activeEnrollment = enrollments.find(e => e.status === "active");
       switch (view) {
-        case "student-dashboard": return <StudentDashboard profile={profile} onNavigate={setView} />;
-        case "student-courses": return <StudentCourses profile={profile} onNavigate={setView} />;
-        case "student-module": return <ModuleViewer profile={profile} onNavigate={setView} />;
-        case "student-assignments": return <StudentAssignments profile={profile} />;
-        case "student-payment": return <StudentPayments profile={profile} />;
-        default: return <StudentDashboard profile={profile} onNavigate={setView} />;
+        case "student-dashboard":
+          return <StudentDashboard profile={profile} onNavigate={setView} enrollments={enrollments} progress={progress} />;
+        case "student-courses":
+          return <StudentCourses profile={profile} onNavigate={setView} courses={courses} enrollments={enrollments} onEnroll={handleEnroll} />;
+        case "student-module":
+          return <ModuleViewer profile={profile} enrollment={activeEnrollment || null} modules={modulesByCourse[activeEnrollment?.course_id || ""] || []} onNavigate={setView} onProgressUpdate={handleProgressUpdate} />;
+        case "student-assignments":
+          return <StudentAssignments profile={profile} />;
+        case "student-payment":
+          return <StudentPayments profile={profile} />;
+        default:
+          return <StudentDashboard profile={profile} onNavigate={setView} enrollments={enrollments} progress={progress} />;
       }
     }
   };
