@@ -523,7 +523,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             </div>
             <span className="font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Pruta Academy</span>
           </div>
-          <p className="text-sm text-muted-foreground">© 2024 Pruta Academy LMS. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground"></p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Shield className="w-3.5 h-3.5" />
             <span>Content Protected</span>
