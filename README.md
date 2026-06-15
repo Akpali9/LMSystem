@@ -1,4 +1,3 @@
-
   # Advanced Learning Management System
   ## Running the code
 
