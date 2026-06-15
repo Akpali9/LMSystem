@@ -53,6 +53,7 @@ import {
   User,
   Camera,
   Send,
+  Info,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -933,7 +934,6 @@ function StudentProfile({ profile, onUpdate }: { profile: Profile; onUpdate: (up
 
       <Card className="p-8">
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Avatar Section */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
               <Avatar name={fullName} size="lg" src={avatarPreview || undefined} />
@@ -954,7 +954,6 @@ function StudentProfile({ profile, onUpdate }: { profile: Profile; onUpdate: (up
             </p>
           </div>
 
-          {/* Profile Info Section */}
           <div className="flex-1 space-y-4">
             {isEditing ? (
               <>
@@ -1040,7 +1039,7 @@ function StudentProfile({ profile, onUpdate }: { profile: Profile; onUpdate: (up
   );
 }
 
-// ─── Student Dashboard ────────────────────────────────────────────────────────
+// ─── Student Dashboard (with Enrollment Feedback) ─────────────────────────────
 
 function StudentDashboard({ profile, onNavigate, enrollments, progress }: { 
   profile: Profile; 
@@ -1049,10 +1048,33 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
   progress: ModuleProgress[];
 }) {
   const activeEnrollment = enrollments.find(e => e.status === "active");
+  const pendingEnrollments = enrollments.filter(e => e.status === "pending_payment" || e.status === "payment_submitted");
   const passedCount = progress.filter(p => p.status === "passed").length;
 
   return (
     <div className="p-8 space-y-8 max-w-6xl">
+      {/* Pending Enrollments Alert */}
+      {pendingEnrollments.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+          <div className="flex items-start gap-3">
+            <Clock className="w-5 h-5 text-yellow-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-yellow-800">Pending Enrollment{pendingEnrollments.length > 1 ? 's' : ''}</p>
+              <p className="text-sm text-yellow-700 mt-1">
+                You have {pendingEnrollments.length} enrollment{pendingEnrollments.length > 1 ? 's' : ''} awaiting payment confirmation.
+                Once approved, you'll get access to your course{pendingEnrollments.length > 1 ? 's' : ''}.
+              </p>
+              <button
+                onClick={() => onNavigate("student-courses")}
+                className="mt-2 text-sm text-yellow-800 font-medium hover:underline flex items-center gap-1"
+              >
+                View pending enrollments <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Good morning, {profile.full_name.split(" ")[0]} 👋
@@ -1061,7 +1083,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard icon={BookOpen} label="Enrolled Courses" value={enrollments.length} />
+        <StatCard icon={BookOpen} label="Enrolled Courses" value={enrollments.filter(e => e.status === "active").length} />
         <StatCard icon={CheckCircle} label="Modules Passed" value={passedCount} />
         <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
         <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
@@ -1110,7 +1132,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
   );
 }
 
-// ─── Student Courses ──────────────────────────────────────────────────────────
+// ─── Student Courses (with Enrollment Feedback) ───────────────────────────────
 
 function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }: { 
   profile: Profile; 
@@ -1123,65 +1145,164 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: "", type: 'success' });
 
   const enrolledCourseIds = enrollments.map(e => e.course_id);
   const availableCourses = courses.filter(c => !enrolledCourseIds.includes(c.id));
-  const activeEnrollment = enrollments.find(e => e.status === "active");
+  
+  const activeEnrollments = enrollments.filter(e => e.status === "active");
+  const pendingEnrollments = enrollments.filter(e => e.status === "pending_payment" || e.status === "payment_submitted");
+  const completedEnrollments = enrollments.filter(e => e.status === "completed");
 
   const handleEnrollSubmit = async () => {
     if (!selectedCourse || !receiptFile) return;
     setUploading(true);
+    setSubmitting(true);
     
-    const fileExt = receiptFile.name.split('.').pop();
-    const fileName = `${profile.id}-${selectedCourse.id}-${Date.now()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage
-      .from("receipts")
-      .upload(fileName, receiptFile);
-    
-    if (uploadError) {
-      alert("Failed to upload receipt");
+    try {
+      const fileExt = receiptFile.name.split('.').pop();
+      const fileName = `${profile.id}-${selectedCourse.id}-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("receipts")
+        .upload(fileName, receiptFile);
+      
+      if (uploadError) {
+        setSubmissionStatus({ show: true, message: "Failed to upload receipt. Please try again.", type: 'error' });
+        setUploading(false);
+        setSubmitting(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("receipts")
+        .getPublicUrl(fileName);
+
+      const { data: enrollment, error: enrollmentError } = await supabase
+        .from("enrollments")
+        .insert({
+          student_id: profile.id,
+          course_id: selectedCourse.id,
+          status: "pending_payment",
+          current_module_index: 0,
+        })
+        .select()
+        .single();
+
+      if (enrollmentError) {
+        setSubmissionStatus({ show: true, message: "Failed to create enrollment. Please try again.", type: 'error' });
+        setUploading(false);
+        setSubmitting(false);
+        return;
+      }
+
+      if (enrollment) {
+        const { error: paymentError } = await supabase.from("payment_receipts").insert({
+          enrollment_id: enrollment.id,
+          student_id: profile.id,
+          receipt_url: publicUrl,
+          amount: selectedCourse.price,
+          status: "pending",
+        });
+        
+        if (paymentError) {
+          setSubmissionStatus({ show: true, message: "Payment recorded but please contact admin.", type: 'error' });
+        } else {
+          setSubmissionStatus({ 
+            show: true, 
+            message: `✅ Enrollment request submitted for ${selectedCourse.title}! Your payment receipt is pending admin approval. You will be notified once approved.`, 
+            type: 'success' 
+          });
+        }
+      }
+
+      await onEnroll(selectedCourse.id);
+      
+      setTimeout(() => {
+        setSubmissionStatus({ show: false, message: "", type: 'success' });
+      }, 5000);
+      
+      setShowEnroll(false);
+      setSelectedCourse(null);
+      setReceiptFile(null);
+    } catch (error) {
+      setSubmissionStatus({ show: true, message: "An error occurred. Please try again.", type: 'error' });
+    } finally {
       setUploading(false);
-      return;
+      setSubmitting(false);
     }
+  };
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("receipts")
-      .getPublicUrl(fileName);
-
-    const { data: enrollment } = await supabase
-      .from("enrollments")
-      .insert({
-        student_id: profile.id,
-        course_id: selectedCourse.id,
-        status: "pending_payment",
-        current_module_index: 0,
-      })
-      .select()
-      .single();
-
-    if (enrollment) {
-      await supabase.from("payment_receipts").insert({
-        enrollment_id: enrollment.id,
-        student_id: profile.id,
-        receipt_url: publicUrl,
-        amount: selectedCourse.price,
-        status: "pending",
-      });
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'pending_payment':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'payment_submitted':
+        return 'bg-blue-100 text-blue-800';
+      case 'completed':
+        return 'bg-purple-100 text-purple-800';
+      case 'expired':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
+  };
 
-    await onEnroll(selectedCourse.id);
-    setShowEnroll(false);
-    setSelectedCourse(null);
-    setReceiptFile(null);
-    setUploading(false);
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active':
+        return '✅ Active - You have access!';
+      case 'pending_payment':
+        return '⏳ Pending Payment - Please upload receipt';
+      case 'payment_submitted':
+        return '📤 Payment Submitted - Awaiting admin approval';
+      case 'completed':
+        return '🎉 Completed - Course finished';
+      case 'expired':
+        return '❌ Expired - Access ended';
+      default:
+        return status;
+    }
   };
 
   return (
     <div className="p-8 space-y-8 max-w-6xl">
+      {/* Success/Error Toast */}
+      {submissionStatus.show && (
+        <div className={cn(
+          "fixed top-20 right-4 z-50 p-4 rounded-xl shadow-lg animate-in slide-in-from-top-2",
+          submissionStatus.type === 'success' ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+        )}>
+          <div className="flex items-center gap-3">
+            {submissionStatus.type === 'success' ? (
+              <CheckCircle className="w-5 h-5 text-green-600" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-600" />
+            )}
+            <p className={cn(
+              "text-sm",
+              submissionStatus.type === 'success' ? "text-green-800" : "text-red-800"
+            )}>
+              {submissionStatus.message}
+            </p>
+            <button 
+              onClick={() => setSubmissionStatus({ show: false, message: "", type: 'success' })}
+              className="ml-2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>My Courses</h1>
-          <p className="text-muted-foreground mt-1">Manage your enrollments and explore new programs.</p>
+          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+            My Courses
+          </h1>
+          <p className="text-muted-foreground mt-1">Manage your enrollments and track payment status.</p>
         </div>
         <button
           onClick={() => setShowEnroll(true)}
@@ -1191,36 +1312,102 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         </button>
       </div>
 
-      {activeEnrollment && activeEnrollment.course && (
+      {/* Active Enrollments Section */}
+      {activeEnrollments.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Active Enrollments</h2>
-          <Card className="p-6">
-            <div className="flex gap-5">
-              <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
-                <img src={activeEnrollment.course.thumbnail_url} alt="" className="w-full h-full object-cover" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-bold text-foreground">{activeEnrollment.course.title}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Enrolled: {formatDate(activeEnrollment.enrolled_at || "")} · Expires: {formatDate(activeEnrollment.expires_at || "")}
-                    </p>
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-600" /> Active Courses ({activeEnrollments.length})
+          </h2>
+          <div className="space-y-4">
+            {activeEnrollments.map((enrollment) => (
+              <Card key={enrollment.id} className="p-6">
+                <div className="flex gap-5">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                    <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
                   </div>
-                  <StatusBadge status={activeEnrollment.status} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="font-bold text-foreground text-lg">{enrollment.course?.title}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Enrolled: {formatDate(enrollment.enrolled_at || "")} · Expires: {formatDate(enrollment.expires_at || "")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium", getStatusBadgeColor(enrollment.status))}>
+                          {getStatusText(enrollment.status)}
+                        </span>
+                      </div>
+                    </div>
+                    <ProgressBar value={enrollment.current_module_index + 1} max={5} className="mt-4" />
+                    <p className="text-xs text-muted-foreground mt-1">Module {enrollment.current_module_index + 1} of 5</p>
+                    <button
+                      onClick={() => onNavigate("student-module")}
+                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      <Play className="w-4 h-4" /> Continue Learning
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => onNavigate("student-module")}
-                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  <Play className="w-3.5 h-3.5" /> Continue Learning
-                </button>
-              </div>
-            </div>
-          </Card>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 
+      {/* Pending Enrollments Section */}
+      {pendingEnrollments.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-yellow-600" /> Pending Approvals ({pendingEnrollments.length})
+          </h2>
+          <div className="space-y-4">
+            {pendingEnrollments.map((enrollment) => (
+              <Card key={enrollment.id} className="p-6 bg-yellow-50/30 border-yellow-200">
+                <div className="flex gap-5">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                    <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="font-bold text-foreground text-lg">{enrollment.course?.title}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Requested: {formatDate(enrollment.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium", getStatusBadgeColor(enrollment.status))}>
+                          {getStatusText(enrollment.status)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 p-3 bg-yellow-100/50 rounded-lg">
+                      <p className="text-sm text-yellow-800 flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Your enrollment is pending admin approval. You will receive access once your payment is verified.
+                      </p>
+                    </div>
+                    {enrollment.status === "pending_payment" && (
+                      <button
+                        onClick={() => {
+                          setSelectedCourse(enrollment.course || null);
+                          setShowEnroll(true);
+                        }}
+                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+                      >
+                        <Upload className="w-4 h-4" /> Upload Payment Receipt
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Available Courses Section */}
       {availableCourses.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-foreground mb-4">Explore Programs</h2>
@@ -1241,7 +1428,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                       onClick={() => { setSelectedCourse(course); setShowEnroll(true); }}
                       className="px-4 py-2 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
                     >
-                      Enroll
+                      Enroll Now
                     </button>
                   </div>
                 </div>
@@ -1251,9 +1438,19 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         </div>
       )}
 
+      {/* No Courses Message */}
+      {activeEnrollments.length === 0 && pendingEnrollments.length === 0 && availableCourses.length === 0 && (
+        <Card className="p-12 text-center">
+          <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-muted-foreground">No courses available at the moment.</p>
+        </Card>
+      )}
+
+      {/* Enroll Modal */}
       <Modal open={showEnroll} onClose={() => { setShowEnroll(false); setSelectedCourse(null); setReceiptFile(null); }} title="Enroll in a Course">
         {!selectedCourse ? (
           <div className="space-y-3">
+            <p className="text-sm text-muted-foreground mb-3">Select a course to enroll:</p>
             {availableCourses.map((c) => (
               <button
                 key={c.id}
@@ -1273,18 +1470,34 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
           <div className="space-y-5">
             <div className="p-4 bg-muted rounded-xl">
               <p className="font-semibold text-foreground">{selectedCourse.title}</p>
-              <p className="text-sm text-muted-foreground mt-1">{formatNaira(selectedCourse.price)} · 3 months access</p>
+              <p className="text-sm text-muted-foreground mt-1">{formatNaira(selectedCourse.price)} · {selectedCourse.duration_months} months access</p>
             </div>
+            
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <p className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+                <Info className="w-4 h-4" /> How it works:
+              </p>
+              <ol className="mt-2 space-y-1 text-sm text-blue-700">
+                <li>1. Make payment to the account below</li>
+                <li>2. Upload your payment receipt</li>
+                <li>3. Admin will verify and activate your access within 24 hours</li>
+                <li>4. You'll receive email notification once approved</li>
+              </ol>
+            </div>
+            
             <div className="p-4 bg-accent/10 border border-accent/20 rounded-xl space-y-2">
-              <p className="text-sm font-semibold text-foreground flex items-center gap-2"><DollarSign className="w-4 h-4 text-accent" /> Payment Instructions</p>
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-accent" /> Payment Details
+              </p>
               <p className="text-sm text-muted-foreground">Transfer <strong>{formatNaira(selectedCourse.price)}</strong> to:</p>
-              <div className="bg-card rounded-lg p-3 font-mono text-sm space-y-1">
-                <p><span className="text-muted-foreground">Bank:</span> First National Bank</p>
+              <div className="bg-card rounded-lg p-3 font-mono text-sm space-y-1 border border-border">
+                <p><span className="text-muted-foreground">Bank:</span> Pruta Academy</p>
                 <p><span className="text-muted-foreground">Account:</span> 0123456789</p>
-                <p><span className="text-muted-foreground">Reference:</span> {profile.id.toUpperCase()}-{selectedCourse.id.toUpperCase()}</p>
+                <p><span className="text-muted-foreground">Bank:</span> First Bank of Nigeria</p>
+                <p><span className="text-muted-foreground">Reference:</span> {profile.id.slice(0, 8).toUpperCase()}-{selectedCourse.id.slice(0, 8).toUpperCase()}</p>
               </div>
-              <p className="text-xs text-muted-foreground">After payment, upload your receipt below. Admin will confirm within 24 hours.</p>
             </div>
+            
             <div 
               className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-accent transition-colors cursor-pointer"
               onClick={() => document.getElementById("receipt-upload")?.click()}
@@ -1300,12 +1513,13 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                 onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
               />
             </div>
+            
             <button
               onClick={handleEnrollSubmit}
               disabled={!receiptFile || uploading}
-              className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+              className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Submit Receipt & Request Enrollment"}
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Submit Enrollment Request</>}
             </button>
           </div>
         )}
@@ -1588,7 +1802,9 @@ function StudentAssignments({ profile }: { profile: Profile }) {
   return (
     <div className="p-8 space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Assignments</h1>
+        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          Assignments
+        </h1>
         <p className="text-muted-foreground mt-1">Your assigned work from all enrolled courses.</p>
       </div>
       <div className="space-y-4">
@@ -1681,7 +1897,9 @@ function StudentPayments({ profile }: { profile: Profile }) {
   return (
     <div className="p-8 space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Payments</h1>
+        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          Payments
+        </h1>
         <p className="text-muted-foreground mt-1">Manage your payment receipts and enrollment status.</p>
       </div>
 
@@ -2451,8 +2669,8 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
 // ─── Admin Payments ───────────────────────────────────────────────────────────
 
 function AdminPayments() {
-  const [payments, setPayments] = useState<PaymentReceipt[]>([]);
-  const [viewReceipt, setViewReceipt] = useState<PaymentReceipt | null>(null);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [viewReceipt, setViewReceipt] = useState<any | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -2468,23 +2686,84 @@ function AdminPayments() {
   }, []);
 
   const fetchPayments = async () => {
-    const { data } = await supabase.from("payment_receipts").select("*, enrollment:enrollment_id(*)");
-    if (data) setPayments(data as PaymentReceipt[]);
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from("payment_receipts")
+      .select(`
+        *,
+        enrollment:enrollment_id (
+          id,
+          course_id,
+          course:course_id (
+            id,
+            title,
+            price
+          )
+        )
+      `)
+      .order("submitted_at", { ascending: false });
+    
+    if (paymentsError) {
+      console.error("Error fetching payments:", paymentsError);
+      return;
+    }
+    
+    if (paymentsData) {
+      const paymentsWithStudents = await Promise.all(
+        paymentsData.map(async (payment) => {
+          let studentName = "Unknown";
+          let studentEmail = "";
+          
+          if (payment.student_id) {
+            const { data: studentData } = await supabase
+              .from("profiles")
+              .select("full_name, email")
+              .eq("id", payment.student_id)
+              .single();
+            
+            if (studentData) {
+              studentName = studentData.full_name;
+              studentEmail = studentData.email;
+            }
+          }
+          
+          return {
+            ...payment,
+            student_name: studentName,
+            student_email: studentEmail,
+            course_title: payment.enrollment?.course?.title || "Unknown Course",
+          };
+        })
+      );
+      
+      setPayments(paymentsWithStudents);
+    }
   };
 
   const handleAction = async (id: string, action: "approved" | "rejected") => {
     setLoading(true);
-    await supabase
+    
+    const { error: updateError } = await supabase
       .from("payment_receipts")
       .update({ status: action, admin_notes: notes })
       .eq("id", id);
+    
+    if (updateError) {
+      console.error("Error updating payment:", updateError);
+      alert("Failed to update payment status");
+      setLoading(false);
+      return;
+    }
     
     if (action === "approved") {
       const payment = payments.find(p => p.id === id);
       if (payment) {
         await supabase
           .from("enrollments")
-          .update({ status: "active", enrolled_at: new Date().toISOString(), expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() })
+          .update({ 
+            status: "active", 
+            enrolled_at: new Date().toISOString(), 
+            expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() 
+          })
           .eq("id", payment.enrollment_id);
       }
     }
@@ -2495,8 +2774,10 @@ function AdminPayments() {
     fetchPayments();
   };
 
+  const pendingCount = payments.filter(p => p.status === "pending").length;
+
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-8 space-y-6 max-w-6xl">
       <div>
         <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Payment Approvals
@@ -2505,42 +2786,59 @@ function AdminPayments() {
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4">
-        <StatCard icon={Clock} label="Pending" value={payments.filter((p) => p.status === "pending").length} />
-        <StatCard icon={CheckCircle} label="Approved" value={payments.filter((p) => p.status === "approved").length} />
-        <StatCard icon={XCircle} label="Rejected" value={payments.filter((p) => p.status === "rejected").length} />
+        <StatCard icon={Clock} label="Pending" value={pendingCount} />
+        <StatCard icon={CheckCircle} label="Approved" value={payments.filter(p => p.status === "approved").length} />
+        <StatCard icon={XCircle} label="Rejected" value={payments.filter(p => p.status === "rejected").length} />
       </div>
 
       <div className="space-y-4">
-        {payments.map((p) => (
-          <Card key={p.id} className="p-5">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5 text-accent" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground">Student ID: {p.student_id.slice(0, 8)}...</p>
-                <p className="text-sm text-muted-foreground">{formatNaira(p.amount)}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Submitted: {formatDate(p.submitted_at)}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={p.status} />
+        {payments.length === 0 ? (
+          <Card className="p-8 text-center">
+            <DollarSign className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">No payment receipts submitted yet.</p>
+          </Card>
+        ) : (
+          payments.map((p) => (
+            <Card key={p.id} className="p-5">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5 text-accent" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between flex-wrap gap-2">
+                    <div>
+                      <p className="font-semibold text-foreground">{p.student_name}</p>
+                      <p className="text-xs text-muted-foreground">{p.student_email}</p>
+                    </div>
+                    <StatusBadge status={p.status} />
+                  </div>
+                  <p className="text-sm font-medium text-foreground mt-2">
+                    Course: {p.course_title}
+                  </p>
+                  <p className="text-lg font-bold text-primary mt-1">
+                    {formatNaira(p.amount)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Submitted: {formatDate(p.submitted_at)}
+                  </p>
+                  {p.admin_notes && (
+                    <div className="mt-2 p-2 bg-muted rounded-lg text-xs text-muted-foreground">
+                      Admin note: {p.admin_notes}
+                    </div>
+                  )}
+                </div>
                 {p.status === "pending" && (
                   <button
                     onClick={() => setViewReceipt(p)}
-                    className="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1.5 shrink-0"
                   >
                     <Eye className="w-3.5 h-3.5" /> Review
                   </button>
                 )}
               </div>
-            </div>
-            {p.admin_notes && (
-              <div className="mt-3 p-3 bg-muted rounded-lg text-xs text-muted-foreground">
-                Note: {p.admin_notes}
-              </div>
-            )}
-          </Card>
-        ))}
+            </Card>
+          ))
+        )}
       </div>
 
       <Modal open={!!viewReceipt} onClose={() => setViewReceipt(null)} title="Review Payment Receipt">
@@ -2548,21 +2846,43 @@ function AdminPayments() {
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="bg-muted rounded-xl p-3">
-                <p className="text-xs text-muted-foreground">Student ID</p>
-                <p className="font-semibold mt-0.5 text-xs">{viewReceipt.student_id}</p>
+                <p className="text-xs text-muted-foreground">Student</p>
+                <p className="font-semibold mt-0.5">{viewReceipt.student_name}</p>
+              </div>
+              <div className="bg-muted rounded-xl p-3">
+                <p className="text-xs text-muted-foreground">Course</p>
+                <p className="font-semibold mt-0.5">{viewReceipt.course_title}</p>
               </div>
               <div className="bg-muted rounded-xl p-3">
                 <p className="text-xs text-muted-foreground">Amount</p>
-                <p className="font-semibold mt-0.5">{formatNaira(viewReceipt.amount)}</p>
+                <p className="font-semibold mt-0.5 text-primary">{formatNaira(viewReceipt.amount)}</p>
+              </div>
+              <div className="bg-muted rounded-xl p-3">
+                <p className="text-xs text-muted-foreground">Submitted</p>
+                <p className="font-semibold mt-0.5">{formatDate(viewReceipt.submitted_at)}</p>
               </div>
             </div>
+            
             <div className="bg-muted rounded-xl p-6 text-center">
               <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-              <a href={viewReceipt.receipt_url} target="_blank" rel="noopener noreferrer" className="mt-2 text-xs text-accent hover:underline flex items-center gap-1 mx-auto justify-center">
-                <Eye className="w-3 h-3" /> View Receipt
+              <a 
+                href={viewReceipt.receipt_url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-sm text-accent hover:underline flex items-center gap-1 mx-auto justify-center"
+              >
+                <Eye className="w-4 h-4" /> View Receipt Document
               </a>
             </div>
-            <Textarea label="Admin Notes (optional)" value={notes} onChange={setNotes} placeholder="Reason for approval or rejection..." rows={2} />
+            
+            <Textarea 
+              label="Admin Notes (optional)" 
+              value={notes} 
+              onChange={setNotes} 
+              placeholder="Add a note for the student (e.g., reason for approval/rejection)..." 
+              rows={2} 
+            />
+            
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleAction(viewReceipt.id, "rejected")}
@@ -2576,7 +2896,7 @@ function AdminPayments() {
                 disabled={loading}
                 className="py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Approve</>}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Approve & Activate Course</>}
               </button>
             </div>
           </div>
@@ -2586,7 +2906,7 @@ function AdminPayments() {
   );
 }
 
-// ─── Admin Assignments (Create and Grade) ─────────────────────────────────────
+// ─── Admin Assignments ────────────────────────────────────────────────────────
 
 function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignment }: { 
   courses: Course[];
@@ -2668,7 +2988,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       </div>
 
       <div className="space-y-4">
-        <h2 className="font-semibold text-foreground">Pending Submissions</h2>
+        <h2 className="font-semibold text-foreground">Pending Submissions ({submissions.length})</h2>
         {submissions.map((sa) => (
           <Card key={sa.id} className="p-5">
             <div className="flex items-center gap-4">
@@ -2883,7 +3203,6 @@ export default function App() {
     return newProfile;
   };
 
-  // Check session on mount
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -2911,7 +3230,6 @@ export default function App() {
     
     checkSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         const profile = await ensureProfile(
@@ -2936,7 +3254,6 @@ export default function App() {
     };
   }, []);
 
-  // Fetch data when profile changes
   useEffect(() => {
     if (profile) {
       fetchCourses();
@@ -2949,7 +3266,6 @@ export default function App() {
     }
   }, [profile]);
 
-  // Real-time subscriptions
   useEffect(() => {
     if (!profile) return;
 
@@ -3191,7 +3507,6 @@ export default function App() {
   };
 
   const handleSendAssignment = async (studentId: string, studentName: string, assignmentData: any) => {
-    // Create assignment template
     const { data: assignment } = await supabase
       .from("assignments")
       .insert({
@@ -3205,7 +3520,6 @@ export default function App() {
       .single();
 
     if (assignment) {
-      // Get enrollment for this student in the course
       const moduleInfo = modules.find(m => m.id === assignmentData.module_id);
       const { data: enrollment } = await supabase
         .from("enrollments")
@@ -3227,7 +3541,6 @@ export default function App() {
   };
 
   const handleCreateAssignment = async (assignmentData: any) => {
-    // Create assignment
     const { data: assignment } = await supabase
       .from("assignments")
       .insert({
