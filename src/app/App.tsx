@@ -318,7 +318,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               <GraduationCap className="w-5 h-5 text-accent" />
             </div>
             <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Pruta Academy
+              Academia
             </span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -521,9 +521,9 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
               <GraduationCap className="w-4 h-4 text-accent" />
             </div>
-            <span className="font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Pruta Academy</span>
+            <span className="font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Academia</span>
           </div>
-          <p className="text-sm text-muted-foreground">© 2024 Pruta Academy LMS. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2024 Academia LMS. All rights reserved.</p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Shield className="w-3.5 h-3.5" />
             <span>Content Protected</span>
@@ -545,7 +545,6 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
   const [error, setError] = useState("");
 
   const ensureProfile = async (userId: string, userEmail: string, userName: string) => {
-    // First try to get existing profile
     const { data: existing } = await supabase
       .from("profiles")
       .select("*")
@@ -554,22 +553,16 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
     
     if (existing) return existing;
     
-    // Create new profile
-    const { data: newProfile, error: insertError } = await supabase
+    const { data: newProfile } = await supabase
       .from("profiles")
       .insert({
         id: userId,
         email: userEmail,
         full_name: userName,
-        role: userEmail === 'admin@Pruta Academy.com' ? 'admin' : 'student',
+        role: userEmail === 'admin@academia.com' ? 'admin' : 'student',
       })
       .select()
       .single();
-    
-    if (insertError) {
-      console.error("Profile creation error:", insertError);
-      return null;
-    }
     
     return newProfile;
   };
@@ -613,7 +606,6 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         if (signUpError) throw signUpError;
         
         if (data.user) {
-          // Wait a bit for the trigger, then ensure profile exists
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           const profile = await ensureProfile(
@@ -651,7 +643,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
               <GraduationCap className="w-5 h-5 text-primary" />
             </div>
             <span className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Pruta Academy
+              Academia
             </span>
           </div>
           <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -669,11 +661,11 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
                 <GraduationCap className="w-5 h-5 text-accent" />
               </div>
               <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Pruta Academy
+                Academia
               </span>
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-              {mode === "login" ? "Welcome back" : "Join Pruta Academy"}
+              {mode === "login" ? "Welcome back" : "Join Academia"}
             </h1>
             <p className="text-muted-foreground">
               {mode === "login" ? "Sign in to continue your learning journey." : "Create your account and start learning today."}
@@ -716,7 +708,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
 
           <div className="mt-8 p-4 bg-muted rounded-xl border border-border">
             <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Demo Credentials</p>
-            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Admin:</span> admin@Pruta Academy.com</p>
+            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Admin:</span> admin@academia.com</p>
             <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Student:</span> any email (auto-register)</p>
             <p className="text-xs text-muted-foreground mt-2">⚡ Admin users are redirected to Admin Dashboard</p>
           </div>
@@ -771,7 +763,7 @@ function Sidebar({
         </div>
         {!collapsed && (
           <span className="font-bold text-sidebar-foreground text-lg" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Pruta Academy
+            Academia
           </span>
         )}
         <button
@@ -1466,7 +1458,9 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
   return (
     <div className="p-8 space-y-8 max-w-6xl">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          Admin Dashboard
+        </h1>
         <p className="text-muted-foreground mt-1">Platform overview and quick actions.</p>
       </div>
 
@@ -1567,7 +1561,9 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd }: {
     <div className="p-8 space-y-6 max-w-6xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Courses & Modules</h1>
+          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Courses & Modules
+          </h1>
           <p className="text-muted-foreground mt-1">Manage your course catalog and module content.</p>
         </div>
         <button
@@ -1673,7 +1669,9 @@ function AdminStudents({ students }: { students: Profile[] }) {
   return (
     <div className="p-8 space-y-6 max-w-6xl">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Students</h1>
+        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          Students
+        </h1>
         <p className="text-muted-foreground mt-1">View and manage enrolled students.</p>
       </div>
 
@@ -1710,15 +1708,15 @@ function AdminStudents({ students }: { students: Profile[] }) {
                   <td className="px-6 py-4 text-sm text-muted-foreground">{s.email}</td>
                   <td className="px-6 py-4"><Badge variant="default">{s.role}</Badge></td>
                   <td className="px-6 py-4 text-xs text-muted-foreground font-mono">{formatDate(s.created_at)}</td>
-                  
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-    );
-  }
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
 
 // ─── Admin Payments ───────────────────────────────────────────────────────────
 
@@ -1770,7 +1768,9 @@ function AdminPayments() {
   return (
     <div className="p-8 space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Payment Approvals</h1>
+        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          Payment Approvals
+        </h1>
         <p className="text-muted-foreground mt-1">Review and approve student payment receipts.</p>
       </div>
 
@@ -1943,7 +1943,9 @@ function AdminAssignments() {
     <div className="p-8 space-y-6 max-w-5xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Assignments</h1>
+          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Assignments
+          </h1>
           <p className="text-muted-foreground mt-1">Create assignments and grade student submissions.</p>
         </div>
         <button
@@ -2078,7 +2080,7 @@ export default function App() {
         id: userId,
         email: userEmail,
         full_name: userName,
-        role: userEmail === 'admin@Pruta Academy.com' ? 'admin' : 'student',
+        role: userEmail === 'admin@academia.com' ? 'admin' : 'student',
       })
       .select()
       .single();
