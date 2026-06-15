@@ -90,6 +90,15 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
+function formatNaira(amount: number) {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 // ─── Secure Video Player ──────────────────────────────────────────────────────
 
 function SecureVideoPlayer({ url, title }: { url: string; title: string }) {
@@ -419,7 +428,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
                 <p className="text-xs text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-                    ${course.price}
+                    {formatNaira(course.price)}
                   </span>
                   <span className="text-xs text-accent font-medium flex items-center gap-1">
                     Enroll <ChevronRight className="w-3 h-3" />
@@ -553,14 +562,35 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
       }
 
       if (data.user) {
-        const { data: profile } = await supabase
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        let { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", data.user.id)
           .single();
         
+        if (profileError || !profile) {
+          const { data: newProfile, error: insertError } = await supabase
+            .from("profiles")
+            .insert({
+              id: data.user.id,
+              email: data.user.email,
+              full_name: data.user.user_metadata?.full_name || email.split('@')[0],
+              role: email === 'admin@academia.com' ? 'admin' : 'student',
+            })
+            .select()
+            .single();
+          
+          if (newProfile) {
+            profile = newProfile;
+          }
+        }
+        
         if (profile) {
           onLogin(profile as Profile);
+        } else {
+          setError("Failed to load user profile");
         }
       }
     } else {
@@ -579,18 +609,32 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
       }
 
       if (data.user) {
-        // Wait for profile to be created via trigger
-        setTimeout(async () => {
-          const { data: profile } = await supabase
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", data.user.id)
+          .single();
+        
+        if (profile) {
+          onLogin(profile as Profile);
+        } else {
+          const { data: newProfile } = await supabase
             .from("profiles")
-            .select("*")
-            .eq("id", data.user!.id)
+            .insert({
+              id: data.user.id,
+              email: data.user.email,
+              full_name: name,
+              role: 'student',
+            })
+            .select()
             .single();
           
-          if (profile) {
-            onLogin(profile as Profile);
+          if (newProfile) {
+            onLogin(newProfile as Profile);
           }
-        }, 1000);
+        }
       }
     }
     setLoading(false);
@@ -638,9 +682,9 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
-              <Input label="Full Name" value={name} onChange={setName} placeholder="Jane Okonkwo" required />
+              <Input label="Full Name" value={name} onChange={setName} placeholder="John Doe" required />
             )}
-            <Input label="Email Address" type="email" value={email} onChange={setEmail} placeholder="you@email.com" required />
+            <Input label="Email Address" type="email" value={email} onChange={setEmail} placeholder="you@example.com" required />
             <Input label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••" required />
 
             {error && (
@@ -668,6 +712,13 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
               {mode === "login" ? "Don't have an account? " : "Already have an account? "}
               <span className="text-accent font-semibold">{mode === "login" ? "Register" : "Sign In"}</span>
             </button>
+          </div>
+
+          <div className="mt-8 p-4 bg-muted rounded-xl border border-border">
+            <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Demo Credentials</p>
+            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Admin:</span> admin@academia.com</p>
+            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Student:</span> any email (auto-register)</p>
+            <p className="text-xs text-muted-foreground mt-2">⚡ Admin users are redirected to Admin Dashboard</p>
           </div>
         </div>
       </div>
@@ -786,7 +837,6 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
 }) {
   const activeEnrollment = enrollments.find(e => e.status === "active");
   const passedCount = progress.filter(p => p.status === "passed").length;
-  const pendingAssignments = 0; // Fetch from assignments
 
   return (
     <div className="p-8 space-y-8 max-w-6xl">
@@ -800,7 +850,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard icon={BookOpen} label="Enrolled Courses" value={enrollments.length} />
         <StatCard icon={CheckCircle} label="Modules Passed" value={passedCount} />
-        <StatCard icon={ClipboardList} label="Assignments Due" value={pendingAssignments} />
+        <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
         <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
       </div>
 
@@ -869,7 +919,6 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
     if (!selectedCourse || !receiptFile) return;
     setUploading(true);
     
-    // Upload receipt to storage
     const fileExt = receiptFile.name.split('.').pop();
     const fileName = `${profile.id}-${selectedCourse.id}-${Date.now()}.${fileExt}`;
     const { error: uploadError } = await supabase.storage
@@ -886,7 +935,6 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
       .from("receipts")
       .getPublicUrl(fileName);
 
-    // Create enrollment and payment receipt
     const { data: enrollment } = await supabase
       .from("enrollments")
       .insert({
@@ -973,7 +1021,9 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                   <h3 className="font-semibold text-foreground mb-1 leading-snug">{course.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>${course.price}</span>
+                    <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+                      {formatNaira(course.price)}
+                    </span>
                     <button
                       onClick={() => { setSelectedCourse(course); setShowEnroll(true); }}
                       className="px-4 py-2 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
@@ -1000,7 +1050,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                 <img src={c.thumbnail_url} alt="" className="w-14 h-10 rounded-lg object-cover" />
                 <div className="flex-1">
                   <p className="font-medium text-foreground text-sm">{c.title}</p>
-                  <p className="text-xs text-muted-foreground">${c.price} · {c.duration_months} months</p>
+                  <p className="text-xs text-muted-foreground">{formatNaira(c.price)} · {c.duration_months} months</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </button>
@@ -1010,11 +1060,11 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
           <div className="space-y-5">
             <div className="p-4 bg-muted rounded-xl">
               <p className="font-semibold text-foreground">{selectedCourse.title}</p>
-              <p className="text-sm text-muted-foreground mt-1">${selectedCourse.price} · 3 months access</p>
+              <p className="text-sm text-muted-foreground mt-1">{formatNaira(selectedCourse.price)} · 3 months access</p>
             </div>
             <div className="p-4 bg-accent/10 border border-accent/20 rounded-xl space-y-2">
               <p className="text-sm font-semibold text-foreground flex items-center gap-2"><DollarSign className="w-4 h-4 text-accent" /> Payment Instructions</p>
-              <p className="text-sm text-muted-foreground">Transfer <strong>${selectedCourse.price}</strong> to:</p>
+              <p className="text-sm text-muted-foreground">Transfer <strong>{formatNaira(selectedCourse.price)}</strong> to:</p>
               <div className="bg-card rounded-lg p-3 font-mono text-sm space-y-1">
                 <p><span className="text-muted-foreground">Bank:</span> First National Bank</p>
                 <p><span className="text-muted-foreground">Account:</span> 0123456789</p>
@@ -1392,7 +1442,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
                   <FileText className="w-5 h-5 text-accent" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-foreground">${p.amount} — Receipt</p>
+                  <p className="font-medium text-foreground">{formatNaira(p.amount)} — Receipt</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Submitted: {formatDate(p.submitted_at)}</p>
                 </div>
                 <StatusBadge status={p.status} />
@@ -1490,7 +1540,7 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd }: {
       description: courseForm.description,
       price: parseFloat(courseForm.price),
       duration_months: parseInt(courseForm.duration_months),
-      currency: "USD",
+      currency: "NGN",
       is_active: true,
     });
     setShowModal(false);
@@ -1544,7 +1594,7 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd }: {
                       <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">{course.description}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="success">${course.price}</Badge>
+                      <Badge variant="success">{formatNaira(course.price)}</Badge>
                       <Badge variant="info">{course.duration_months}mo</Badge>
                     </div>
                   </div>
@@ -1578,7 +1628,7 @@ function AdminCourses({ courses, modules, onCourseAdd, onModuleAdd }: {
           <Input label="Course Title" value={courseForm.title} onChange={(v) => setCourseForm((p) => ({ ...p, title: v }))} placeholder="e.g. Advanced Data Science" required />
           <Textarea label="Description" value={courseForm.description} onChange={(v) => setCourseForm((p) => ({ ...p, description: v }))} placeholder="What will students learn?" required />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Price (USD)" type="number" value={courseForm.price} onChange={(v) => setCourseForm((p) => ({ ...p, price: v }))} placeholder="499" required />
+            <Input label="Price (₦)" type="number" value={courseForm.price} onChange={(v) => setCourseForm((p) => ({ ...p, price: v }))} placeholder="50000" required />
             <Input label="Duration (months)" type="number" value={courseForm.duration_months} onChange={(v) => setCourseForm((p) => ({ ...p, duration_months: v }))} required />
           </div>
           <button
@@ -1646,7 +1696,7 @@ function AdminStudents({ students }: { students: Profile[] }) {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Joined</th>
-               </tr>
+              </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((s) => (
@@ -1656,14 +1706,14 @@ function AdminStudents({ students }: { students: Profile[] }) {
                       <Avatar name={s.full_name} size="sm" />
                       <p className="text-sm font-semibold text-foreground">{s.full_name}</p>
                     </div>
-                   </td>
+                  </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">{s.email}</td>
                   <td className="px-6 py-4"><Badge variant="default">{s.role}</Badge></td>
                   <td className="px-6 py-4 text-xs text-muted-foreground font-mono">{formatDate(s.created_at)}</td>
-                 </tr>
+                </tr>
               ))}
             </tbody>
-           </table>
+          </table>
         </div>
       </Card>
     </div>
@@ -1739,7 +1789,7 @@ function AdminPayments() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-foreground">Student ID: {p.student_id.slice(0, 8)}...</p>
-                <p className="text-sm text-muted-foreground">${p.amount}</p>
+                <p className="text-sm text-muted-foreground">{formatNaira(p.amount)}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Submitted: {formatDate(p.submitted_at)}</p>
               </div>
               <div className="flex items-center gap-3">
@@ -1773,7 +1823,7 @@ function AdminPayments() {
               </div>
               <div className="bg-muted rounded-xl p-3">
                 <p className="text-xs text-muted-foreground">Amount</p>
-                <p className="font-semibold mt-0.5">${viewReceipt.amount}</p>
+                <p className="font-semibold mt-0.5">{formatNaira(viewReceipt.amount)}</p>
               </div>
             </div>
             <div className="bg-muted rounded-xl p-6 text-center">
@@ -1853,7 +1903,6 @@ function AdminAssignments() {
       .single();
 
     if (assignment) {
-      // Create assignments for all enrolled students in this course
       const { data: enrollments } = await supabase
         .from("enrollments")
         .select("id, student_id")
@@ -2014,66 +2063,94 @@ export default function App() {
   const [students, setStudents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch initial data
+  // Check session on mount
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+          
+          if (!profileError && profileData) {
+            const userProfile = profileData as Profile;
+            setProfile(userProfile);
+            setView(userProfile.role === "admin" ? "admin-dashboard" : "student-dashboard");
+          }
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
         const { data: profileData } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", session.user.id)
           .single();
+        
         if (profileData) {
-          setProfile(profileData as Profile);
-          setView(profileData.role === "admin" ? "admin-dashboard" : "student-dashboard");
+          const userProfile = profileData as Profile;
+          setProfile(userProfile);
+          setView(userProfile.role === "admin" ? "admin-dashboard" : "student-dashboard");
         }
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null);
+        setView("landing");
       }
-      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
     };
-    checkSession();
   }, []);
+
+  // Fetch data when profile changes
+  useEffect(() => {
+    if (profile) {
+      fetchCourses();
+      fetchModules();
+      fetchEnrollments();
+      if (profile.role === "admin") {
+        fetchStudents();
+      }
+    }
+  }, [profile]);
 
   // Real-time subscriptions
   useEffect(() => {
     if (!profile) return;
 
-    // Courses subscription
-    const coursesSub = supabase
+    const coursesChannel = supabase
       .channel("courses-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "courses" }, () => fetchCourses())
       .subscribe();
 
-    // Modules subscription
-    const modulesSub = supabase
+    const modulesChannel = supabase
       .channel("modules-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "modules" }, () => fetchModules())
       .subscribe();
 
-    // Enrollments subscription (student-specific)
-    let enrollmentsSub;
-    if (profile.role === "student") {
-      enrollmentsSub = supabase
-        .channel("enrollments-changes")
-        .on("postgres_changes", { event: "*", schema: "public", table: "enrollments", filter: `student_id=eq.${profile.id}` }, () => fetchEnrollments())
-        .subscribe();
-    }
-
-    // Progress subscription
-    const progressSub = supabase
-      .channel("progress-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "module_progress", filter: `enrollment_id=in.(${enrollments.map(e => e.id).join(",")})` }, () => fetchProgress())
+    const enrollmentsChannel = supabase
+      .channel("enrollments-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "enrollments" }, () => fetchEnrollments())
       .subscribe();
 
-    fetchCourses();
-    fetchModules();
-    fetchEnrollments();
-
     return () => {
-      coursesSub.unsubscribe();
-      modulesSub.unsubscribe();
-      if (enrollmentsSub) enrollmentsSub.unsubscribe();
-      progressSub.unsubscribe();
+      coursesChannel.unsubscribe();
+      modulesChannel.unsubscribe();
+      enrollmentsChannel.unsubscribe();
     };
   }, [profile]);
 
@@ -2115,7 +2192,6 @@ export default function App() {
   const handleLogin = (p: Profile) => {
     setProfile(p);
     setView(p.role === "admin" ? "admin-dashboard" : "student-dashboard");
-    if (p.role === "admin") fetchStudents();
   };
 
   const handleLogout = async () => {
@@ -2146,8 +2222,9 @@ export default function App() {
     }
 
     if (status === "passed") {
-      const currentModuleIndex = modules.findIndex(m => m.id === moduleId);
-      if (currentModuleIndex === enrollment.current_module_index && currentModuleIndex + 1 < modules.filter(m => m.course_id === enrollment.course_id).length) {
+      const courseModules = modules.filter(m => m.course_id === enrollment.course_id).sort((a, b) => a.order_index - b.order_index);
+      const currentModuleIndex = courseModules.findIndex(m => m.id === moduleId);
+      if (currentModuleIndex === enrollment.current_module_index && currentModuleIndex + 1 < courseModules.length) {
         await supabase
           .from("enrollments")
           .update({ current_module_index: currentModuleIndex + 1 })
@@ -2196,8 +2273,8 @@ export default function App() {
             stats={{
               students: students.length,
               courses: courses.length,
-              pendingPayments: 0, // Fetch from DB
-              submittedAssignments: 0, // Fetch from DB
+              pendingPayments: 0,
+              submittedAssignments: 0,
             }} 
           />;
         case "admin-courses":
