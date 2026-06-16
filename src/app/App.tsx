@@ -111,11 +111,13 @@ function formatNaira(amount: number) {
 
 // ─── Circular Progress Component ─────────────────────────────────────────────
 
-function CircularProgress({ value, max, size = 80, strokeWidth = 6 }: { 
+function CircularProgress({ value, max, size = 80, strokeWidth = 6, label, showPercentage = true }: { 
   value: number; 
   max: number; 
   size?: number; 
   strokeWidth?: number;
+  label?: string;
+  showPercentage?: boolean;
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -123,34 +125,41 @@ function CircularProgress({ value, max, size = 80, strokeWidth = 6 }: {
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg width={size} height={size} className="transform -rotate-90">
-        <circle
-          className="text-muted"
-          strokeWidth={strokeWidth}
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-        />
-        <circle
-          className="text-accent transition-all duration-1000 ease-in-out"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-        />
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center">
-        <span className="text-lg font-bold text-foreground">{Math.round(progress)}%</span>
-        <span className="text-xs text-muted-foreground">{value}/{max}</span>
+    <div className="relative inline-flex flex-col items-center">
+      <div className="relative inline-flex items-center justify-center">
+        <svg width={size} height={size} className="transform -rotate-90">
+          <circle
+            className="text-muted"
+            strokeWidth={strokeWidth}
+            stroke="currentColor"
+            fill="transparent"
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+          />
+          <circle
+            className="text-accent transition-all duration-1000 ease-in-out"
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            stroke="currentColor"
+            fill="transparent"
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+          />
+        </svg>
+        <div className="absolute flex flex-col items-center justify-center">
+          {showPercentage && (
+            <span className="text-lg font-bold text-foreground">{Math.round(progress)}%</span>
+          )}
+          <span className="text-xs text-muted-foreground">{value}/{max}</span>
+        </div>
       </div>
+      {label && (
+        <span className="text-xs text-muted-foreground mt-2 text-center">{label}</span>
+      )}
     </div>
   );
 }
@@ -336,18 +345,6 @@ function StatCard({ icon: Icon, label, value, trend }: { icon: any; label: strin
         </div>
       </div>
     </Card>
-  );
-}
-
-function ProgressBar({ value, max, className }: { value: number; max: number; className?: string }) {
-  const pct = Math.min(Math.round((value / max) * 100), 100);
-  return (
-    <div className={cn("h-2 bg-muted rounded-full overflow-hidden", className)}>
-      <div
-        className="h-full bg-accent rounded-full transition-all duration-500"
-        style={{ width: `${pct}%` }}
-      />
-    </div>
   );
 }
 
@@ -1007,7 +1004,6 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
 
       <Card className="p-4 md:p-8">
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Avatar Section */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
               <Avatar name={fullName} size="lg" src={avatarPreview || undefined} />
@@ -1028,7 +1024,6 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
             </p>
           </div>
 
-          {/* Profile Info Section */}
           <div className="flex-1 space-y-4">
             {isEditing ? (
               <>
@@ -1111,31 +1106,21 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
         </div>
       </Card>
 
-      {/* Progress Summary Section */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-foreground mb-4">Your Learning Progress</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6 text-center">
-            <BookOpen className="w-8 h-8 text-accent mx-auto mb-2" />
-            <p className="text-2xl font-bold text-foreground">{activeEnrollments.length}</p>
-            <p className="text-sm text-muted-foreground">Active Courses</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="p-6 flex flex-col items-center">
+            <CircularProgress value={activeEnrollments.length} max={10} size={80} label="Active Courses" />
           </Card>
-          <Card className="p-6 text-center">
-            <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-foreground">{passedCount}</p>
-            <p className="text-sm text-muted-foreground">Modules Passed</p>
+          <Card className="p-6 flex flex-col items-center">
+            <CircularProgress value={passedCount} max={totalModules || 1} size={80} label="Modules Passed" />
           </Card>
-          <Card className="p-6 text-center">
-            <Award className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-foreground">
-              {totalModules > 0 ? Math.round((passedCount / totalModules) * 100) : 0}%
-            </p>
-            <p className="text-sm text-muted-foreground">Overall Progress</p>
+          <Card className="p-6 flex flex-col items-center">
+            <CircularProgress value={totalModules > 0 ? Math.round((passedCount / totalModules) * 100) : 0} max={100} size={80} label="Overall Progress" />
           </Card>
         </div>
       </div>
 
-      {/* Enrolled Courses Section */}
       {activeEnrollments.length > 0 && (
         <div className="mt-8">
           <h2 className="text-xl font-semibold text-foreground mb-4">Your Courses</h2>
@@ -1145,13 +1130,10 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
               const passedModules = progress.filter(p => 
                 p.enrollment_id === enrollment.id && p.status === "passed"
               );
-              const progressPct = courseModules.length > 0 
-                ? Math.round((passedModules.length / courseModules.length) * 100) 
-                : 0;
               
               return (
                 <Card key={enrollment.id} className="p-4 md:p-6">
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
                       <img 
                         src={enrollment.course?.thumbnail_url} 
@@ -1159,18 +1141,21 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
                         className="w-full h-full object-cover" 
                       />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 text-center sm:text-left">
                       <h3 className="font-semibold text-foreground">{enrollment.course?.title}</h3>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                         <StatusBadge status={enrollment.status} />
                         <span className="text-xs text-muted-foreground">
                           {passedModules.length}/{courseModules.length} modules
                         </span>
                       </div>
-                      <ProgressBar value={passedModules.length} max={courseModules.length || 1} className="mt-2" />
-                      <p className="text-xs text-muted-foreground mt-1">{progressPct}% complete</p>
                     </div>
-                    <CircularProgress value={passedModules.length} max={courseModules.length || 1} size={60} strokeWidth={4} />
+                    <CircularProgress 
+                      value={passedModules.length} 
+                      max={courseModules.length || 1} 
+                      size={70} 
+                      strokeWidth={5}
+                    />
                   </div>
                 </Card>
               );
@@ -1182,7 +1167,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   );
 }
 
-// ─── Student Dashboard (with Circular Progress) ─────────────────────────────
+// ─── Student Dashboard ─────────────────────────────────────────────────────────────
 
 function StudentDashboard({ profile, onNavigate, enrollments, progress, modules }: { 
   profile: Profile; 
@@ -1251,8 +1236,12 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
                   </p>
                   <StatusBadge status={activeEnrollment.status} />
                   <div className="mt-3">
-                    <ProgressBar value={passedCount} max={totalModules || 5} />
-                    <p className="text-xs text-muted-foreground mt-1">{passedCount} of {totalModules || 5} modules completed</p>
+                    <div className="flex items-center gap-4">
+                      <ProgressBar value={passedCount} max={totalModules || 5} className="flex-1" />
+                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                        {passedCount}/{totalModules || 5}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1285,7 +1274,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
   );
 }
 
-// ─── Student Courses (with Enrollment Feedback) ───────────────────────────────
+// ─── Student Courses ──────────────────────────────────────────────────────────
 
 function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }: { 
   profile: Profile; 
@@ -2226,30 +2215,126 @@ function StudentAssignments({ profile }: { profile: Profile }) {
   );
 }
 
-// ─── Student Payments ─────────────────────────────────────────────────────────
+// ─── Student Payments (FIXED) ─────────────────────────────────────────────────
 
 function StudentPayments({ profile }: { profile: Profile }) {
-  const [payments, setPayments] = useState<PaymentReceipt[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingEnrollments, setPendingEnrollments] = useState<Enrollment[]>([]);
 
   useEffect(() => {
     fetchPayments();
+    fetchPendingEnrollments();
     
     const subscription = supabase
       .channel("student-payments")
-      .on("postgres_changes", { event: "*", schema: "public", table: "payment_receipts", filter: `student_id=eq.${profile.id}` },
-        () => fetchPayments())
+      .on("postgres_changes", 
+        { 
+          event: "*", 
+          schema: "public", 
+          table: "payment_receipts", 
+          filter: `student_id=eq.${profile.id}` 
+        }, 
+        () => fetchPayments()
+      )
       .subscribe();
 
-    return () => { subscription.unsubscribe(); };
+    return () => { 
+      subscription.unsubscribe(); 
+    };
   }, [profile.id]);
 
   const fetchPayments = async () => {
-    const { data } = await supabase
-      .from("payment_receipts")
-      .select("*")
-      .eq("student_id", profile.id);
-    if (data) setPayments(data as PaymentReceipt[]);
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("payment_receipts")
+        .select(`
+          *,
+          enrollment:enrollment_id (
+            id,
+            course_id,
+            course:course_id (
+              id,
+              title,
+              price
+            )
+          )
+        `)
+        .eq("student_id", profile.id)
+        .order("submitted_at", { ascending: false });
+      
+      if (fetchError) {
+        console.error("Error fetching payments:", fetchError);
+        setError("Failed to load payment history");
+        setLoading(false);
+        return;
+      }
+      
+      if (data) {
+        setPayments(data);
+      } else {
+        setPayments([]);
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      setError("An error occurred while fetching payments");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const fetchPendingEnrollments = async () => {
+    const { data } = await supabase
+      .from("enrollments")
+      .select("*, course:course_id(*)")
+      .eq("student_id", profile.id)
+      .in("status", ["pending_payment", "payment_submitted"]);
+    
+    if (data) {
+      setPendingEnrollments(data as Enrollment[]);
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return '✅ Approved';
+      case 'pending':
+        return '⏳ Pending Review';
+      case 'rejected':
+        return '❌ Rejected';
+      default:
+        return status;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
+        <div className="text-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-accent" />
+          <p className="text-muted-foreground mt-4">Loading payment history...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
@@ -2259,6 +2344,26 @@ function StudentPayments({ profile }: { profile: Profile }) {
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your payment receipts and enrollment status.</p>
       </div>
+
+      {pendingEnrollments.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+          <div className="flex items-start gap-3">
+            <Clock className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-semibold text-yellow-800">Pending Payment Required</p>
+              <p className="text-sm text-yellow-700 mt-1">
+                You have {pendingEnrollments.length} enrollment{pendingEnrollments.length > 1 ? 's' : ''} that need payment confirmation.
+              </p>
+              <button
+                onClick={() => window.location.href = "/student-courses"}
+                className="mt-2 text-sm text-yellow-800 font-medium hover:underline flex items-center gap-1"
+              >
+                Go to My Courses <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card className="p-4 md:p-6">
         <h2 className="font-semibold text-foreground mb-4">How Payment Works</h2>
@@ -2278,11 +2383,44 @@ function StudentPayments({ profile }: { profile: Profile }) {
       </Card>
 
       <div className="space-y-4">
-        <h2 className="font-semibold text-foreground">Payment History</h2>
-        {payments.length === 0 ? (
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-foreground">Payment History</h2>
+          <button
+            onClick={fetchPayments}
+            className="flex items-center gap-1 px-3 py-1.5 bg-secondary text-secondary-foreground text-xs rounded-lg hover:bg-secondary/80 transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          </button>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+            <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
+            <p className="text-sm text-red-700">{error}</p>
+            <button
+              onClick={fetchPayments}
+              className="mt-2 text-sm text-red-600 font-medium hover:underline"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {payments.length === 0 && !error ? (
           <Card className="p-8 text-center">
-            <DollarSign className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-muted-foreground">No payments submitted yet.</p>
+            <div className="flex flex-col items-center">
+              <DollarSign className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No payments submitted yet.</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                When you enroll in a course, you'll be asked to upload a payment receipt here.
+              </p>
+              <button
+                onClick={() => window.location.href = "/student-courses"}
+                className="mt-4 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
+              >
+                Browse Courses
+              </button>
+            </div>
           </Card>
         ) : (
           payments.map((p) => (
@@ -2291,17 +2429,43 @@ function StudentPayments({ profile }: { profile: Profile }) {
                 <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
                   <FileText className="w-5 h-5 text-accent" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">{formatNaira(p.amount)} — Receipt</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Submitted: {formatDate(p.submitted_at)}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {formatNaira(p.amount)} 
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          — {p.enrollment?.course?.title || "Unknown Course"}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Submitted: {formatDate(p.submitted_at)}
+                      </p>
+                    </div>
+                    <span className={cn(
+                      "px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap",
+                      getStatusBadgeColor(p.status)
+                    )}>
+                      {getStatusText(p.status)}
+                    </span>
+                  </div>
+                  {p.admin_notes && (
+                    <div className="mt-2 p-2 bg-muted rounded-lg text-xs text-muted-foreground">
+                      Admin note: {p.admin_notes}
+                    </div>
+                  )}
+                  {p.receipt_url && (
+                    <a 
+                      href={p.receipt_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-xs text-accent hover:underline"
+                    >
+                      <Eye className="w-3 h-3" /> View Receipt
+                    </a>
+                  )}
                 </div>
-                <StatusBadge status={p.status} />
               </div>
-              {p.admin_notes && (
-                <div className="mt-3 p-3 bg-muted rounded-lg text-xs text-muted-foreground">
-                  Admin note: {p.admin_notes}
-                </div>
-              )}
             </Card>
           ))
         )}
@@ -2772,7 +2936,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
   );
 }
 
-// ─── Admin Students ───────────────────────────────────────────────────────────
+// ─── Admin Students (with Card View) ─────────────────────────────────────────
 
 function AdminStudents({ students, onSendAssignment, onViewProfile }: { 
   students: Profile[];
@@ -2792,7 +2956,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   const [courses, setCourses] = useState<Course[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(false);
-  const [studentProgress, setStudentProgress] = useState<Record<string, { passed: number; total: number }>>({});
+  const [studentProgress, setStudentProgress] = useState<Record<string, { passed: number; total: number; enrollments: any[] }>>({});
 
   useEffect(() => {
     fetchCoursesAndModules();
@@ -2811,7 +2975,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   const fetchAllStudentProgress = async () => {
     const { data: enrollments } = await supabase
       .from("enrollments")
-      .select("id, student_id, course_id")
+      .select("id, student_id, course_id, status, course:course_id(*)")
       .eq("status", "active");
 
     if (!enrollments) return;
@@ -2824,7 +2988,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
 
     if (!progressData) return;
 
-    const progressMap: Record<string, { passed: number; total: number }> = {};
+    const progressMap: Record<string, { passed: number; total: number; enrollments: any[] }> = {};
     
     enrollments.forEach((enrollment) => {
       const studentId = enrollment.student_id;
@@ -2833,10 +2997,11 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
       const passed = progressData.filter(p => p.enrollment_id === enrollment.id && p.status === "passed").length;
       
       if (!progressMap[studentId]) {
-        progressMap[studentId] = { passed: 0, total: 0 };
+        progressMap[studentId] = { passed: 0, total: 0, enrollments: [] };
       }
       progressMap[studentId].passed += passed;
       progressMap[studentId].total += total;
+      progressMap[studentId].enrollments.push(enrollment);
     });
 
     setStudentProgress(progressMap);
@@ -2860,7 +3025,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   const availableModules = modules.filter(m => m.course_id === assignmentData.module_id);
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Students
@@ -2878,67 +3043,60 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
         />
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px]">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Student</th>
-                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</th>
-                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Progress</th>
-                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</th>
-                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Joined</th>
-                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((s) => {
-                const progress = studentProgress[s.id] || { passed: 0, total: 0 };
-                const pct = progress.total > 0 ? Math.round((progress.passed / progress.total) * 100) : 0;
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {filtered.map((student) => {
+          const progress = studentProgress[student.id] || { passed: 0, total: 0, enrollments: [] };
+          const pct = progress.total > 0 ? Math.round((progress.passed / progress.total) * 100) : 0;
+          
+          return (
+            <Card key={student.id} className="p-4 hover:shadow-lg transition-shadow">
+              <div className="flex flex-col items-center text-center">
+                <Avatar name={student.full_name} size="lg" src={student.avatar_url} />
+                <h3 className="font-semibold text-foreground mt-3 text-sm">{student.full_name}</h3>
+                <p className="text-xs text-muted-foreground truncate max-w-full">{student.email}</p>
                 
-                return (
-                  <tr key={s.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 md:px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={s.full_name} size="sm" src={s.avatar_url} />
-                        <p className="text-sm font-semibold text-foreground truncate max-w-[100px] md:max-w-none">{s.full_name}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 md:px-6 py-4 text-sm text-muted-foreground truncate max-w-[120px] md:max-w-none">{s.email}</td>
-                    <td className="px-4 md:px-6 py-4">
-                      <div className="min-w-[100px]">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">{progress.passed}/{progress.total} modules</span>
-                          <span className="font-medium">{pct}%</span>
-                        </div>
-                        <ProgressBar value={progress.passed} max={progress.total || 1} className="mt-1" />
-                      </div>
-                    </td>
-                    <td className="px-4 md:px-6 py-4"><Badge variant="default">{s.role}</Badge></td>
-                    <td className="px-4 md:px-6 py-4 text-xs text-muted-foreground font-mono hidden md:table-cell">{formatDate(s.created_at)}</td>
-                    <td className="px-4 md:px-6 py-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          onClick={() => onViewProfile(s)}
-                          className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors"
-                        >
-                          <Eye className="w-3 h-3" /> View
-                        </button>
-                        <button
-                          onClick={() => { setSelectedStudent(s); setShowAssignmentModal(true); }}
-                          className="flex items-center gap-1 px-2 py-1 bg-accent/15 text-accent text-xs rounded-lg hover:bg-accent/25 transition-colors"
-                        >
-                          <Send className="w-3 h-3" /> Send
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                <div className="mt-3 flex items-center gap-2">
+                  <Badge variant="default">{student.role}</Badge>
+                  <Badge variant="info">{progress.enrollments.length} courses</Badge>
+                </div>
+                
+                <div className="mt-4 w-full">
+                  <CircularProgress value={progress.passed} max={progress.total || 1} size={80} />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {progress.passed}/{progress.total} modules ({pct}%)
+                  </p>
+                </div>
+                
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 w-full">
+                  <button
+                    onClick={() => onViewProfile(student)}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View Profile
+                  </button>
+                  <button
+                    onClick={() => { setSelectedStudent(student); setShowAssignmentModal(true); }}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-accent/15 text-accent text-xs rounded-lg hover:bg-accent/25 transition-colors"
+                  >
+                    <Send className="w-3.5 h-3.5" /> Send Assignment
+                  </button>
+                </div>
+                
+                <div className="mt-3 w-full border-t border-border pt-3">
+                  <p className="text-xs text-muted-foreground">Joined {formatDate(student.created_at)}</p>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <Card className="p-12 text-center">
+          <Users className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-muted-foreground">No students found.</p>
+        </Card>
+      )}
 
       <Modal open={showAssignmentModal} onClose={() => setShowAssignmentModal(false)} title={`Send Assignment to ${selectedStudent?.full_name}`}>
         <div className="space-y-4">
@@ -3086,7 +3244,6 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
             {enrollments.map((e) => {
               const totalModules = getModuleCountForCourse(e.course_id);
               const passed = getPassedModules(e.id);
-              const progressPct = totalModules > 0 ? Math.round((passed / totalModules) * 100) : 0;
               
               return (
                 <div key={e.id} className="p-4 bg-muted rounded-xl">
@@ -3094,11 +3251,21 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
                     <span className="font-semibold text-foreground">{e.course?.title}</span>
                     <StatusBadge status={e.status} />
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <span>📚 {passed}/{totalModules} modules passed</span>
-                    <span>📊 {progressPct}% complete</span>
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>📚 {passed}/{totalModules} modules passed</span>
+                      </div>
+                      <ProgressBar value={passed} max={totalModules || 1} className="mt-2" />
+                    </div>
+                    <CircularProgress 
+                      value={passed} 
+                      max={totalModules || 1} 
+                      size={60} 
+                      strokeWidth={4}
+                      showPercentage={false}
+                    />
                   </div>
-                  <ProgressBar value={passed} max={totalModules || 1} className="mt-2" />
                 </div>
               );
             })}
