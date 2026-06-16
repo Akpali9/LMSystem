@@ -3104,7 +3104,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
                 You have {pendingEnrollments.length} enrollment{pendingEnrollments.length > 1 ? 's' : ''} that need payment confirmation.
               </p>
               <button
-                onClick={() => window.location.href = "/student-courses"}
+                onClick={() => window.location.href = "/"}
                 className="mt-2 text-sm text-yellow-800 font-medium hover:underline flex items-center gap-1"
               >
                 Go to My Courses <ArrowRight className="w-3 h-3" />
