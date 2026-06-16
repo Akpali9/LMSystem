@@ -854,7 +854,34 @@ function Sidebar({
   onNavigate: (v: View) => void;
   onLogout: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setCollapsed(true);
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const toggleSidebar = () => {
+    setCollapsed(!collapsed);
+  };
+
+  const handleNavigate = (view: View) => {
+    onNavigate(view);
+    if (isMobile) {
+      setCollapsed(true);
+    }
+  };
 
   if (!profile) {
     return null;
@@ -880,10 +907,88 @@ function Sidebar({
 
   const nav = profile.role === "admin" ? adminNav : studentNav;
 
+  if (isMobile) {
+    return (
+      <>
+        {!collapsed && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
+            onClick={() => setCollapsed(true)}
+          />
+        )}
+        
+        <aside
+          className={cn(
+            "fixed top-0 left-0 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 z-50 shadow-2xl",
+            collapsed ? "-translate-x-full" : "translate-x-0",
+            "w-72"
+          )}
+        >
+          <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
+              <GraduationCap className="w-5 h-5 text-primary" />
+            </div>
+            <span className="font-bold text-sidebar-foreground text-lg flex-1" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Pruta Academy
+            </span>
+            <button
+              onClick={toggleSidebar}
+              className="w-8 h-8 rounded-lg hover:bg-sidebar-accent flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5 text-sidebar-foreground" />
+            </button>
+          </div>
+
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto h-[calc(100vh-140px)]">
+            {nav.map(({ view, icon: Icon, label }) => (
+              <button
+                key={view}
+                onClick={() => handleNavigate(view)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all",
+                  currentView === view
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                )}
+              >
+                <Icon className="w-5 h-5 shrink-0" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="p-3 border-t border-sidebar-border absolute bottom-0 left-0 right-0 bg-sidebar">
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <Avatar name={profile.full_name} size="sm" src={profile.avatar_url} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-sidebar-foreground truncate">{profile.full_name}</p>
+                <p className="text-xs text-sidebar-foreground/50 truncate capitalize">{profile.role}</p>
+              </div>
+            </div>
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all mt-1"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </aside>
+
+        <button
+          onClick={toggleSidebar}
+          className="fixed top-4 left-4 z-30 w-10 h-10 rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center md:hidden"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      </>
+    );
+  }
+
   return (
     <aside
       className={cn(
-        "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0",
+        "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0 hidden md:flex",
         collapsed ? "w-16" : "w-60"
       )}
     >
@@ -897,14 +1002,17 @@ function Sidebar({
           </span>
         )}
         <button
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn("ml-auto w-7 h-7 rounded-lg hover:bg-sidebar-accent flex items-center justify-center transition-colors", collapsed && "mx-auto ml-0")}
+          onClick={toggleSidebar}
+          className={cn(
+            "ml-auto w-7 h-7 rounded-lg hover:bg-sidebar-accent flex items-center justify-center transition-colors",
+            collapsed && "mx-auto ml-0"
+          )}
         >
           <Menu className="w-4 h-4 text-sidebar-foreground" />
         </button>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {nav.map(({ view, icon: Icon, label }) => (
           <button
             key={view}
@@ -926,7 +1034,7 @@ function Sidebar({
         <div className={cn("flex items-center gap-3 px-3 py-2.5", collapsed && "justify-center")}>
           <Avatar name={profile.full_name} size="sm" src={profile.avatar_url} />
           {!collapsed && (
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-sidebar-foreground truncate">{profile.full_name}</p>
               <p className="text-xs text-sidebar-foreground/50 truncate capitalize">{profile.role}</p>
             </div>
@@ -1191,7 +1299,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   );
 }
 
-// ─── Student Dashboard ─────────────────────────────────────────────────────────────
+// ─── Student Dashboard (FIXED) ─────────────────────────────────────────────
 
 function StudentDashboard({ profile, onNavigate, enrollments, progress, modules }: { 
   profile: Profile; 
@@ -1204,13 +1312,25 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
   const safeProgress = progress || [];
   const safeModules = modules || [];
   
+  // Get the active enrollment
   const activeEnrollment = safeEnrollments.find(e => e?.status === "active") || null;
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
-  const passedCount = safeProgress.filter(p => p?.status === "passed").length || 0;
   
-  const totalModules = activeEnrollment && safeModules.length > 0 
-    ? safeModules.filter(m => m?.course_id === activeEnrollment?.course_id).length 
-    : 0;
+  // Only count modules passed for the active course
+  let passedCount = 0;
+  let totalModulesForActiveCourse = 0;
+  
+  if (activeEnrollment) {
+    // Get modules for the active course
+    const courseModules = safeModules.filter(m => m?.course_id === activeEnrollment?.course_id);
+    totalModulesForActiveCourse = courseModules.length;
+    
+    // Count passed modules for this specific enrollment
+    passedCount = safeProgress.filter(p => 
+      p?.enrollment_id === activeEnrollment?.id && 
+      p?.status === "passed"
+    ).length;
+  }
 
   if (!profile) {
     return (
@@ -1280,9 +1400,9 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
                   <StatusBadge status={activeEnrollment.status || "active"} />
                   <div className="mt-3">
                     <div className="flex items-center gap-4">
-                      <ProgressBar value={passedCount} max={totalModules || 5} className="flex-1" />
+                      <ProgressBar value={passedCount} max={totalModulesForActiveCourse || 5} className="flex-1" />
                       <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-                        {passedCount}/{totalModules || 5}
+                        {passedCount}/{totalModulesForActiveCourse || 5}
                       </span>
                     </div>
                   </div>
@@ -1300,11 +1420,11 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
           <div className="flex items-center justify-center">
             <Card className="p-6 w-full flex flex-col items-center">
               <h3 className="font-semibold text-foreground mb-4 text-sm text-center">Overall Progress</h3>
-              <CircularProgress value={passedCount} max={totalModules || 5} size={120} />
+              <CircularProgress value={passedCount} max={totalModulesForActiveCourse || 5} size={120} />
               <p className="text-xs text-muted-foreground mt-3 text-center">
-                {passedCount} of {totalModules || 5} modules passed
+                {passedCount} of {totalModulesForActiveCourse || 5} modules passed
               </p>
-              {passedCount === totalModules && totalModules > 0 && (
+              {passedCount === totalModulesForActiveCourse && totalModulesForActiveCourse > 0 && (
                 <div className="mt-3 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
                   🎉 Course Complete!
                 </div>
@@ -1586,7 +1706,8 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                       </p>
                     </div>
                     {enrollment.status === "pending_payment" && (
-                      <button                        onClick={() => {
+                      <button
+                        onClick={() => {
                           setSelectedCourse(enrollment.course || null);
                           setShowEnroll(true);
                         }}
@@ -1818,7 +1939,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setShowNoQuizMessage(false);
     
     try {
-      // First, check if a quiz exists for this module
       const { data: quiz, error: quizError } = await supabase
         .from("quizzes")
         .select("*")
@@ -1838,7 +1958,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         console.log("✅ Quiz found for module:", quiz);
         setQuizData(quiz);
         
-        // Fetch questions for this quiz
         const { data: questions, error: questionsError } = await supabase
           .from("quiz_questions")
           .select("*")
@@ -1862,7 +1981,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           return;
         }
         
-        // Check if student has already attempted this quiz
         const { data: attempt, error: attemptError } = await supabase
           .from("quiz_attempts")
           .select("*")
@@ -1893,18 +2011,15 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setLoadingQuiz(false);
   };
 
-  // Handle auto-advance when no quiz exists
   const handleNoQuizAutoAdvance = async () => {
     if (autoAdvancing) return;
     
-    // Check if already passed this module
     const existingProgress = progressData.find(p => p.module_id === currentModule?.id);
     if (existingProgress?.status === "passed") {
       console.log("Module already passed, skipping auto-advance");
       return;
     }
     
-    // Check if we've already advanced this module
     const currentIndex = currentEnrollment?.current_module_index || 0;
     const currentModuleId = modules?.[currentIndex]?.id;
     
@@ -1913,7 +2028,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       return;
     }
     
-    // Check if this is the last module
     const nextModuleIndex = selectedModuleIndex + 1;
     if (nextModuleIndex >= modules.length) {
       console.log("This is the last module, no next module to advance to");
@@ -1925,10 +2039,8 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setAutoAdvancing(true);
     
     try {
-      // Mark current module as passed (100% score since no quiz)
       await onProgressUpdate(currentModule.id, "passed", 100);
       
-      // Update enrollment to advance to next module
       const { error } = await supabase
         .from("enrollments")
         .update({ current_module_index: nextModuleIndex })
@@ -1940,11 +2052,9 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         return;
       }
       
-      // Refresh enrollment and progress data
       await fetchEnrollmentData();
       await fetchProgress();
       
-      // Update UI to show the next module
       setTimeout(() => {
         setIsAdvancing(true);
         setSelectedModuleIndex(nextModuleIndex);
@@ -1960,7 +2070,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         }, 300);
       }, 500);
       
-      // Show a notification to the user
       setShowNoQuizMessage(true);
       setTimeout(() => setShowNoQuizMessage(false), 5000);
       
@@ -2186,7 +2295,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       </div>
 
       <div className="flex-1 p-4 md:p-6 overflow-y-auto max-h-[calc(100vh-80px)]">
-        {/* Auto-advance notification */}
         {showNoQuizMessage && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
@@ -2218,7 +2326,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           </p>
         </div>
 
-        {/* Navigation Tabs */}
         <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit mb-6 flex-wrap">
           <button
             onClick={() => setActiveTab("content")}
@@ -2263,7 +2370,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           </button>
         </div>
 
-        {/* Content Tab */}
         {activeTab === "content" && (
           <div className="space-y-6">
             {currentContent ? (
@@ -2297,7 +2403,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
               </Card>
             )}
             
-            {/* Show "Mark as Complete" button if no quiz and not completed */}
             {!quizData && moduleProgress?.status !== "passed" && !isModuleLocked(selectedModuleIndex) && currentContent && (
               <div className="flex justify-end">
                 <button
@@ -2341,7 +2446,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           </div>
         )}
 
-        {/* Quiz Tab */}
         {activeTab === "quiz" && (
           <div className="space-y-5">
             {isModuleLocked(selectedModuleIndex) ? (
@@ -2566,7 +2670,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           </div>
         )}
 
-        {/* Exam Tab */}
         {activeTab === "exam" && (
           <div className="space-y-5">
             {isModuleLocked(selectedModuleIndex) ? (
