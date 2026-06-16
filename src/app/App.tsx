@@ -836,7 +836,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
   );
 }
 
-// ─── Sidebar (FIXED: Desktop Toggle, Mobile Default Collapsed) ─────────────
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 function Sidebar({
   profile,
@@ -856,7 +856,6 @@ function Sidebar({
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // On mobile, start collapsed. On desktop, start expanded.
       if (mobile) {
         setCollapsed(true);
       } else {
@@ -876,7 +875,6 @@ function Sidebar({
 
   const handleNavigate = (view: View) => {
     onNavigate(view);
-    // On mobile, close sidebar after navigation
     if (isMobile) {
       setCollapsed(true);
     }
@@ -906,11 +904,10 @@ function Sidebar({
 
   const nav = profile.role === "admin" ? adminNav : studentNav;
 
-  // ─── MOBILE SIDEBAR (Slide-in drawer) ────────────────────────────────────
+  // ─── MOBILE SIDEBAR ──────────────────────────────────────────────────────
   if (isMobile) {
     return (
       <>
-        {/* Overlay */}
         {!collapsed && (
           <div 
             className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden"
@@ -918,7 +915,6 @@ function Sidebar({
           />
         )}
         
-        {/* Mobile Sidebar */}
         <aside
           className={cn(
             "fixed top-0 left-0 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 z-50 shadow-2xl md:hidden",
@@ -977,7 +973,6 @@ function Sidebar({
           </div>
         </aside>
 
-        {/* Mobile Hamburger Button */}
         <button
           onClick={toggleSidebar}
           className="fixed top-4 left-4 z-30 w-10 h-10 rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center md:hidden"
@@ -988,7 +983,7 @@ function Sidebar({
     );
   }
 
-  // ─── DESKTOP SIDEBAR (Toggleable) ────────────────────────────────────────
+  // ─── DESKTOP SIDEBAR ────────────────────────────────────────────────────────
   return (
     <aside
       className={cn(
@@ -1303,7 +1298,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   );
 }
 
-// ─── Student Dashboard (FIXED) ─────────────────────────────────────────────
+// ─── Student Dashboard ─────────────────────────────────────────────────────────────
 
 function StudentDashboard({ profile, onNavigate, enrollments, progress, modules }: { 
   profile: Profile; 
@@ -1850,7 +1845,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   );
 }
 
-// ─── Student Module Viewer (FIXED: Auto-unlock with quiz OR assignment) ────
+// ─── Student Module Viewer (NO AUTO-PASS) ────────────────────────────────────
 
 function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
@@ -1875,10 +1870,8 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const [currentEnrollment, setCurrentEnrollment] = useState<Enrollment | null>(enrollment);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
-  const [autoAdvancing, setAutoAdvancing] = useState(false);
-  const [showNoQuizMessage, setShowNoQuizMessage] = useState(false);
   const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
-  const [checkingCompletion, setCheckingCompletion] = useState(false);
+  const [manualCompleteLoading, setManualCompleteLoading] = useState(false);
 
   // Fetch student assignments for this enrollment
   useEffect(() => {
@@ -1940,7 +1933,91 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     if (data) setProgressData(data as ModuleProgress[]);
   };
 
-  // Check if a module can be passed (either quiz passed OR assignment graded)
+  const fetchQuizForModule = async () => {
+    if (!currentModule) {
+      setLoadingQuiz(false);
+      setQuizData(null);
+      setQuizQuestions([]);
+      return;
+    }
+    
+    console.log("Fetching quiz for module:", currentModule.id);
+    setLoadingQuiz(true);
+    setQuizSubmitted(false);
+    setQuizAnswers({});
+    setQuizScore(0);
+    setQuizAttempted(false);
+    
+    try {
+      const { data: quiz, error: quizError } = await supabase
+        .from("quizzes")
+        .select("*")
+        .eq("module_id", currentModule.id)
+        .maybeSingle();
+      
+      if (quizError) {
+        console.error("Error fetching quiz:", quizError);
+        setQuizData(null);
+        setQuizQuestions([]);
+        setLoadingQuiz(false);
+        return;
+      }
+      
+      if (quiz) {
+        console.log("✅ Quiz found for module:", quiz);
+        setQuizData(quiz);
+        
+        const { data: questions, error: questionsError } = await supabase
+          .from("quiz_questions")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .order("order_index", { ascending: true });
+        
+        if (questionsError) {
+          console.error("Error fetching quiz questions:", questionsError);
+          setQuizQuestions([]);
+          setLoadingQuiz(false);
+          return;
+        } else if (questions && questions.length > 0) {
+          console.log(`✅ Found ${questions.length} questions for quiz`);
+          setQuizQuestions(questions);
+        } else {
+          console.log("⚠️ No questions found for this quiz");
+          setQuizQuestions([]);
+          setLoadingQuiz(false);
+          return;
+        }
+        
+        const { data: attempt, error: attemptError } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .eq("student_id", profile.id)
+          .eq("enrollment_id", enrollment?.id)
+          .maybeSingle();
+        
+        if (attemptError) {
+          console.error("Error fetching quiz attempt:", attemptError);
+        } else if (attempt) {
+          console.log("✅ Found existing quiz attempt:", attempt);
+          setQuizAttempted(true);
+          setQuizSubmitted(true);
+          setQuizScore(attempt.score);
+        }
+      } else {
+        console.log("❌ No quiz found for module:", currentModule.id);
+        setQuizData(null);
+        setQuizQuestions([]);
+      }
+    } catch (error) {
+      console.error("Error in fetchQuizForModule:", error);
+      setQuizData(null);
+      setQuizQuestions([]);
+    }
+    setLoadingQuiz(false);
+  };
+
+  // Check if a module can be passed (only quiz passed OR assignment graded)
   const canPassModule = async (moduleId: string): Promise<{ canPass: boolean; score: number; reason: string }> => {
     // Check if already passed
     const existingProgress = progressData.find(p => p.module_id === moduleId);
@@ -2000,210 +2077,8 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       return { canPass: false, score: 0, reason: "Assignment submitted, awaiting grading" };
     }
 
-    // No quiz and no assignment - auto-pass
-    return { canPass: true, score: 100, reason: "No quiz or assignment required" };
-  };
-
-  const fetchQuizForModule = async () => {
-    if (!currentModule) {
-      setLoadingQuiz(false);
-      setQuizData(null);
-      setQuizQuestions([]);
-      return;
-    }
-    
-    console.log("Fetching quiz for module:", currentModule.id);
-    setLoadingQuiz(true);
-    setQuizSubmitted(false);
-    setQuizAnswers({});
-    setQuizScore(0);
-    setQuizAttempted(false);
-    setShowNoQuizMessage(false);
-    
-    try {
-      const { data: quiz, error: quizError } = await supabase
-        .from("quizzes")
-        .select("*")
-        .eq("module_id", currentModule.id)
-        .maybeSingle();
-      
-      if (quizError) {
-        console.error("Error fetching quiz:", quizError);
-        setQuizData(null);
-        setQuizQuestions([]);
-        setLoadingQuiz(false);
-        await handleModuleCompletion();
-        return;
-      }
-      
-      if (quiz) {
-        console.log("✅ Quiz found for module:", quiz);
-        setQuizData(quiz);
-        
-        const { data: questions, error: questionsError } = await supabase
-          .from("quiz_questions")
-          .select("*")
-          .eq("quiz_id", quiz.id)
-          .order("order_index", { ascending: true });
-        
-        if (questionsError) {
-          console.error("Error fetching quiz questions:", questionsError);
-          setQuizQuestions([]);
-          await handleModuleCompletion();
-          setLoadingQuiz(false);
-          return;
-        } else if (questions && questions.length > 0) {
-          console.log(`✅ Found ${questions.length} questions for quiz`);
-          setQuizQuestions(questions);
-        } else {
-          console.log("⚠️ No questions found for this quiz");
-          setQuizQuestions([]);
-          await handleModuleCompletion();
-          setLoadingQuiz(false);
-          return;
-        }
-        
-        const { data: attempt, error: attemptError } = await supabase
-          .from("quiz_attempts")
-          .select("*")
-          .eq("quiz_id", quiz.id)
-          .eq("student_id", profile.id)
-          .eq("enrollment_id", enrollment?.id)
-          .maybeSingle();
-        
-        if (attemptError) {
-          console.error("Error fetching quiz attempt:", attemptError);
-        } else if (attempt) {
-          console.log("✅ Found existing quiz attempt:", attempt);
-          setQuizAttempted(true);
-          setQuizSubmitted(true);
-          setQuizScore(attempt.score);
-        }
-      } else {
-        console.log("❌ No quiz found for module:", currentModule.id);
-        setQuizData(null);
-        setQuizQuestions([]);
-        await handleModuleCompletion();
-      }
-    } catch (error) {
-      console.error("Error in fetchQuizForModule:", error);
-      setQuizData(null);
-      setQuizQuestions([]);
-    }
-    setLoadingQuiz(false);
-  };
-
-  // Handle module completion (quiz pass OR assignment pass OR no quiz)
-  const handleModuleCompletion = async () => {
-    if (checkingCompletion) return;
-    setCheckingCompletion(true);
-
-    try {
-      const moduleId = currentModule?.id;
-      if (!moduleId) {
-        setCheckingCompletion(false);
-        return;
-      }
-
-      // Check if already passed
-      const existingProgress = progressData.find(p => p.module_id === moduleId);
-      if (existingProgress?.status === "passed") {
-        setCheckingCompletion(false);
-        return;
-      }
-
-      // Check if we can pass this module
-      const result = await canPassModule(moduleId);
-      
-      if (result.canPass) {
-        console.log(`✅ Module can be passed: ${result.reason}`);
-        await handleNoQuizAutoAdvance(result.score);
-      } else {
-        console.log(`⏳ Module not ready: ${result.reason}`);
-        // If there's a submitted assignment, show a message
-        const moduleAssignments = studentAssignments.filter(
-          sa => sa.assignment?.module_id === moduleId
-        );
-        const submittedAssignments = moduleAssignments.filter(sa => sa.status === "submitted");
-        if (submittedAssignments.length > 0) {
-          setShowNoQuizMessage(true);
-          setTimeout(() => setShowNoQuizMessage(false), 5000);
-        }
-      }
-    } catch (error) {
-      console.error("Error in handleModuleCompletion:", error);
-    } finally {
-      setCheckingCompletion(false);
-    }
-  };
-
-  const handleNoQuizAutoAdvance = async (score: number = 100) => {
-    if (autoAdvancing) return;
-    
-    const currentIndex = currentEnrollment?.current_module_index || 0;
-    const currentModuleId = modules?.[currentIndex]?.id;
-    
-    if (currentModuleId !== currentModule?.id) {
-      console.log("Already advanced past this module");
-      return;
-    }
-    
-    const nextModuleIndex = selectedModuleIndex + 1;
-    if (nextModuleIndex >= modules.length) {
-      console.log("This is the last module, no next module to advance to");
-      setShowNoQuizMessage(true);
-      setTimeout(() => setShowNoQuizMessage(false), 5000);
-      return;
-    }
-    
-    console.log(`Auto-advancing to next module with score: ${score}`);
-    setAutoAdvancing(true);
-    
-    try {
-      // Mark current module as passed
-      await onProgressUpdate(currentModule.id, "passed", score);
-      
-      // Update enrollment to advance to next module
-      const { error } = await supabase
-        .from("enrollments")
-        .update({ current_module_index: nextModuleIndex })
-        .eq("id", enrollment?.id);
-      
-      if (error) {
-        console.error("Error advancing enrollment:", error);
-        setAutoAdvancing(false);
-        return;
-      }
-      
-      // Refresh data
-      await fetchEnrollmentData();
-      await fetchProgress();
-      await fetchStudentAssignments();
-      
-      // Update UI to show the next module
-      setTimeout(() => {
-        setIsAdvancing(true);
-        setSelectedModuleIndex(nextModuleIndex);
-        setActiveTab("content");
-        setQuizSubmitted(false);
-        setQuizAnswers({});
-        setQuizScore(0);
-        setQuizAttempted(false);
-        fetchQuizForModule();
-        setTimeout(() => {
-          setIsAdvancing(false);
-          setAutoAdvancing(false);
-        }, 300);
-      }, 500);
-      
-      // Show notification
-      setShowNoQuizMessage(true);
-      setTimeout(() => setShowNoQuizMessage(false), 5000);
-      
-    } catch (error) {
-      console.error("Error in auto-advance:", error);
-      setAutoAdvancing(false);
-    }
+    // NO AUTO-PASS - require quiz or assignment
+    return { canPass: false, score: 0, reason: "Complete the quiz or assignment to pass this module" };
   };
 
   const handleModuleSelect = (index: number) => {
@@ -2227,7 +2102,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       setQuizAnswers({});
       setQuizScore(0);
       setQuizAttempted(false);
-      setShowNoQuizMessage(false);
       setTimeout(() => {
         fetchQuizForModule();
         setIsAdvancing(false);
@@ -2329,6 +2203,42 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setSubmittingQuiz(false);
   };
 
+  const handleManualComplete = async () => {
+    if (!currentModule) return;
+    setManualCompleteLoading(true);
+    
+    try {
+      const result = await canPassModule(currentModule.id);
+      
+      if (result.canPass) {
+        await onProgressUpdate(currentModule.id, "passed", result.score);
+        await fetchEnrollmentData();
+        await fetchProgress();
+        
+        const { data: updatedEnrollment } = await supabase
+          .from("enrollments")
+          .select("*")
+          .eq("id", enrollment?.id)
+          .single();
+        
+        if (updatedEnrollment && updatedEnrollment.current_module_index > selectedModuleIndex) {
+          setTimeout(() => {
+            setIsAdvancing(true);
+            setSelectedModuleIndex(updatedEnrollment.current_module_index);
+            setActiveTab("content");
+            setTimeout(() => setIsAdvancing(false), 300);
+          }, 500);
+        }
+      } else {
+        alert(result.reason || "Complete the quiz or assignment to pass this module.");
+      }
+    } catch (error) {
+      console.error("Error in manual complete:", error);
+      alert("Failed to complete module. Please try again.");
+    }
+    setManualCompleteLoading(false);
+  };
+
   const currentModule = modules?.[selectedModuleIndex] || modules?.[0] || null;
   const currentContent = moduleContents?.find(c => c.module_id === currentModule?.id) || null;
   const moduleProgress = progressData.find(p => p.module_id === currentModule?.id);
@@ -2337,6 +2247,12 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const hasGradedAssignment = studentAssignments.some(
     sa => sa.assignment?.module_id === currentModule?.id && sa.status === "graded"
   );
+
+  // Check if there's a quiz attempt that passed
+  const hasPassedQuiz = quizAttempted && quizScore >= (quizData?.pass_score || 70);
+
+  // Check if module can be completed (quiz passed OR assignment graded)
+  const canCompleteModule = hasPassedQuiz || hasGradedAssignment;
 
   if (!enrollment || !currentModule) {
     return (
@@ -2399,9 +2315,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                 {!isLocked && quizData && quizQuestions.length > 0 && (
                   <Badge variant="info" className="text-[10px] px-1.5 py-0.5">📝</Badge>
                 )}
-                {!isLocked && !quizData && isCompleted && (
-                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">🚀</Badge>
-                )}
                 {hasGradedAssignment && isCompleted && (
                   <Badge variant="success" className="text-[10px] px-1.5 py-0.5">📋</Badge>
                 )}
@@ -2425,30 +2338,10 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         <div className="mt-3 text-xs text-muted-foreground border-t border-border pt-3 space-y-1">
           <p>Module {selectedModuleIndex + 1} of {modules?.length || 0}</p>
           <p className="text-accent">✓ Pass quiz OR complete assignment</p>
-          <p className="text-green-600">🚀 No quiz? Auto-advance!</p>
         </div>
       </div>
 
       <div className="flex-1 p-4 md:p-6 overflow-y-auto max-h-[calc(100vh-80px)]">
-        {/* Auto-advance notification */}
-        {showNoQuizMessage && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl animate-in slide-in-from-top-2">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-green-800">✅ Module Complete!</p>
-                <p className="text-xs text-green-700">
-                  {quizData && quizQuestions.length === 0 
-                    ? "This module has no quiz. You've been automatically advanced!" 
-                    : hasGradedAssignment 
-                      ? "Your assignment was graded and you've passed! Advanced to next module."
-                      : "No quiz or assignment required. You've been advanced!"}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Badge variant="info">Module {selectedModuleIndex + 1} of {modules?.length || 0}</Badge>
@@ -2456,18 +2349,27 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
             {moduleProgress?.status === "failed" && <Badge variant="danger">❌ Failed</Badge>}
             {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
             {quizData && quizQuestions.length > 0 && <Badge variant="info">📝 Quiz: {quizData.title}</Badge>}
-            {!quizData && moduleProgress?.status === "passed" && <Badge variant="success">🚀 Auto-Passed</Badge>}
             {hasGradedAssignment && moduleProgress?.status === "passed" && <Badge variant="success">📋 Assignment Passed</Badge>}
+            {!quizData && !hasGradedAssignment && moduleProgress?.status !== "passed" && (
+              <Badge variant="warning">⚠️ No Quiz - Complete Assignment</Badge>
+            )}
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
             {currentModule.title}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Pass with ≥{currentModule.pass_score}% to unlock the next module.
+            {quizData && quizQuestions.length > 0 
+              ? `Pass with ≥${currentModule.pass_score}% to unlock the next module.` 
+              : "Complete the assignment to unlock the next module."}
           </p>
           {hasGradedAssignment && (
             <p className="text-sm text-green-600 mt-1">
               ✅ You have a graded assignment for this module!
+            </p>
+          )}
+          {!quizData && !hasGradedAssignment && moduleProgress?.status !== "passed" && (
+            <p className="text-sm text-amber-600 mt-1">
+              ⚠️ This module has no quiz. You must complete and pass the assignment.
             </p>
           )}
         </div>
@@ -2549,37 +2451,30 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
               </Card>
             )}
             
-            {/* Show completion button for various scenarios */}
+            {/* Completion button - only enabled when quiz or assignment is passed */}
             {!isModuleLocked(selectedModuleIndex) && currentContent && moduleProgress?.status !== "passed" && (
-              <div className="flex justify-end gap-2">
-                {!quizData && (
-                  <button
-                    onClick={async () => {
-                      await handleNoQuizAutoAdvance(100);
-                    }}
-                    className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors text-sm"
-                  >
-                    <CheckCircle className="w-4 h-4" /> Mark as Complete (No Quiz)
-                  </button>
-                )}
-                {quizData && quizQuestions.length === 0 && (
-                  <button
-                    onClick={async () => {
-                      await handleNoQuizAutoAdvance(100);
-                    }}
-                    className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors text-sm"
-                  >
-                    <CheckCircle className="w-4 h-4" /> Mark as Complete (No Questions)
-                  </button>
-                )}
-                {quizData && quizQuestions.length > 0 && !quizAttempted && (
-                  <button
-                    onClick={() => setActiveTab("quiz")}
-                    className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors text-sm"
-                  >
-                    Take Module Quiz <ChevronRight className="w-4 h-4" />
-                  </button>
-                )}
+              <div className="flex justify-end">
+                <button
+                  onClick={handleManualComplete}
+                  disabled={!canCompleteModule || manualCompleteLoading}
+                  className={cn(
+                    "flex items-center gap-2 px-6 py-3 font-medium rounded-xl transition-colors text-sm",
+                    canCompleteModule 
+                      ? "bg-green-600 text-white hover:bg-green-700" 
+                      : "bg-muted text-muted-foreground cursor-not-allowed"
+                  )}
+                >
+                  {manualCompleteLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                  {canCompleteModule 
+                    ? "Mark as Complete" 
+                    : quizData && quizQuestions.length > 0 
+                      ? "Take the quiz to complete" 
+                      : "Complete assignment to pass"}
+                </button>
               </div>
             )}
           </div>
@@ -2602,37 +2497,27 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
               </Card>
             ) : !quizData || quizQuestions.length === 0 ? (
               <Card className="p-8 text-center">
-                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                <h3 className="font-semibold text-foreground mb-2">No Quiz Required ✅</h3>
+                <FileQuestion className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                <h3 className="font-semibold text-foreground mb-2">No Quiz Available</h3>
                 <p className="text-sm text-muted-foreground">
-                  {quizData && quizQuestions.length === 0 
-                    ? "A quiz exists but has no questions. You can skip this module." 
-                    : "This module doesn't have a quiz. You can mark it as complete."}
+                  This module doesn't have a quiz. Complete the assignment to pass.
                 </p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  <button
-                    onClick={async () => {
-                      await handleNoQuizAutoAdvance(100);
-                    }}
-                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <CheckCircle className="w-4 h-4 inline mr-1" /> Mark as Complete
-                  </button>
-                  <button
-                    onClick={() => {
-                      setQuizRefreshKey(prev => prev + 1);
-                    }}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" /> Refresh
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("content")}
-                    className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
-                  >
-                    Back to Content
-                  </button>
-                </div>
+                {hasGradedAssignment && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+                    <p className="text-sm text-green-800">✅ Your assignment has been graded and passed!</p>
+                    <button
+                      onClick={handleManualComplete}
+                      className="mt-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <CheckCircle className="w-4 h-4 inline mr-1" /> Mark Module Complete
+                    </button>
+                  </div>
+                )}
+                {!hasGradedAssignment && (
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-sm text-amber-800">⏳ Complete the assignment to pass this module.</p>
+                  </div>
+                )}
               </Card>
             ) : (
               <Card className="p-4 md:p-6">
@@ -2780,7 +2665,9 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                     {moduleProgress?.status === "passed" ? (
                       "✅ You have already passed this module! Great job!"
                     ) : (
-                      "Complete the quiz or assignment to unlock the exam."
+                      canCompleteModule 
+                        ? "🎉 You've passed the quiz or assignment! You can now complete this module."
+                        : "Complete the module quiz or assignment to unlock the exam."
                     )}
                   </p>
                   <div className="mt-6 flex flex-col items-center gap-4">
@@ -2790,13 +2677,13 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                         <span className="text-sm text-foreground">Content Completed</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {moduleProgress?.status === "passed" ? (
+                        {moduleProgress?.status === "passed" || canCompleteModule ? (
                           <CheckCircle className="w-5 h-5 text-green-500" />
                         ) : (
                           <Clock className="w-5 h-5 text-yellow-500" />
                         )}
                         <span className="text-sm text-foreground">
-                          {moduleProgress?.status === "passed" ? "Quiz/Assignment Passed" : "Quiz/Assignment Pending"}
+                          {moduleProgress?.status === "passed" || canCompleteModule ? "Quiz/Assignment Passed" : "Quiz/Assignment Pending"}
                         </span>
                       </div>
                     </div>
@@ -2816,17 +2703,32 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                           </button>
                         )}
                       </div>
+                    ) : canCompleteModule ? (
+                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl w-full">
+                        <p className="text-sm text-green-800 text-center">
+                          🎉 You've passed the quiz or assignment!
+                        </p>
+                        <button
+                          onClick={handleManualComplete}
+                          disabled={manualCompleteLoading}
+                          className="mt-3 w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          {manualCompleteLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Complete Module →"}
+                        </button>
+                      </div>
                     ) : (
                       <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl w-full">
                         <p className="text-sm text-yellow-800 text-center">
                           ⏳ Complete the module quiz or assignment to unlock the exam.
                         </p>
-                        <button
-                          onClick={() => setActiveTab("quiz")}
-                          className="mt-3 w-full px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
-                        >
-                          Take Quiz
-                        </button>
+                        {quizData && quizQuestions.length > 0 && (
+                          <button
+                            onClick={() => setActiveTab("quiz")}
+                            className="mt-3 w-full px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+                          >
+                            Take Quiz
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
