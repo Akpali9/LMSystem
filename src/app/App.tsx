@@ -1730,7 +1730,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   );
 }
 
-// ─── Student Module Viewer (FIXED - with Quiz functionality) ─────────────────
+// ─── Student Module Viewer (with Navbar - Content, Quiz, Assignments) ──────
 
 function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
@@ -1742,7 +1742,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
 }) {
   const [selectedModuleIndex, setSelectedModuleIndex] = useState(enrollment?.current_module_index || 0);
   const [videoProgress, setVideoProgress] = useState(0);
-  const [showQuiz, setShowQuiz] = useState(false);
+  const [activeTab, setActiveTab] = useState<"content" | "quiz" | "assignment">("content");
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
@@ -1784,6 +1784,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       setCurrentEnrollment(data as Enrollment);
       if (data.current_module_index !== selectedModuleIndex && !isAdvancing) {
         setSelectedModuleIndex(data.current_module_index);
+        setActiveTab("content");
         setTimeout(() => fetchQuizForModule(), 100);
       }
     }
@@ -1863,7 +1864,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       
       setIsAdvancing(true);
       setSelectedModuleIndex(index);
-      setShowQuiz(false);
+      setActiveTab("content");
       setQuizSubmitted(false);
       setQuizAnswers({});
       setQuizScore(0);
@@ -1946,7 +1947,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
             setTimeout(() => {
               setIsAdvancing(true);
               setSelectedModuleIndex(newIndex);
-              setShowQuiz(false);
+              setActiveTab("content");
               setQuizSubmitted(false);
               setQuizAnswers({});
               setQuizScore(0);
@@ -1983,295 +1984,320 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-full">
-      <div className="w-full md:w-64 bg-muted/30 border-b md:border-b-0 md:border-r border-border p-4 shrink-0 overflow-y-auto max-h-[calc(100vh-80px)]">
-        <h3 className="font-semibold text-foreground mb-3 text-sm">Course Modules</h3>
-        <div className="space-y-1">
-          {modules?.map((module, index) => {
-            const isLocked = isModuleLocked(index);
-            const isActive = index === selectedModuleIndex;
-            const isCompleted = isModuleCompleted(module.id);
-            const prog = progressData.find(p => p.module_id === module.id);
-            const isNext = index === (currentEnrollment?.current_module_index || 0) + 1;
-            
-            return (
-              <button
-                key={module.id}
-                onClick={() => handleModuleSelect(index)}
-                disabled={isLocked}
-                className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all text-left",
-                  isActive ? "bg-accent/20 text-accent font-medium border border-accent/30" : "text-foreground/70 hover:bg-muted",
-                  isLocked && "opacity-50 cursor-not-allowed",
-                  isCompleted && !isActive && "bg-green-50 text-green-700",
-                  isNext && !isActive && !isCompleted && !isLocked && "border-l-2 border-accent/30 bg-accent/5"
-                )}
-              >
-                <span className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0",
-                  isCompleted ? "bg-green-100 text-green-600" : 
-                  isActive ? "bg-accent/20 text-accent" : 
-                  "bg-muted/50 text-muted-foreground"
-                )}>
-                  {isCompleted ? (
-                    <Check className="w-3.5 h-3.5" />
-                  ) : isLocked ? (
-                    <Lock className="w-3 h-3" />
-                  ) : (
-                    index + 1
-                  )}
-                </span>
-                <span className="truncate flex-1">{module.title}</span>
-                {isCompleted && (
-                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">✓</Badge>
-                )}
-                {isNext && !isCompleted && !isLocked && (
-                  <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">Next</Badge>
-                )}
-                {prog?.status === "failed" && (
-                  <Badge variant="danger" className="text-[10px] px-1.5 py-0.5">✗</Badge>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        
-        <div className="mt-4 pt-4 border-t border-border">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Progress</span>
-            <span>{progressData.filter(p => p.status === "passed").length}/{modules?.length || 0}</span>
-          </div>
-          <ProgressBar 
-            value={progressData.filter(p => p.status === "passed").length} 
-            max={modules?.length || 1} 
-            className="mt-1" 
-          />
-        </div>
-        
-        <div className="mt-3 text-xs text-muted-foreground border-t border-border pt-3 space-y-1">
-          <p>Module {selectedModuleIndex + 1} of {modules?.length || 0}</p>
-          <p className="text-accent">✓ Pass quizzes to unlock next module</p>
-        </div>
-      </div>
-
-      <div className="flex-1 p-4 md:p-6 overflow-y-auto max-h-[calc(100vh-80px)]">
-        <div className="mb-4">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant="info">Module {selectedModuleIndex + 1} of {modules?.length || 0}</Badge>
-            {moduleProgress?.status === "passed" && <Badge variant="success">✅ Passed</Badge>}
-            {moduleProgress?.status === "failed" && <Badge variant="danger">❌ Failed</Badge>}
-            {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
-            {quizData && <Badge variant="info">📝 Quiz: {quizData.title}</Badge>}
-          </div>
-          <h1 className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-            {currentModule.title}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Pass with ≥{currentModule.pass_score}% to unlock the next module.
-          </p>
-        </div>
-
-        <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit mb-6">
+    <div className="flex flex-col h-full">
+      {/* ─── Top Navigation Bar ────────────────────────────────────────────── */}
+      <div className="bg-card border-b border-border px-4 md:px-8 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowQuiz(false)}
+            onClick={() => onNavigate("student-courses")}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          >
+            ← Back
+          </button>
+          <div className="h-6 w-px bg-border" />
+          <div>
+            <p className="text-sm font-medium text-foreground truncate max-w-[200px] md:max-w-[300px]">
+              {currentModule.title}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Module {selectedModuleIndex + 1} of {modules.length}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("content")}
             className={cn(
-              "px-4 md:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize",
-              !showQuiz ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              "px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
+              activeTab === "content"
+                ? "bg-accent/20 text-accent"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             📺 Content
           </button>
-          {quizData && quizQuestions.length > 0 && !isModuleLocked(selectedModuleIndex) && (
-            <button
-              onClick={() => setShowQuiz(true)}
-              className={cn(
-                "px-4 md:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize",
-                showQuiz ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              📝 Quiz {quizAttempted && quizScore >= (quizData?.pass_score || 70) ? "✅" : quizAttempted ? "❌" : ""}
-            </button>
-          )}
-        </div>
-
-        {!showQuiz && (
-          <div className="space-y-6">
-            {currentContent ? (
-              <>
-                {currentContent.content_type === "video" && currentContent.content_url && (
-                  <SecureVideoPlayer 
-                    url={currentContent.content_url} 
-                    title={currentContent.title}
-                    onProgress={setVideoProgress}
-                  />
-                )}
-                
-                {currentContent.content_type === "text" && currentContent.content_text && (
-                  <Card className="p-4 md:p-6">
-                    <h3 className="font-semibold text-foreground mb-3 text-lg">{currentContent.title}</h3>
-                    <div className="prose prose-sm max-w-none text-muted-foreground">
-                      <p className="whitespace-pre-wrap text-sm md:text-base">{currentContent.content_text}</p>
-                    </div>
-                  </Card>
-                )}
-              </>
-            ) : (
-              <Card className="p-4 md:p-6 text-center">
-                <div className="py-8">
-                  <FileText className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                  <h3 className="font-semibold text-foreground mb-2">No Content Available</h3>
-                  <p className="text-sm text-muted-foreground">
-                    The instructor hasn't added content for this module yet. Please check back later.
-                  </p>
-                </div>
-              </Card>
+          <button
+            onClick={() => setActiveTab("quiz")}
+            disabled={isModuleLocked(selectedModuleIndex)}
+            className={cn(
+              "px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
+              activeTab === "quiz"
+                ? "bg-accent/20 text-accent"
+                : "text-muted-foreground hover:text-foreground",
+              isModuleLocked(selectedModuleIndex) && "opacity-50 cursor-not-allowed"
             )}
-            
-            {!isModuleLocked(selectedModuleIndex) && currentContent && quizData && quizQuestions.length > 0 && !quizAttempted && (
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setShowQuiz(true)}
-                  className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors text-sm"
-                >
-                  Take Module Quiz <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+          >
+            📝 Quiz
+            {quizAttempted && quizScore >= (quizData?.pass_score || 70) && " ✅"}
+            {quizAttempted && quizScore < (quizData?.pass_score || 70) && " ❌"}
+          </button>
+          <button
+            onClick={() => setActiveTab("assignment")}
+            className={cn(
+              "px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
+              activeTab === "assignment"
+                ? "bg-accent/20 text-accent"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            📄 Assignments
+          </button>
+          <div className="ml-auto flex items-center gap-2">
+            {moduleProgress?.status === "passed" && (
+              <Badge variant="success">✅ Passed</Badge>
+            )}
+            {moduleProgress?.status === "failed" && (
+              <Badge variant="danger">❌ Failed</Badge>
+            )}
+            {isModuleLocked(selectedModuleIndex) && (
+              <Badge variant="muted">🔒 Locked</Badge>
+            )}
+            {isAdvancing && (
+              <Badge variant="warning">⏳ Loading...</Badge>
             )}
           </div>
-        )}
+        </div>
+      </div>
 
-        {showQuiz && (
-          <div className="space-y-5">
-            {isModuleLocked(selectedModuleIndex) ? (
-              <Card className="p-8 text-center">
-                <Lock className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                <h3 className="font-semibold text-foreground mb-2">Module Locked</h3>
-                <p className="text-sm text-muted-foreground">
-                  Complete the previous module to unlock this quiz.
-                </p>
-              </Card>
-            ) : loadingQuiz ? (
-              <Card className="p-8 text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                <p className="text-muted-foreground mt-4">Loading quiz...</p>
-              </Card>
-            ) : !quizData || quizQuestions.length === 0 ? (
-              <Card className="p-8 text-center">
-                <HelpCircle className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                <h3 className="font-semibold text-foreground mb-2">No Quiz Available</h3>
-                <p className="text-sm text-muted-foreground">
-                  The instructor hasn't created a quiz for this module yet.
-                </p>
+      {/* ─── Module List Sidebar ───────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-56 bg-muted/20 border-r border-border p-3 shrink-0 overflow-y-auto hidden md:block">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Course Modules</h4>
+          <div className="space-y-1">
+            {modules?.map((module, index) => {
+              const isLocked = isModuleLocked(index);
+              const isActive = index === selectedModuleIndex;
+              const isCompleted = isModuleCompleted(module.id);
+              const prog = progressData.find(p => p.module_id === module.id);
+              
+              return (
                 <button
-                  onClick={() => setShowQuiz(false)}
-                  className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  Back to Content
-                </button>
-              </Card>
-            ) : (
-              <Card className="p-4 md:p-6">
-                <div className="mb-4">
-                  <h3 className="font-semibold text-foreground text-lg">{quizData.title}</h3>
-                  {quizData.description && (
-                    <p className="text-sm text-muted-foreground mt-1">{quizData.description}</p>
+                  key={module.id}
+                  onClick={() => handleModuleSelect(index)}
+                  disabled={isLocked}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all text-left",
+                    isActive ? "bg-accent/20 text-accent font-medium border border-accent/30" : "text-foreground/70 hover:bg-muted",
+                    isLocked && "opacity-50 cursor-not-allowed",
+                    isCompleted && !isActive && "bg-green-50 text-green-700"
                   )}
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Pass score: <span className="font-semibold text-accent">{quizData.pass_score}%</span>
-                  </p>
-                </div>
-                
-                {quizQuestions.map((q, qi) => (
-                  <div key={q.id} className="mb-6 last:mb-0 border-b border-border pb-4 last:border-0 last:pb-0">
-                    <p className="text-sm font-medium text-foreground mb-3">{qi + 1}. {q.question}</p>
-                    <div className="space-y-2">
-                      {q.options.map((opt: string, oi: number) => {
-                        const selected = quizAnswers[qi] === oi;
-                        const isCorrect = oi === q.correct_answer;
-                        const showCorrect = quizSubmitted && isCorrect;
-                        const showWrong = quizSubmitted && selected && !isCorrect;
-                        return (
-                          <button
-                            key={oi}
-                            onClick={() => !quizSubmitted && !quizAttempted && setQuizAnswers((p) => ({ ...p, [qi]: oi }))}
-                            disabled={quizSubmitted || quizAttempted || submittingQuiz}
-                            className={cn(
-                              "w-full text-left px-4 py-3 rounded-xl border text-sm transition-all",
-                              quizSubmitted || quizAttempted
-                                ? showCorrect ? "border-green-400 bg-green-50 text-green-800"
-                                  : showWrong ? "border-red-400 bg-red-50 text-red-800"
-                                  : "border-border text-muted-foreground opacity-60"
-                                : selected
-                                ? "border-accent bg-accent/10 text-foreground"
-                                : "border-border hover:border-primary/40 text-foreground"
-                            )}
-                          >
-                            <span className="flex items-center gap-2">
-                              {(quizSubmitted || quizAttempted) && showCorrect && <CheckCircle className="w-4 h-4 text-green-600" />}
-                              {(quizSubmitted || quizAttempted) && showWrong && <XCircle className="w-4 h-4 text-red-600" />}
-                              {opt}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-                
-                {quizAttempted || quizSubmitted ? (
-                  <div className={cn(
-                    "mt-6 p-5 rounded-xl flex flex-col md:flex-row items-center gap-4",
-                    quizScore >= (quizData.pass_score || 70) ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+                >
+                  <span className={cn(
+                    "w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0",
+                    isCompleted ? "bg-green-100 text-green-600" : 
+                    isActive ? "bg-accent/20 text-accent" : 
+                    "bg-muted/50 text-muted-foreground"
                   )}>
-                    {quizScore >= (quizData.pass_score || 70)
-                      ? <CheckCircle className="w-8 h-8 text-green-600 shrink-0" />
-                      : <XCircle className="w-8 h-8 text-red-600 shrink-0" />}
-                    <div className="flex-1 text-center md:text-left">
-                      <p className={cn("font-bold text-lg", quizScore >= (quizData.pass_score || 70) ? "text-green-800" : "text-red-800")}>
-                        {quizScore}% — {quizScore >= (quizData.pass_score || 70) ? "Quiz Passed! 🎉" : "Not Passed"}
-                      </p>
-                      <p className={cn("text-sm mt-0.5", quizScore >= (quizData.pass_score || 70) ? "text-green-700" : "text-red-700")}>
-                        {quizScore >= (quizData.pass_score || 70)
-                          ? "The next module has been unlocked. Great work!"
-                          : `You need ${quizData.pass_score}% to pass. Review the content and try again.`}
-                      </p>
-                    </div>
-                    {quizScore < (quizData.pass_score || 70) && (
-                      <button
-                        onClick={async () => { 
-                          setQuizSubmitted(false); 
-                          setQuizAnswers({}); 
-                          setQuizScore(0);
-                          setQuizAttempted(false);
-                          await supabase
-                            .from("quiz_attempts")
-                            .delete()
-                            .eq("quiz_id", quizData.id)
-                            .eq("student_id", profile.id)
-                            .eq("enrollment_id", enrollment?.id);
-                          const existingProgress = progressData.find(p => p.module_id === currentModule.id);
-                          if (existingProgress) {
-                            await supabase
-                              .from("module_progress")
-                              .update({ status: "in_progress", score: null })
-                              .eq("id", existingProgress.id);
-                          }
-                          await fetchProgress();
-                          await fetchEnrollmentData();
-                        }}
-                        className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5 inline mr-1" /> Retry Quiz
-                      </button>
+                    {isCompleted ? (
+                      <Check className="w-3 h-3" />
+                    ) : isLocked ? (
+                      <Lock className="w-2.5 h-2.5" />
+                    ) : (
+                      index + 1
                     )}
-                    {quizScore >= (quizData.pass_score || 70) && (
-                      <button
-                        onClick={() => {
-                          const nextIndex = selectedModuleIndex + 1;
-                          if (nextIndex < modules.length) {
-                            const nextModule = modules[nextIndex];
-                            const nextProgress = progressData.find(p => p.module_id === nextModule.id);
-                            if (!nextProgress || nextProgress.status === "locked") {
+                  </span>
+                  <span className="truncate flex-1 text-xs">{module.title}</span>
+                  {isCompleted && <Check className="w-3 h-3 text-green-600" />}
+                </button>
+              );
+            })}
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Progress</span>
+              <span>{progressData.filter(p => p.status === "passed").length}/{modules?.length || 0}</span>
+            </div>
+            <ProgressBar 
+              value={progressData.filter(p => p.status === "passed").length} 
+              max={modules?.length || 1} 
+              className="mt-1" 
+            />
+          </div>
+        </div>
+
+        {/* ─── Main Content ────────────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          {/* Content Tab */}
+          {activeTab === "content" && (
+            <div className="space-y-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-foreground">{currentModule.title}</h2>
+                <p className="text-sm text-muted-foreground mt-1">{currentModule.description}</p>
+              </div>
+              
+              {currentContent ? (
+                <>
+                  {currentContent.content_type === "video" && currentContent.content_url && (
+                    <SecureVideoPlayer 
+                      url={currentContent.content_url} 
+                      title={currentContent.title}
+                      onProgress={setVideoProgress}
+                    />
+                  )}
+                  
+                  {currentContent.content_type === "text" && currentContent.content_text && (
+                    <Card className="p-4 md:p-6">
+                      <h3 className="font-semibold text-foreground mb-3 text-lg">{currentContent.title}</h3>
+                      <div className="prose prose-sm max-w-none text-muted-foreground">
+                        <p className="whitespace-pre-wrap text-sm md:text-base">{currentContent.content_text}</p>
+                      </div>
+                    </Card>
+                  )}
+                </>
+              ) : (
+                <Card className="p-4 md:p-6 text-center">
+                  <div className="py-8">
+                    <FileText className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                    <h3 className="font-semibold text-foreground mb-2">No Content Available</h3>
+                    <p className="text-sm text-muted-foreground">
+                      The instructor hasn't added content for this module yet.
+                    </p>
+                  </div>
+                </Card>
+              )}
+              
+              {!isModuleLocked(selectedModuleIndex) && quizData && quizQuestions.length > 0 && !quizAttempted && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setActiveTab("quiz")}
+                    className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors text-sm"
+                  >
+                    Take Module Quiz <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Quiz Tab */}
+          {activeTab === "quiz" && (
+            <div className="space-y-5">
+              {isModuleLocked(selectedModuleIndex) ? (
+                <Card className="p-8 text-center">
+                  <Lock className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                  <h3 className="font-semibold text-foreground mb-2">Module Locked</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Complete the previous module to unlock this quiz.
+                  </p>
+                </Card>
+              ) : loadingQuiz ? (
+                <Card className="p-8 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+                  <p className="text-muted-foreground mt-4">Loading quiz...</p>
+                </Card>
+              ) : !quizData || quizQuestions.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <HelpCircle className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                  <h3 className="font-semibold text-foreground mb-2">No Quiz Available</h3>
+                  <p className="text-sm text-muted-foreground">
+                    The instructor hasn't created a quiz for this module yet.
+                  </p>
+                </Card>
+              ) : (
+                <Card className="p-4 md:p-6">
+                  <div className="mb-4">
+                    <h3 className="font-semibold text-foreground text-lg">{quizData.title}</h3>
+                    {quizData.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{quizData.description}</p>
+                    )}
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Pass score: <span className="font-semibold text-accent">{quizData.pass_score}%</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {quizQuestions.length} questions
+                    </p>
+                  </div>
+                  
+                  {quizQuestions.map((q, qi) => (
+                    <div key={q.id} className="mb-6 last:mb-0 border-b border-border pb-4 last:border-0 last:pb-0">
+                      <p className="text-sm font-medium text-foreground mb-3">{qi + 1}. {q.question}</p>
+                      <div className="space-y-2">
+                        {q.options.map((opt: string, oi: number) => {
+                          const selected = quizAnswers[qi] === oi;
+                          const isCorrect = oi === q.correct_answer;
+                          const showCorrect = quizSubmitted && isCorrect;
+                          const showWrong = quizSubmitted && selected && !isCorrect;
+                          return (
+                            <button
+                              key={oi}
+                              onClick={() => !quizSubmitted && !quizAttempted && setQuizAnswers((p) => ({ ...p, [qi]: oi }))}
+                              disabled={quizSubmitted || quizAttempted || submittingQuiz}
+                              className={cn(
+                                "w-full text-left px-4 py-3 rounded-xl border text-sm transition-all",
+                                quizSubmitted || quizAttempted
+                                  ? showCorrect ? "border-green-400 bg-green-50 text-green-800"
+                                    : showWrong ? "border-red-400 bg-red-50 text-red-800"
+                                    : "border-border text-muted-foreground opacity-60"
+                                  : selected
+                                  ? "border-accent bg-accent/10 text-foreground"
+                                  : "border-border hover:border-primary/40 text-foreground"
+                              )}
+                            >
+                              <span className="flex items-center gap-2">
+                                {(quizSubmitted || quizAttempted) && showCorrect && <CheckCircle className="w-4 h-4 text-green-600" />}
+                                {(quizSubmitted || quizAttempted) && showWrong && <XCircle className="w-4 h-4 text-red-600" />}
+                                {opt}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {quizAttempted || quizSubmitted ? (
+                    <div className={cn(
+                      "mt-6 p-5 rounded-xl flex flex-col md:flex-row items-center gap-4",
+                      quizScore >= (quizData.pass_score || 70) ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+                    )}>
+                      {quizScore >= (quizData.pass_score || 70)
+                        ? <CheckCircle className="w-8 h-8 text-green-600 shrink-0" />
+                        : <XCircle className="w-8 h-8 text-red-600 shrink-0" />}
+                      <div className="flex-1 text-center md:text-left">
+                        <p className={cn("font-bold text-lg", quizScore >= (quizData.pass_score || 70) ? "text-green-800" : "text-red-800")}>
+                          {quizScore}% — {quizScore >= (quizData.pass_score || 70) ? "Quiz Passed! 🎉" : "Not Passed"}
+                        </p>
+                        <p className={cn("text-sm mt-0.5", quizScore >= (quizData.pass_score || 70) ? "text-green-700" : "text-red-700")}>
+                          {quizScore >= (quizData.pass_score || 70)
+                            ? "The next module has been unlocked. Great work!"
+                            : `You need ${quizData.pass_score}% to pass. Review the content and try again.`}
+                        </p>
+                      </div>
+                      {quizScore < (quizData.pass_score || 70) && (
+                        <button
+                          onClick={async () => { 
+                            setQuizSubmitted(false); 
+                            setQuizAnswers({}); 
+                            setQuizScore(0);
+                            setQuizAttempted(false);
+                            await supabase
+                              .from("quiz_attempts")
+                              .delete()
+                              .eq("quiz_id", quizData.id)
+                              .eq("student_id", profile.id)
+                              .eq("enrollment_id", enrollment?.id);
+                            const existingProgress = progressData.find(p => p.module_id === currentModule.id);
+                            if (existingProgress) {
+                              await supabase
+                                .from("module_progress")
+                                .update({ status: "in_progress", score: null })
+                                .eq("id", existingProgress.id);
+                            }
+                            await fetchProgress();
+                            await fetchEnrollmentData();
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5 inline mr-1" /> Retry Quiz
+                        </button>
+                      )}
+                      {quizScore >= (quizData.pass_score || 70) && (
+                        <button
+                          onClick={() => {
+                            const nextIndex = selectedModuleIndex + 1;
+                            if (nextIndex < modules.length) {
                               const checkAndAdvance = async () => {
                                 await fetchEnrollmentData();
                                 await fetchProgress();
@@ -2283,7 +2309,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                                 if (updated && updated.current_module_index > selectedModuleIndex) {
                                   setIsAdvancing(true);
                                   setSelectedModuleIndex(updated.current_module_index);
-                                  setShowQuiz(false);
+                                  setActiveTab("content");
                                   setQuizSubmitted(false);
                                   setQuizAnswers({});
                                   setQuizScore(0);
@@ -2297,31 +2323,42 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                               };
                               checkAndAdvance();
                             } else {
-                              handleModuleSelect(nextIndex);
+                              onNavigate("student-courses");
                             }
-                          } else {
-                            onNavigate("student-courses");
-                          }
-                        }}
-                        className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        {selectedModuleIndex + 1 < modules.length ? "Next Module →" : "Back to Courses"}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleSubmitQuiz}
-                    disabled={Object.keys(quizAnswers).length < quizQuestions.length || submittingQuiz}
-                    className="mt-6 w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
-                  >
-                    {submittingQuiz ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Quiz"}
-                  </button>
-                )}
+                          }}
+                          className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          {selectedModuleIndex + 1 < modules.length ? "Next Module →" : "Back to Courses"}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleSubmitQuiz}
+                      disabled={Object.keys(quizAnswers).length < quizQuestions.length || submittingQuiz}
+                      className="mt-6 w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+                    >
+                      {submittingQuiz ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Quiz"}
+                    </button>
+                  )}
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Assignment Tab */}
+          {activeTab === "assignment" && (
+            <div className="space-y-5">
+              <Card className="p-6 text-center">
+                <ClipboardList className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                <h3 className="font-semibold text-foreground mb-2">Assignments</h3>
+                <p className="text-sm text-muted-foreground">
+                  Assignments for this module will appear here when created by your instructor.
+                </p>
               </Card>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
