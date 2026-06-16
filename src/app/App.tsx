@@ -2353,6 +2353,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
               <p className="font-semibold text-yellow-800">Pending Payment Required</p>
               <p className="text-sm text-yellow-700 mt-1">
                 You have {pendingEnrollments.length} enrollment{pendingEnrollments.length > 1 ? 's' : ''} that need payment confirmation.
+                Please upload your receipt to complete enrollment.
               </p>
               <button
                 onClick={() => window.location.href = "/student-courses"}
@@ -2535,7 +2536,7 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
   );
 }
 
-// ─── Admin Courses ────────────────────────────────────────────────────────────
+// ─── Admin Courses (with 500MB Video Upload) ─────────────────────────────────
 
 function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseUpdate, onCourseDelete, onModuleAdd, onModuleDelete, onModuleContentAdd, onModuleContentDelete }: { 
   courses: Course[]; 
@@ -2561,6 +2562,8 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSpeed, setUploadSpeed] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: string; title: string } | null>(null);
 
   const openCreateCourse = () => {
@@ -2622,6 +2625,113 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
   const handleDeleteContent = async (contentId: string) => {
     if (confirm("Are you sure you want to delete this content?")) {
       await onModuleContentDelete(contentId);
+    }
+  };
+
+  // Chunked upload function for large videos
+  const uploadVideoInChunks = async (file: File, moduleId: string, onProgress: (progress: number) => void) => {
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `module-${moduleId}-${Date.now()}.${fileExt}`;
+    
+    let uploadedChunks = 0;
+    let startTime = Date.now();
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(file.size, start + CHUNK_SIZE);
+      const chunk = file.slice(start, end);
+      
+      const { error } = await supabase.storage
+        .from('module-videos')
+        .upload(fileName, chunk, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type,
+        });
+      
+      if (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
+      
+      uploadedChunks++;
+      const progress = Math.round((uploadedChunks / totalChunks) * 100);
+      onProgress(progress);
+      
+      // Calculate upload speed
+      const elapsed = (Date.now() - startTime) / 1000;
+      const uploadedMB = (uploadedChunks * CHUNK_SIZE) / (1024 * 1024);
+      const speed = uploadedMB / elapsed;
+      setUploadSpeed(`${speed.toFixed(1)} MB/s`);
+    }
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('module-videos')
+      .getPublicUrl(fileName);
+    
+    return publicUrl;
+  };
+
+  // Direct upload for smaller files
+  const uploadVideoDirect = async (file: File, moduleId: string, onProgress: (progress: number) => void) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `module-${moduleId}-${Date.now()}.${fileExt}`;
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 5;
+      if (progress <= 95) {
+        onProgress(progress);
+      }
+    }, 200);
+    
+    const { error } = await supabase.storage
+      .from('module-videos')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: file.type,
+      });
+    
+    clearInterval(interval);
+    
+    if (error) {
+      console.error('Upload error:', error);
+      throw error;
+    }
+    
+    onProgress(100);
+    const { data: { publicUrl } } = supabase.storage
+      .from('module-videos')
+      .getPublicUrl(fileName);
+    
+    return publicUrl;
+  };
+
+  const handleVideoUpload = async (file: File, moduleId: string) => {
+    setUploadProgress(0);
+    setUploadSpeed("");
+    
+    try {
+      let videoUrl;
+      
+      // For files larger than 50MB, use chunked upload
+      if (file.size > 50 * 1024 * 1024) {
+        videoUrl = await uploadVideoInChunks(file, moduleId, (progress) => {
+          setUploadProgress(progress);
+        });
+      } else {
+        videoUrl = await uploadVideoDirect(file, moduleId, (progress) => {
+          setUploadProgress(progress);
+        });
+      }
+      
+      return videoUrl;
+    } catch (error) {
+      console.error('Upload failed:', error);
+      throw error;
     }
   };
 
@@ -2743,6 +2853,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         })}
       </div>
 
+      {/* Course Modal (Create/Edit) */}
       <Modal open={showCourseModal} onClose={() => setShowCourseModal(false)} title={editingCourse ? "Edit Course" : "Create New Course"}>
         <div className="space-y-4">
           <Input label="Course Title" value={courseForm.title} onChange={(v) => setCourseForm((p) => ({ ...p, title: v }))} placeholder="e.g. Advanced Data Science" required />
@@ -2796,6 +2907,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         </div>
       </Modal>
 
+      {/* Add Module Modal */}
       <Modal open={showModuleModal} onClose={() => setShowModuleModal(false)} title={`Add Module — ${activeCourse?.title}`}>
         <div className="space-y-4">
           <Input label="Module Title" value={moduleForm.title} onChange={(v) => setModuleForm((p) => ({ ...p, title: v }))} placeholder="e.g. Python Foundations" required />
@@ -2824,6 +2936,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         </div>
       </Modal>
 
+      {/* Add Module Content Modal - Video Upload with 500MB support */}
       <Modal open={showContentModal} onClose={() => setShowContentModal(false)} title={`Add Content — ${activeModule?.title}`}>
         <div className="space-y-4">
           <Input label="Content Title" value={contentForm.title} onChange={(v) => setContentForm((p) => ({ ...p, title: v }))} placeholder="e.g. Introduction Video" required />
@@ -2834,13 +2947,13 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
               onChange={(e) => setContentForm((p) => ({ ...p, content_type: e.target.value }))}
               className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
             >
-              <option value="video">Video (DRM Protected)</option>
+              <option value="video">Video (DRM Protected - Up to 500MB)</option>
               <option value="text">Text Lesson</option>
             </select>
           </div>
           {contentForm.content_type === "video" && (
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-foreground">Upload Video</label>
+              <label className="block text-sm font-medium text-foreground">Upload Video (Max 500MB)</label>
               <div 
                 className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-accent transition-colors cursor-pointer"
                 onClick={() => document.getElementById("video-upload")?.click()}
@@ -2849,8 +2962,11 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                   <div className="flex items-center justify-center gap-2">
                     <CheckCircle className="w-5 h-5 text-green-500" />
                     <span className="text-sm text-foreground">{videoFile.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({(videoFile.size / (1024 * 1024)).toFixed(1)} MB)
+                    </span>
                     <button 
-                      onClick={(e) => { e.stopPropagation(); setVideoFile(null); }}
+                      onClick={(e) => { e.stopPropagation(); setVideoFile(null); setUploadProgress(0); }}
                       className="text-destructive hover:text-destructive/80"
                     >
                       <X className="w-4 h-4" />
@@ -2861,6 +2977,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                     <Video className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">Click to upload module video</p>
                     <p className="text-xs text-muted-foreground">MP4, MOV · Max 500MB · DRM Protected</p>
+                    <p className="text-xs text-amber-600 mt-1">Large files are uploaded in chunks for reliability</p>
                   </>
                 )}
                 <input
@@ -2868,9 +2985,37 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                   type="file"
                   className="hidden"
                   accept="video/*"
-                  onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && file.size <= 500 * 1024 * 1024) {
+                      setVideoFile(file);
+                      setUploadProgress(0);
+                    } else if (file) {
+                      alert("File size exceeds 500MB limit. Please select a smaller file.");
+                    }
+                  }}
                 />
               </div>
+              {uploadProgress > 0 && uploadProgress < 100 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Uploading...</span>
+                    <span>{uploadSpeed}</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-accent rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground">{uploadProgress}% complete</p>
+                </div>
+              )}
+              {uploadProgress === 100 && (
+                <div className="flex items-center gap-2 text-green-600 text-sm">
+                  <CheckCircle className="w-4 h-4" /> Upload complete!
+                </div>
+              )}
               <p className="text-xs text-amber-600 flex items-center gap-1">
                 <Shield className="w-3 h-3" /> Videos are protected - Students cannot download or share
               </p>
@@ -2890,16 +3035,31 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
             onClick={async () => {
               if (!activeModule) return;
               setLoading(true);
+              
+              let videoUrl = null;
+              if (videoFile && contentForm.content_type === "video") {
+                try {
+                  videoUrl = await handleVideoUpload(videoFile, activeModule.id);
+                } catch (error) {
+                  alert("Failed to upload video. Please try again.");
+                  setLoading(false);
+                  return;
+                }
+              }
+              
               await onModuleContentAdd({
                 module_id: activeModule.id,
                 title: contentForm.title,
                 content_type: contentForm.content_type as "video" | "text",
                 content_text: contentForm.content_type === "text" ? contentForm.content_text : undefined,
+                content_url: videoUrl,
                 order_index: 0,
               }, videoFile || undefined);
+              
               setShowContentModal(false);
               setContentForm({ title: "", content_type: "video", content_text: "" });
               setVideoFile(null);
+              setUploadProgress(0);
               setLoading(false);
             }}
             disabled={loading || !contentForm.title || (contentForm.content_type === "video" && !videoFile) || (contentForm.content_type === "text" && !contentForm.content_text)}
