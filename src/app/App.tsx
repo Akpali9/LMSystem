@@ -1586,8 +1586,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                       </p>
                     </div>
                     {enrollment.status === "pending_payment" && (
-                      <button
-                        onClick={() => {
+                      <button                        onClick={() => {
                           setSelectedCourse(enrollment.course || null);
                           setShowEnroll(true);
                         }}
@@ -1731,7 +1730,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   );
 }
 
-// ─── Student Module Viewer (WITH EXAM NAVIGATION & FIXED QUIZ FETCHING) ────────────
+// ─── Student Module Viewer (WITH AUTO-ADVANCE) ────────────────────────────
 
 function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
@@ -1756,6 +1755,8 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const [currentEnrollment, setCurrentEnrollment] = useState<Enrollment | null>(enrollment);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
+  const [autoAdvancing, setAutoAdvancing] = useState(false);
+  const [showNoQuizMessage, setShowNoQuizMessage] = useState(false);
 
   useEffect(() => {
     if (enrollment) {
@@ -1814,6 +1815,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setQuizAnswers({});
     setQuizScore(0);
     setQuizAttempted(false);
+    setShowNoQuizMessage(false);
     
     try {
       // First, check if a quiz exists for this module
@@ -1828,6 +1830,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         setQuizData(null);
         setQuizQuestions([]);
         setLoadingQuiz(false);
+        await handleNoQuizAutoAdvance();
         return;
       }
       
@@ -1845,12 +1848,18 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         if (questionsError) {
           console.error("Error fetching quiz questions:", questionsError);
           setQuizQuestions([]);
+          await handleNoQuizAutoAdvance();
+          setLoadingQuiz(false);
+          return;
         } else if (questions && questions.length > 0) {
           console.log(`✅ Found ${questions.length} questions for quiz`);
           setQuizQuestions(questions);
         } else {
           console.log("⚠️ No questions found for this quiz");
           setQuizQuestions([]);
+          await handleNoQuizAutoAdvance();
+          setLoadingQuiz(false);
+          return;
         }
         
         // Check if student has already attempted this quiz
@@ -1874,6 +1883,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         console.log("❌ No quiz found for module:", currentModule.id);
         setQuizData(null);
         setQuizQuestions([]);
+        await handleNoQuizAutoAdvance();
       }
     } catch (error) {
       console.error("Error in fetchQuizForModule:", error);
@@ -1881,6 +1891,83 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       setQuizQuestions([]);
     }
     setLoadingQuiz(false);
+  };
+
+  // Handle auto-advance when no quiz exists
+  const handleNoQuizAutoAdvance = async () => {
+    if (autoAdvancing) return;
+    
+    // Check if already passed this module
+    const existingProgress = progressData.find(p => p.module_id === currentModule?.id);
+    if (existingProgress?.status === "passed") {
+      console.log("Module already passed, skipping auto-advance");
+      return;
+    }
+    
+    // Check if we've already advanced this module
+    const currentIndex = currentEnrollment?.current_module_index || 0;
+    const currentModuleId = modules?.[currentIndex]?.id;
+    
+    if (currentModuleId !== currentModule?.id) {
+      console.log("Already advanced past this module");
+      return;
+    }
+    
+    // Check if this is the last module
+    const nextModuleIndex = selectedModuleIndex + 1;
+    if (nextModuleIndex >= modules.length) {
+      console.log("This is the last module, no next module to advance to");
+      setShowNoQuizMessage(true);
+      return;
+    }
+    
+    console.log("No quiz found, auto-advancing to next module");
+    setAutoAdvancing(true);
+    
+    try {
+      // Mark current module as passed (100% score since no quiz)
+      await onProgressUpdate(currentModule.id, "passed", 100);
+      
+      // Update enrollment to advance to next module
+      const { error } = await supabase
+        .from("enrollments")
+        .update({ current_module_index: nextModuleIndex })
+        .eq("id", enrollment?.id);
+      
+      if (error) {
+        console.error("Error advancing enrollment:", error);
+        setAutoAdvancing(false);
+        return;
+      }
+      
+      // Refresh enrollment and progress data
+      await fetchEnrollmentData();
+      await fetchProgress();
+      
+      // Update UI to show the next module
+      setTimeout(() => {
+        setIsAdvancing(true);
+        setSelectedModuleIndex(nextModuleIndex);
+        setActiveTab("content");
+        setQuizSubmitted(false);
+        setQuizAnswers({});
+        setQuizScore(0);
+        setQuizAttempted(false);
+        fetchQuizForModule();
+        setTimeout(() => {
+          setIsAdvancing(false);
+          setAutoAdvancing(false);
+        }, 300);
+      }, 500);
+      
+      // Show a notification to the user
+      setShowNoQuizMessage(true);
+      setTimeout(() => setShowNoQuizMessage(false), 5000);
+      
+    } catch (error) {
+      console.error("Error in auto-advance:", error);
+      setAutoAdvancing(false);
+    }
   };
 
   const handleModuleSelect = (index: number) => {
@@ -1904,6 +1991,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       setQuizAnswers({});
       setQuizScore(0);
       setQuizAttempted(false);
+      setShowNoQuizMessage(false);
       setTimeout(() => {
         fetchQuizForModule();
         setIsAdvancing(false);
@@ -2067,9 +2155,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                 {prog?.status === "failed" && (
                   <Badge variant="danger" className="text-[10px] px-1.5 py-0.5">✗</Badge>
                 )}
-                {/* Show quiz indicator */}
                 {!isLocked && quizData && quizQuestions.length > 0 && (
                   <Badge variant="info" className="text-[10px] px-1.5 py-0.5">📝</Badge>
+                )}
+                {!isLocked && !quizData && isCompleted && (
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">🚀</Badge>
                 )}
               </button>
             );
@@ -2091,10 +2181,26 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         <div className="mt-3 text-xs text-muted-foreground border-t border-border pt-3 space-y-1">
           <p>Module {selectedModuleIndex + 1} of {modules?.length || 0}</p>
           <p className="text-accent">✓ Pass quizzes to unlock next module</p>
+          <p className="text-green-600">🚀 No quiz? Auto-advance!</p>
         </div>
       </div>
 
       <div className="flex-1 p-4 md:p-6 overflow-y-auto max-h-[calc(100vh-80px)]">
+        {/* Auto-advance notification */}
+        {showNoQuizMessage && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-green-800">✅ No Quiz Required!</p>
+                <p className="text-xs text-green-700">
+                  This module has no quiz. You've been automatically advanced to the next module.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Badge variant="info">Module {selectedModuleIndex + 1} of {modules?.length || 0}</Badge>
@@ -2102,6 +2208,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
             {moduleProgress?.status === "failed" && <Badge variant="danger">❌ Failed</Badge>}
             {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
             {quizData && quizQuestions.length > 0 && <Badge variant="info">📝 Quiz: {quizData.title}</Badge>}
+            {!quizData && moduleProgress?.status === "passed" && <Badge variant="success">🚀 Auto-Passed</Badge>}
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
             {currentModule.title}
@@ -2111,7 +2218,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           </p>
         </div>
 
-        {/* Navigation Tabs - Content, Quiz, Exam */}
+        {/* Navigation Tabs */}
         <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit mb-6 flex-wrap">
           <button
             onClick={() => setActiveTab("content")}
@@ -2144,19 +2251,16 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           >
             <Award className="w-4 h-4" /> Exam
           </button>
-          {/* Refresh button for quiz */}
-          {!isModuleLocked(selectedModuleIndex) && (
-            <button
-              onClick={() => {
-                setQuizRefreshKey(prev => prev + 1);
-                setActiveTab("quiz");
-              }}
-              className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-card/50 flex items-center gap-1"
-              title="Refresh quiz data"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setQuizRefreshKey(prev => prev + 1);
+              setActiveTab("quiz");
+            }}
+            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-card/50 flex items-center gap-1"
+            title="Refresh quiz data"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* Content Tab */}
@@ -2193,6 +2297,37 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
               </Card>
             )}
             
+            {/* Show "Mark as Complete" button if no quiz and not completed */}
+            {!quizData && moduleProgress?.status !== "passed" && !isModuleLocked(selectedModuleIndex) && currentContent && (
+              <div className="flex justify-end">
+                <button
+                  onClick={async () => {
+                    await onProgressUpdate(currentModule.id, "passed", 100);
+                    const nextIndex = selectedModuleIndex + 1;
+                    if (nextIndex < modules.length) {
+                      const { error } = await supabase
+                        .from("enrollments")
+                        .update({ current_module_index: nextIndex })
+                        .eq("id", enrollment?.id);
+                      
+                      if (!error) {
+                        await fetchEnrollmentData();
+                        await fetchProgress();
+                        setIsAdvancing(true);
+                        setSelectedModuleIndex(nextIndex);
+                        setActiveTab("content");
+                        fetchQuizForModule();
+                        setTimeout(() => setIsAdvancing(false), 300);
+                      }
+                    }
+                  }}
+                  className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors text-sm"
+                >
+                  <CheckCircle className="w-4 h-4" /> Mark as Complete (No Quiz)
+                </button>
+              </div>
+            )}
+            
             {!isModuleLocked(selectedModuleIndex) && currentContent && quizData && quizQuestions.length > 0 && !quizAttempted && (
               <div className="flex justify-end">
                 <button
@@ -2206,7 +2341,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           </div>
         )}
 
-        {/* Quiz Tab - FIXED */}
+        {/* Quiz Tab */}
         {activeTab === "quiz" && (
           <div className="space-y-5">
             {isModuleLocked(selectedModuleIndex) ? (
@@ -2224,21 +2359,48 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
               </Card>
             ) : !quizData || quizQuestions.length === 0 ? (
               <Card className="p-8 text-center">
-                <HelpCircle className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                <h3 className="font-semibold text-foreground mb-2">No Quiz Available</h3>
+                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                <h3 className="font-semibold text-foreground mb-2">No Quiz Required ✅</h3>
                 <p className="text-sm text-muted-foreground">
                   {quizData && quizQuestions.length === 0 
-                    ? "A quiz exists for this module but has no questions. Please contact the administrator." 
-                    : "The instructor hasn't created a quiz for this module yet."}
+                    ? "A quiz exists but has no questions. You can skip this module." 
+                    : "This module doesn't have a quiz. You can mark it as complete."}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    onClick={async () => {
+                      await onProgressUpdate(currentModule.id, "passed", 100);
+                      const nextIndex = selectedModuleIndex + 1;
+                      if (nextIndex < modules.length) {
+                        const { error } = await supabase
+                          .from("enrollments")
+                          .update({ current_module_index: nextIndex })
+                          .eq("id", enrollment?.id);
+                        
+                        if (!error) {
+                          await fetchEnrollmentData();
+                          await fetchProgress();
+                          setIsAdvancing(true);
+                          setSelectedModuleIndex(nextIndex);
+                          setActiveTab("content");
+                          fetchQuizForModule();
+                          setTimeout(() => setIsAdvancing(false), 300);
+                        }
+                      } else {
+                        onNavigate("student-courses");
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <CheckCircle className="w-4 h-4 inline mr-1" /> Mark as Complete
+                  </button>
                   <button
                     onClick={() => {
                       setQuizRefreshKey(prev => prev + 1);
                     }}
                     className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
                   >
-                    <RefreshCw className="w-4 h-4" /> Refresh Quiz
+                    <RefreshCw className="w-4 h-4" /> Refresh
                   </button>
                   <button
                     onClick={() => setActiveTab("content")}
@@ -5044,7 +5206,6 @@ export default function App() {
       
       if (questionsError) {
         console.error("Error creating quiz questions:", questionsError);
-        // Rollback: delete the quiz if questions fail
         await supabase.from("quizzes").delete().eq("id", quiz.id);
         throw questionsError;
       }
@@ -5055,7 +5216,6 @@ export default function App() {
     await supabase.from("quiz_attempts").delete().eq("quiz_id", quizId);
     await supabase.from("quiz_questions").delete().eq("quiz_id", quizId);
     await supabase.from("quizzes").delete().eq("id", quizId);
-    // Refresh quizzes in AdminQuizzes component
   };
 
   if (loading) {
