@@ -119,9 +119,12 @@ function CircularProgress({ value, max, size = 80, strokeWidth = 6, label, showP
   label?: string;
   showPercentage?: boolean;
 }) {
+  const safeMax = max || 1;
+  const safeValue = Math.min(value || 0, safeMax);
+  
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const progress = Math.min((value / max) * 100, 100);
+  const progress = Math.min((safeValue / safeMax) * 100, 100);
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
@@ -154,12 +157,28 @@ function CircularProgress({ value, max, size = 80, strokeWidth = 6, label, showP
           {showPercentage && (
             <span className="text-lg font-bold text-foreground">{Math.round(progress)}%</span>
           )}
-          <span className="text-xs text-muted-foreground">{value}/{max}</span>
+          <span className="text-xs text-muted-foreground">{safeValue}/{safeMax}</span>
         </div>
       </div>
       {label && (
         <span className="text-xs text-muted-foreground mt-2 text-center">{label}</span>
       )}
+    </div>
+  );
+}
+
+// ─── ProgressBar Component ────────────────────────────────────────────────────
+
+function ProgressBar({ value, max, className }: { value: number; max: number; className?: string }) {
+  const safeMax = max || 1;
+  const safeValue = Math.min(value || 0, safeMax);
+  const pct = Math.min(Math.round((safeValue / safeMax) * 100), 100);
+  return (
+    <div className={cn("h-2 bg-muted rounded-full overflow-hidden", className)}>
+      <div
+        className="h-full bg-accent rounded-full transition-all duration-500"
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 }
@@ -836,6 +855,10 @@ function Sidebar({
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
+  if (!profile) {
+    return null;
+  }
+
   const studentNav = [
     { view: "student-dashboard" as View, icon: LayoutDashboard, label: "Dashboard" },
     { view: "student-courses" as View, icon: BookOpen, label: "My Courses" },
@@ -989,9 +1012,9 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
     setLoading(false);
   };
 
-  const activeEnrollments = enrollments.filter(e => e.status === "active");
-  const passedCount = progress.filter(p => p.status === "passed").length;
-  const totalModules = modules.length;
+  const activeEnrollments = enrollments?.filter(e => e.status === "active") || [];
+  const passedCount = progress?.filter(p => p.status === "passed").length || 0;
+  const totalModules = modules?.length || 0;
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
@@ -1126,10 +1149,10 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
           <h2 className="text-xl font-semibold text-foreground mb-4">Your Courses</h2>
           <div className="space-y-4">
             {activeEnrollments.map((enrollment) => {
-              const courseModules = modules.filter(m => m.course_id === enrollment.course_id);
-              const passedModules = progress.filter(p => 
+              const courseModules = modules?.filter(m => m.course_id === enrollment.course_id) || [];
+              const passedModules = progress?.filter(p => 
                 p.enrollment_id === enrollment.id && p.status === "passed"
-              );
+              ) || [];
               
               return (
                 <Card key={enrollment.id} className="p-4 md:p-6">
@@ -1176,11 +1199,26 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
   progress: ModuleProgress[];
   modules: Module[];
 }) {
-  const activeEnrollment = enrollments.find(e => e.status === "active");
-  const pendingEnrollments = enrollments.filter(e => e.status === "pending_payment" || e.status === "payment_submitted");
-  const passedCount = progress.filter(p => p.status === "passed").length;
+  const safeEnrollments = enrollments || [];
+  const safeProgress = progress || [];
+  const safeModules = modules || [];
   
-  const totalModules = activeEnrollment ? modules.filter(m => m.course_id === activeEnrollment.course_id).length : 0;
+  const activeEnrollment = safeEnrollments.find(e => e?.status === "active") || null;
+  const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
+  const passedCount = safeProgress.filter(p => p?.status === "passed").length || 0;
+  
+  const totalModules = activeEnrollment && safeModules.length > 0 
+    ? safeModules.filter(m => m?.course_id === activeEnrollment?.course_id).length 
+    : 0;
+
+  if (!profile) {
+    return (
+      <div className="p-8 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+        <p className="text-muted-foreground mt-4">Loading profile...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
@@ -1206,13 +1244,13 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
 
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Good morning, {profile.full_name.split(" ")[0]} 👋
+          Good morning, {profile.full_name?.split(" ")[0] || "Student"} 👋
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Here's your learning progress at a glance.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-        <StatCard icon={BookOpen} label="Enrolled Courses" value={enrollments.filter(e => e.status === "active").length} />
+        <StatCard icon={BookOpen} label="Enrolled Courses" value={safeEnrollments.filter(e => e?.status === "active").length} />
         <StatCard icon={CheckCircle} label="Modules Passed" value={passedCount} />
         <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
         <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
@@ -1227,14 +1265,18 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
               </h2>
               <div className="flex flex-col md:flex-row gap-4 mb-5">
                 <div className="w-full md:w-24 h-32 md:h-24 rounded-xl overflow-hidden bg-muted shrink-0">
-                  <img src={activeEnrollment.course.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                  <img 
+                    src={activeEnrollment.course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
+                    alt="" 
+                    className="w-full h-full object-cover" 
+                  />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-foreground text-base md:text-lg">{activeEnrollment.course.title}</p>
+                  <p className="font-semibold text-foreground text-base md:text-lg">{activeEnrollment.course.title || "Course"}</p>
                   <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
-                    Module {activeEnrollment.current_module_index + 1} · Expires {formatDate(activeEnrollment.expires_at || "")}
+                    Module {activeEnrollment.current_module_index + 1 || 1} · Expires {formatDate(activeEnrollment.expires_at || "")}
                   </p>
-                  <StatusBadge status={activeEnrollment.status} />
+                  <StatusBadge status={activeEnrollment.status || "active"} />
                   <div className="mt-3">
                     <div className="flex items-center gap-4">
                       <ProgressBar value={passedCount} max={totalModules || 5} className="flex-1" />
@@ -1270,6 +1312,22 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
           </div>
         </div>
       )}
+
+      {!activeEnrollment && safeEnrollments.length === 0 && (
+        <Card className="p-12 text-center">
+          <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+          <h3 className="font-semibold text-foreground mb-2">No Active Courses</h3>
+          <p className="text-sm text-muted-foreground">
+            You haven't enrolled in any courses yet. Browse our programs and start learning!
+          </p>
+          <button
+            onClick={() => onNavigate("student-courses")}
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Browse Courses
+          </button>
+        </Card>
+      )}
     </div>
   );
 }
@@ -1290,11 +1348,11 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   const [submitting, setSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: "", type: 'success' });
 
-  const enrolledCourseIds = enrollments.map(e => e.course_id);
-  const availableCourses = courses.filter(c => !enrolledCourseIds.includes(c.id));
+  const enrolledCourseIds = enrollments?.map(e => e.course_id) || [];
+  const availableCourses = courses?.filter(c => !enrolledCourseIds.includes(c.id)) || [];
   
-  const activeEnrollments = enrollments.filter(e => e.status === "active");
-  const pendingEnrollments = enrollments.filter(e => e.status === "pending_payment" || e.status === "payment_submitted");
+  const activeEnrollments = enrollments?.filter(e => e.status === "active") || [];
+  const pendingEnrollments = enrollments?.filter(e => e.status === "pending_payment" || e.status === "payment_submitted") || [];
 
   const handleEnrollSubmit = async () => {
     if (!selectedCourse || !receiptFile) return;
@@ -1694,8 +1752,8 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const [loadingQuiz, setLoadingQuiz] = useState(false);
   const [quizAttempted, setQuizAttempted] = useState(false);
 
-  const currentModule = modules[selectedModuleIndex] || modules[0];
-  const currentContent = moduleContents.find(c => c.module_id === currentModule?.id);
+  const currentModule = modules?.[selectedModuleIndex] || modules?.[0] || null;
+  const currentContent = moduleContents?.find(c => c.module_id === currentModule?.id) || null;
 
   useEffect(() => {
     if (enrollment) {
@@ -1717,34 +1775,38 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     if (!currentModule) return;
     setLoadingQuiz(true);
     
-    const { data: quiz } = await supabase
-      .from("quizzes")
-      .select("*")
-      .eq("module_id", currentModule.id)
-      .single();
-    
-    if (quiz) {
-      setQuizData(quiz);
-      const { data: questions } = await supabase
-        .from("quiz_questions")
+    try {
+      const { data: quiz, error } = await supabase
+        .from("quizzes")
         .select("*")
-        .eq("quiz_id", quiz.id)
-        .order("order_index");
-      if (questions) setQuizQuestions(questions);
-      
-      const { data: attempt } = await supabase
-        .from("quiz_attempts")
-        .select("*")
-        .eq("quiz_id", quiz.id)
-        .eq("student_id", profile.id)
-        .eq("enrollment_id", enrollment?.id)
+        .eq("module_id", currentModule.id)
         .single();
       
-      if (attempt) {
-        setQuizAttempted(true);
-        setQuizSubmitted(true);
-        setQuizScore(attempt.score);
+      if (quiz) {
+        setQuizData(quiz);
+        const { data: questions } = await supabase
+          .from("quiz_questions")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .order("order_index");
+        if (questions) setQuizQuestions(questions);
+        
+        const { data: attempt } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .eq("student_id", profile.id)
+          .eq("enrollment_id", enrollment?.id)
+          .single();
+        
+        if (attempt) {
+          setQuizAttempted(true);
+          setQuizSubmitted(true);
+          setQuizScore(attempt.score);
+        }
       }
+    } catch (error) {
+      console.error("Error fetching quiz:", error);
     }
     setLoadingQuiz(false);
   };
@@ -1765,7 +1827,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const isModuleLocked = (index: number) => {
     const currentIndex = enrollment?.current_module_index || 0;
     if (index === 0) return false;
-    const prevModule = modules[index - 1];
+    const prevModule = modules?.[index - 1];
     if (!prevModule) return false;
     const prevProgress = progressData.find(p => p.module_id === prevModule.id);
     return !(prevProgress?.status === "passed");
@@ -1828,7 +1890,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       <div className="w-full md:w-64 bg-muted/30 border-b md:border-b-0 md:border-r border-border p-4 shrink-0 overflow-y-auto max-h-[calc(100vh-80px)]">
         <h3 className="font-semibold text-foreground mb-3 text-sm">Course Modules</h3>
         <div className="space-y-1">
-          {modules.map((module, index) => {
+          {modules?.map((module, index) => {
             const isLocked = isModuleLocked(index);
             const isActive = index === selectedModuleIndex;
             const isCompleted = isModuleCompleted(module.id);
@@ -1872,11 +1934,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         <div className="mt-4 pt-4 border-t border-border">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Progress</span>
-            <span>{progressData.filter(p => p.status === "passed").length}/{modules.length}</span>
+            <span>{progressData.filter(p => p.status === "passed").length}/{modules?.length || 0}</span>
           </div>
           <ProgressBar 
             value={progressData.filter(p => p.status === "passed").length} 
-            max={modules.length} 
+            max={modules?.length || 1} 
             className="mt-1" 
           />
         </div>
@@ -1885,7 +1947,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       <div className="flex-1 p-4 md:p-6 overflow-y-auto max-h-[calc(100vh-80px)]">
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant="info">Module {selectedModuleIndex + 1} of {modules.length}</Badge>
+            <Badge variant="info">Module {selectedModuleIndex + 1} of {modules?.length || 0}</Badge>
             {moduleProgress?.status === "passed" && <Badge variant="success">✅ Passed</Badge>}
             {moduleProgress?.status === "failed" && <Badge variant="danger">❌ Failed</Badge>}
             {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
@@ -2353,7 +2415,6 @@ function StudentPayments({ profile }: { profile: Profile }) {
               <p className="font-semibold text-yellow-800">Pending Payment Required</p>
               <p className="text-sm text-yellow-700 mt-1">
                 You have {pendingEnrollments.length} enrollment{pendingEnrollments.length > 1 ? 's' : ''} that need payment confirmation.
-                Please upload your receipt to complete enrollment.
               </p>
               <button
                 onClick={() => window.location.href = "/student-courses"}
@@ -2628,9 +2689,8 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
     }
   };
 
-  // Chunked upload function for large videos
   const uploadVideoInChunks = async (file: File, moduleId: string, onProgress: (progress: number) => void) => {
-    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+    const CHUNK_SIZE = 5 * 1024 * 1024;
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const fileExt = file.name.split('.').pop();
     const fileName = `module-${moduleId}-${Date.now()}.${fileExt}`;
@@ -2660,7 +2720,6 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
       const progress = Math.round((uploadedChunks / totalChunks) * 100);
       onProgress(progress);
       
-      // Calculate upload speed
       const elapsed = (Date.now() - startTime) / 1000;
       const uploadedMB = (uploadedChunks * CHUNK_SIZE) / (1024 * 1024);
       const speed = uploadedMB / elapsed;
@@ -2674,7 +2733,6 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
     return publicUrl;
   };
 
-  // Direct upload for smaller files
   const uploadVideoDirect = async (file: File, moduleId: string, onProgress: (progress: number) => void) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `module-${moduleId}-${Date.now()}.${fileExt}`;
@@ -2717,7 +2775,6 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
     try {
       let videoUrl;
       
-      // For files larger than 50MB, use chunked upload
       if (file.size > 50 * 1024 * 1024) {
         videoUrl = await uploadVideoInChunks(file, moduleId, (progress) => {
           setUploadProgress(progress);
@@ -2753,8 +2810,8 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
       </div>
 
       <div className="space-y-4">
-        {courses.map((course) => {
-          const courseModules = modules[course.id] || [];
+        {courses?.map((course) => {
+          const courseModules = modules?.[course.id] || [];
           return (
             <Card key={course.id} className="p-4 md:p-6">
               <div className="flex flex-col md:flex-row gap-4 md:gap-5">
@@ -2800,7 +2857,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                   {courseModules.length > 0 && (
                     <div className="mt-3 space-y-2">
                       {courseModules.map((m) => {
-                        const content = moduleContents.find(c => c.module_id === m.id);
+                        const content = moduleContents?.find(c => c.module_id === m.id);
                         return (
                           <div key={m.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/30 rounded-lg p-2 gap-2">
                             <div className="flex items-center gap-2 flex-1 flex-wrap">
@@ -2853,7 +2910,6 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         })}
       </div>
 
-      {/* Course Modal (Create/Edit) */}
       <Modal open={showCourseModal} onClose={() => setShowCourseModal(false)} title={editingCourse ? "Edit Course" : "Create New Course"}>
         <div className="space-y-4">
           <Input label="Course Title" value={courseForm.title} onChange={(v) => setCourseForm((p) => ({ ...p, title: v }))} placeholder="e.g. Advanced Data Science" required />
@@ -2907,7 +2963,6 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         </div>
       </Modal>
 
-      {/* Add Module Modal */}
       <Modal open={showModuleModal} onClose={() => setShowModuleModal(false)} title={`Add Module — ${activeCourse?.title}`}>
         <div className="space-y-4">
           <Input label="Module Title" value={moduleForm.title} onChange={(v) => setModuleForm((p) => ({ ...p, title: v }))} placeholder="e.g. Python Foundations" required />
@@ -2921,7 +2976,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                 course_id: activeCourse.id,
                 title: moduleForm.title,
                 description: moduleForm.description,
-                order_index: (modules[activeCourse.id]?.length || 0),
+                order_index: (modules?.[activeCourse.id]?.length || 0),
                 pass_score: parseInt(moduleForm.pass_score),
               });
               setShowModuleModal(false);
@@ -2936,7 +2991,6 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         </div>
       </Modal>
 
-      {/* Add Module Content Modal - Video Upload with 500MB support */}
       <Modal open={showContentModal} onClose={() => setShowContentModal(false)} title={`Add Content — ${activeModule?.title}`}>
         <div className="space-y-4">
           <Input label="Content Title" value={contentForm.title} onChange={(v) => setContentForm((p) => ({ ...p, title: v }))} placeholder="e.g. Introduction Video" required />
@@ -3167,11 +3221,11 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
     setStudentProgress(progressMap);
   };
 
-  const filtered = students.filter(
+  const filtered = students?.filter(
     (s) =>
       s.full_name.toLowerCase().includes(search.toLowerCase()) ||
       s.email.toLowerCase().includes(search.toLowerCase())
-  );
+  ) || [];
 
   const handleSendAssignment = async () => {
     if (!selectedStudent) return;
@@ -3954,14 +4008,58 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
   const [currentQuestion, setCurrentQuestion] = useState({ question: "", options: ["", "", "", ""], correctAnswer: 0 });
   const [loading, setLoading] = useState(false);
   const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchQuizzes();
   }, []);
 
   const fetchQuizzes = async () => {
-    const { data } = await supabase.from("quizzes").select("*, module:module_id(title), module:module_id(course_id)");
-    if (data) setQuizzes(data);
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Simple select first to avoid nested query issues
+      const { data: quizzesData, error: quizzesError } = await supabase
+        .from("quizzes")
+        .select("*");
+      
+      if (quizzesError) {
+        console.error("Error fetching quizzes:", quizzesError);
+        setError("Failed to load quizzes: " + quizzesError.message);
+        setLoading(false);
+        return;
+      }
+      
+      if (quizzesData && quizzesData.length > 0) {
+        // Fetch module data separately
+        const moduleIds = quizzesData.map(q => q.module_id).filter(Boolean);
+        let modulesData: any[] = [];
+        
+        if (moduleIds.length > 0) {
+          const { data: modulesResult } = await supabase
+            .from("modules")
+            .select("id, title, course_id")
+            .in("id", moduleIds);
+          if (modulesResult) modulesData = modulesResult;
+        }
+        
+        // Merge data
+        const quizzesWithModules = quizzesData.map(quiz => ({
+          ...quiz,
+          module: modulesData.find(m => m.id === quiz.module_id)
+        }));
+        
+        setQuizzes(quizzesWithModules);
+      } else {
+        setQuizzes([]);
+      }
+    } catch (err: any) {
+      console.error("Error:", err);
+      setError(err.message || "Failed to load quizzes");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addQuestion = () => {
@@ -4016,6 +4114,19 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
         </button>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+          <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
+          <p className="text-sm text-red-700">{error}</p>
+          <button
+            onClick={fetchQuizzes}
+            className="mt-2 text-sm text-red-600 font-medium hover:underline"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
       <div className="space-y-4">
         {quizzes.map((quiz) => {
           const module = modules.find(m => m.id === quiz.module_id);
@@ -4043,7 +4154,7 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
             </Card>
           );
         })}
-        {quizzes.length === 0 && (
+        {quizzes.length === 0 && !error && (
           <Card className="p-8 text-center">
             <HelpCircle className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
             <p className="text-muted-foreground">No quizzes created yet. Create a quiz for each module.</p>
@@ -4611,17 +4722,17 @@ export default function App() {
           return <AdminDashboard 
             onNavigate={setView} 
             stats={{
-              students: students.length,
-              courses: courses.length,
+              students: students?.length || 0,
+              courses: courses?.length || 0,
               pendingPayments: 0,
               submittedAssignments: 0,
             }} 
           />;
         case "admin-courses":
           return <AdminCourses 
-            courses={courses} 
-            modules={modulesByCourse}
-            moduleContents={moduleContents}
+            courses={courses || []} 
+            modules={modulesByCourse || {}}
+            moduleContents={moduleContents || []}
             onCourseAdd={handleAddCourse}
             onCourseUpdate={handleUpdateCourse}
             onCourseDelete={handleDeleteCourse}
@@ -4632,7 +4743,7 @@ export default function App() {
           />;
         case "admin-students":
           return <AdminStudents 
-            students={students} 
+            students={students || []} 
             onSendAssignment={handleSendAssignment}
             onViewProfile={(student) => setViewingStudent(student)}
           />;
@@ -4640,15 +4751,15 @@ export default function App() {
           return <AdminPayments />;
         case "admin-assignments":
           return <AdminAssignments 
-            courses={courses}
-            modules={modules}
+            courses={courses || []}
+            modules={modules || []}
             onCreateAssignment={handleCreateAssignment}
             onGradeAssignment={handleGradeAssignment}
           />;
         case "admin-quizzes":
           return <AdminQuizzes 
-            courses={courses}
-            modules={modules}
+            courses={courses || []}
+            modules={modules || []}
             onQuizCreate={handleQuizCreate}
             onQuizDelete={handleQuizDelete}
           />;
@@ -4656,30 +4767,30 @@ export default function App() {
           return <AdminDashboard onNavigate={setView} stats={{ students: 0, courses: 0, pendingPayments: 0, submittedAssignments: 0 }} />;
       }
     } else {
-      const activeEnrollment = enrollments.find(e => e.status === "active");
+      const activeEnrollment = enrollments?.find(e => e.status === "active") || null;
       switch (view) {
         case "student-dashboard":
           return <StudentDashboard 
             profile={profile} 
             onNavigate={setView} 
-            enrollments={enrollments} 
-            progress={progress}
-            modules={modules}
+            enrollments={enrollments || []} 
+            progress={progress || []}
+            modules={modules || []}
           />;
         case "student-courses":
           return <StudentCourses 
             profile={profile} 
             onNavigate={setView} 
-            courses={courses} 
-            enrollments={enrollments} 
+            courses={courses || []} 
+            enrollments={enrollments || []} 
             onEnroll={handleEnroll} 
           />;
         case "student-module":
           return <StudentModuleViewer 
             profile={profile} 
             enrollment={activeEnrollment || null} 
-            modules={modulesByCourse[activeEnrollment?.course_id || ""] || []} 
-            moduleContents={moduleContents}
+            modules={modulesByCourse?.[activeEnrollment?.course_id || ""] || []} 
+            moduleContents={moduleContents || []}
             onNavigate={setView} 
             onProgressUpdate={handleProgressUpdate} 
           />;
@@ -4691,17 +4802,17 @@ export default function App() {
           return <StudentProfile 
             profile={profile} 
             onUpdate={handleUpdateProfile} 
-            enrollments={enrollments}
-            progress={progress}
-            modules={modules}
+            enrollments={enrollments || []}
+            progress={progress || []}
+            modules={modules || []}
           />;
         default:
           return <StudentDashboard 
             profile={profile} 
             onNavigate={setView} 
-            enrollments={enrollments} 
-            progress={progress}
-            modules={modules}
+            enrollments={enrollments || []} 
+            progress={progress || []}
+            modules={modules || []}
           />;
       }
     }
