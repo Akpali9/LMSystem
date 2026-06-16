@@ -829,12 +829,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
             </button>
           </div>
 
-          <div className="mt-8 p-4 bg-muted rounded-xl border border-border">
-            <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Demo Credentials</p>
-            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Admin:</span> admin@pruta.com</p>
-            <p className="text-xs text-muted-foreground"><span className="font-mono text-foreground">Student:</span> any email (auto-register)</p>
-            <p className="text-xs text-muted-foreground mt-2">⚡ Admin users are redirected to Admin Dashboard</p>
-          </div>
+         
         </div>
       </div>
     </div>
