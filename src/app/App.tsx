@@ -841,7 +841,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
   );
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
+// ─── Sidebar (FIXED: Desktop Toggle, Mobile Default Collapsed) ─────────────
 
 function Sidebar({
   profile,
@@ -854,15 +854,18 @@ function Sidebar({
   onNavigate: (v: View) => void;
   onLogout: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
+      // On mobile, start collapsed. On desktop, start expanded.
       if (mobile) {
         setCollapsed(true);
+      } else {
+        setCollapsed(false);
       }
     };
     
@@ -878,6 +881,7 @@ function Sidebar({
 
   const handleNavigate = (view: View) => {
     onNavigate(view);
+    // On mobile, close sidebar after navigation
     if (isMobile) {
       setCollapsed(true);
     }
@@ -907,19 +911,22 @@ function Sidebar({
 
   const nav = profile.role === "admin" ? adminNav : studentNav;
 
+  // ─── MOBILE SIDEBAR (Slide-in drawer) ────────────────────────────────────
   if (isMobile) {
     return (
       <>
+        {/* Overlay */}
         {!collapsed && (
           <div 
-            className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
+            className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden"
             onClick={() => setCollapsed(true)}
           />
         )}
         
+        {/* Mobile Sidebar */}
         <aside
           className={cn(
-            "fixed top-0 left-0 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 z-50 shadow-2xl",
+            "fixed top-0 left-0 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 z-50 shadow-2xl md:hidden",
             collapsed ? "-translate-x-full" : "translate-x-0",
             "w-72"
           )}
@@ -975,6 +982,7 @@ function Sidebar({
           </div>
         </aside>
 
+        {/* Mobile Hamburger Button */}
         <button
           onClick={toggleSidebar}
           className="fixed top-4 left-4 z-30 w-10 h-10 rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center md:hidden"
@@ -985,6 +993,7 @@ function Sidebar({
     );
   }
 
+  // ─── DESKTOP SIDEBAR (Toggleable) ────────────────────────────────────────
   return (
     <aside
       className={cn(
@@ -1312,20 +1321,16 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
   const safeProgress = progress || [];
   const safeModules = modules || [];
   
-  // Get the active enrollment
   const activeEnrollment = safeEnrollments.find(e => e?.status === "active") || null;
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
   
-  // Only count modules passed for the active course
   let passedCount = 0;
   let totalModulesForActiveCourse = 0;
   
   if (activeEnrollment) {
-    // Get modules for the active course
     const courseModules = safeModules.filter(m => m?.course_id === activeEnrollment?.course_id);
     totalModulesForActiveCourse = courseModules.length;
     
-    // Count passed modules for this specific enrollment
     passedCount = safeProgress.filter(p => 
       p?.enrollment_id === activeEnrollment?.id && 
       p?.status === "passed"
@@ -1623,8 +1628,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
           </h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your enrollments and track payment status.</p>
         </div>
-        <button
-          onClick={() => setShowEnroll(true)}
+        <button          onClick={() => setShowEnroll(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" /> Enroll in Course
@@ -1851,7 +1855,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   );
 }
 
-// ─── Student Module Viewer (WITH AUTO-ADVANCE) ────────────────────────────
+// ─── Student Module Viewer (FIXED: Auto-unlock with quiz OR assignment) ────
 
 function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
@@ -1878,6 +1882,25 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
   const [autoAdvancing, setAutoAdvancing] = useState(false);
   const [showNoQuizMessage, setShowNoQuizMessage] = useState(false);
+  const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
+  const [checkingCompletion, setCheckingCompletion] = useState(false);
+
+  // Fetch student assignments for this enrollment
+  useEffect(() => {
+    if (enrollment) {
+      fetchStudentAssignments();
+    }
+  }, [enrollment]);
+
+  const fetchStudentAssignments = async () => {
+    if (!enrollment) return;
+    const { data } = await supabase
+      .from("student_assignments")
+      .select("*, assignment:assignment_id(*)")
+      .eq("student_id", profile.id)
+      .eq("enrollment_id", enrollment.id);
+    if (data) setStudentAssignments(data as StudentAssignment[]);
+  };
 
   useEffect(() => {
     if (enrollment) {
@@ -1922,6 +1945,70 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     if (data) setProgressData(data as ModuleProgress[]);
   };
 
+  // Check if a module can be passed (either quiz passed OR assignment graded)
+  const canPassModule = async (moduleId: string): Promise<{ canPass: boolean; score: number; reason: string }> => {
+    // Check if already passed
+    const existingProgress = progressData.find(p => p.module_id === moduleId);
+    if (existingProgress?.status === "passed") {
+      return { canPass: true, score: existingProgress.score || 100, reason: "Already passed" };
+    }
+
+    // Check if there's a quiz with questions
+    const { data: quiz } = await supabase
+      .from("quizzes")
+      .select("id")
+      .eq("module_id", moduleId)
+      .maybeSingle();
+
+    if (quiz) {
+      const { data: questions } = await supabase
+        .from("quiz_questions")
+        .select("id")
+        .eq("quiz_id", quiz.id)
+        .limit(1);
+      
+      if (questions && questions.length > 0) {
+        // Check if quiz is passed
+        const { data: attempt } = await supabase
+          .from("quiz_attempts")
+          .select("score, passed")
+          .eq("quiz_id", quiz.id)
+          .eq("student_id", profile.id)
+          .eq("enrollment_id", enrollment?.id)
+          .maybeSingle();
+        
+        if (attempt && attempt.passed) {
+          return { canPass: true, score: attempt.score, reason: "Quiz passed" };
+        }
+        // Quiz exists but not passed
+        return { canPass: false, score: 0, reason: "Quiz not passed yet" };
+      }
+    }
+
+    // Check if there's a graded assignment for this module
+    const moduleAssignments = studentAssignments.filter(
+      sa => sa.assignment?.module_id === moduleId
+    );
+    
+    const gradedAssignment = moduleAssignments.find(sa => sa.status === "graded");
+    if (gradedAssignment && gradedAssignment.score && gradedAssignment.score >= 50) {
+      return { 
+        canPass: true, 
+        score: Math.round((gradedAssignment.score / (gradedAssignment.assignment?.max_score || 100)) * 100),
+        reason: "Assignment graded and passed" 
+      };
+    }
+
+    // Check if there are any submitted assignments pending grading
+    const submittedAssignments = moduleAssignments.filter(sa => sa.status === "submitted");
+    if (submittedAssignments.length > 0) {
+      return { canPass: false, score: 0, reason: "Assignment submitted, awaiting grading" };
+    }
+
+    // No quiz and no assignment - auto-pass
+    return { canPass: true, score: 100, reason: "No quiz or assignment required" };
+  };
+
   const fetchQuizForModule = async () => {
     if (!currentModule) {
       setLoadingQuiz(false);
@@ -1950,7 +2037,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         setQuizData(null);
         setQuizQuestions([]);
         setLoadingQuiz(false);
-        await handleNoQuizAutoAdvance();
+        await handleModuleCompletion();
         return;
       }
       
@@ -1967,7 +2054,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         if (questionsError) {
           console.error("Error fetching quiz questions:", questionsError);
           setQuizQuestions([]);
-          await handleNoQuizAutoAdvance();
+          await handleModuleCompletion();
           setLoadingQuiz(false);
           return;
         } else if (questions && questions.length > 0) {
@@ -1976,7 +2063,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         } else {
           console.log("⚠️ No questions found for this quiz");
           setQuizQuestions([]);
-          await handleNoQuizAutoAdvance();
+          await handleModuleCompletion();
           setLoadingQuiz(false);
           return;
         }
@@ -2001,7 +2088,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         console.log("❌ No quiz found for module:", currentModule.id);
         setQuizData(null);
         setQuizQuestions([]);
-        await handleNoQuizAutoAdvance();
+        await handleModuleCompletion();
       }
     } catch (error) {
       console.error("Error in fetchQuizForModule:", error);
@@ -2011,14 +2098,52 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setLoadingQuiz(false);
   };
 
-  const handleNoQuizAutoAdvance = async () => {
-    if (autoAdvancing) return;
-    
-    const existingProgress = progressData.find(p => p.module_id === currentModule?.id);
-    if (existingProgress?.status === "passed") {
-      console.log("Module already passed, skipping auto-advance");
-      return;
+  // Handle module completion (quiz pass OR assignment pass OR no quiz)
+  const handleModuleCompletion = async () => {
+    if (checkingCompletion) return;
+    setCheckingCompletion(true);
+
+    try {
+      const moduleId = currentModule?.id;
+      if (!moduleId) {
+        setCheckingCompletion(false);
+        return;
+      }
+
+      // Check if already passed
+      const existingProgress = progressData.find(p => p.module_id === moduleId);
+      if (existingProgress?.status === "passed") {
+        setCheckingCompletion(false);
+        return;
+      }
+
+      // Check if we can pass this module
+      const result = await canPassModule(moduleId);
+      
+      if (result.canPass) {
+        console.log(`✅ Module can be passed: ${result.reason}`);
+        await handleNoQuizAutoAdvance(result.score);
+      } else {
+        console.log(`⏳ Module not ready: ${result.reason}`);
+        // If there's a submitted assignment, show a message
+        const moduleAssignments = studentAssignments.filter(
+          sa => sa.assignment?.module_id === moduleId
+        );
+        const submittedAssignments = moduleAssignments.filter(sa => sa.status === "submitted");
+        if (submittedAssignments.length > 0) {
+          setShowNoQuizMessage(true);
+          setTimeout(() => setShowNoQuizMessage(false), 5000);
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleModuleCompletion:", error);
+    } finally {
+      setCheckingCompletion(false);
     }
+  };
+
+  const handleNoQuizAutoAdvance = async (score: number = 100) => {
+    if (autoAdvancing) return;
     
     const currentIndex = currentEnrollment?.current_module_index || 0;
     const currentModuleId = modules?.[currentIndex]?.id;
@@ -2032,15 +2157,18 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     if (nextModuleIndex >= modules.length) {
       console.log("This is the last module, no next module to advance to");
       setShowNoQuizMessage(true);
+      setTimeout(() => setShowNoQuizMessage(false), 5000);
       return;
     }
     
-    console.log("No quiz found, auto-advancing to next module");
+    console.log(`Auto-advancing to next module with score: ${score}`);
     setAutoAdvancing(true);
     
     try {
-      await onProgressUpdate(currentModule.id, "passed", 100);
+      // Mark current module as passed
+      await onProgressUpdate(currentModule.id, "passed", score);
       
+      // Update enrollment to advance to next module
       const { error } = await supabase
         .from("enrollments")
         .update({ current_module_index: nextModuleIndex })
@@ -2052,9 +2180,12 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         return;
       }
       
+      // Refresh data
       await fetchEnrollmentData();
       await fetchProgress();
+      await fetchStudentAssignments();
       
+      // Update UI to show the next module
       setTimeout(() => {
         setIsAdvancing(true);
         setSelectedModuleIndex(nextModuleIndex);
@@ -2070,6 +2201,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         }, 300);
       }, 500);
       
+      // Show notification
       setShowNoQuizMessage(true);
       setTimeout(() => setShowNoQuizMessage(false), 5000);
       
@@ -2206,6 +2338,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const currentContent = moduleContents?.find(c => c.module_id === currentModule?.id) || null;
   const moduleProgress = progressData.find(p => p.module_id === currentModule?.id);
 
+  // Check if there's a graded assignment for current module
+  const hasGradedAssignment = studentAssignments.some(
+    sa => sa.assignment?.module_id === currentModule?.id && sa.status === "graded"
+  );
+
   if (!enrollment || !currentModule) {
     return (
       <div className="p-8 text-center">
@@ -2270,6 +2407,9 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                 {!isLocked && !quizData && isCompleted && (
                   <Badge variant="success" className="text-[10px] px-1.5 py-0.5">🚀</Badge>
                 )}
+                {hasGradedAssignment && isCompleted && (
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">📋</Badge>
+                )}
               </button>
             );
           })}
@@ -2289,20 +2429,25 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         
         <div className="mt-3 text-xs text-muted-foreground border-t border-border pt-3 space-y-1">
           <p>Module {selectedModuleIndex + 1} of {modules?.length || 0}</p>
-          <p className="text-accent">✓ Pass quizzes to unlock next module</p>
+          <p className="text-accent">✓ Pass quiz OR complete assignment</p>
           <p className="text-green-600">🚀 No quiz? Auto-advance!</p>
         </div>
       </div>
 
       <div className="flex-1 p-4 md:p-6 overflow-y-auto max-h-[calc(100vh-80px)]">
+        {/* Auto-advance notification */}
         {showNoQuizMessage && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-green-800">✅ No Quiz Required!</p>
+                <p className="text-sm font-semibold text-green-800">✅ Module Complete!</p>
                 <p className="text-xs text-green-700">
-                  This module has no quiz. You've been automatically advanced to the next module.
+                  {quizData && quizQuestions.length === 0 
+                    ? "This module has no quiz. You've been automatically advanced!" 
+                    : hasGradedAssignment 
+                      ? "Your assignment was graded and you've passed! Advanced to next module."
+                      : "No quiz or assignment required. You've been advanced!"}
                 </p>
               </div>
             </div>
@@ -2317,6 +2462,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
             {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
             {quizData && quizQuestions.length > 0 && <Badge variant="info">📝 Quiz: {quizData.title}</Badge>}
             {!quizData && moduleProgress?.status === "passed" && <Badge variant="success">🚀 Auto-Passed</Badge>}
+            {hasGradedAssignment && moduleProgress?.status === "passed" && <Badge variant="success">📋 Assignment Passed</Badge>}
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
             {currentModule.title}
@@ -2324,6 +2470,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           <p className="text-muted-foreground text-sm mt-1">
             Pass with ≥{currentModule.pass_score}% to unlock the next module.
           </p>
+          {hasGradedAssignment && (
+            <p className="text-sm text-green-600 mt-1">
+              ✅ You have a graded assignment for this module!
+            </p>
+          )}
         </div>
 
         <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit mb-6 flex-wrap">
@@ -2403,44 +2554,37 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
               </Card>
             )}
             
-            {!quizData && moduleProgress?.status !== "passed" && !isModuleLocked(selectedModuleIndex) && currentContent && (
-              <div className="flex justify-end">
-                <button
-                  onClick={async () => {
-                    await onProgressUpdate(currentModule.id, "passed", 100);
-                    const nextIndex = selectedModuleIndex + 1;
-                    if (nextIndex < modules.length) {
-                      const { error } = await supabase
-                        .from("enrollments")
-                        .update({ current_module_index: nextIndex })
-                        .eq("id", enrollment?.id);
-                      
-                      if (!error) {
-                        await fetchEnrollmentData();
-                        await fetchProgress();
-                        setIsAdvancing(true);
-                        setSelectedModuleIndex(nextIndex);
-                        setActiveTab("content");
-                        fetchQuizForModule();
-                        setTimeout(() => setIsAdvancing(false), 300);
-                      }
-                    }
-                  }}
-                  className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors text-sm"
-                >
-                  <CheckCircle className="w-4 h-4" /> Mark as Complete (No Quiz)
-                </button>
-              </div>
-            )}
-            
-            {!isModuleLocked(selectedModuleIndex) && currentContent && quizData && quizQuestions.length > 0 && !quizAttempted && (
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setActiveTab("quiz")}
-                  className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors text-sm"
-                >
-                  Take Module Quiz <ChevronRight className="w-4 h-4" />
-                </button>
+            {/* Show completion button for various scenarios */}
+            {!isModuleLocked(selectedModuleIndex) && currentContent && moduleProgress?.status !== "passed" && (
+              <div className="flex justify-end gap-2">
+                {!quizData && (
+                  <button
+                    onClick={async () => {
+                      await handleNoQuizAutoAdvance(100);
+                    }}
+                    className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors text-sm"
+                  >
+                    <CheckCircle className="w-4 h-4" /> Mark as Complete (No Quiz)
+                  </button>
+                )}
+                {quizData && quizQuestions.length === 0 && (
+                  <button
+                    onClick={async () => {
+                      await handleNoQuizAutoAdvance(100);
+                    }}
+                    className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors text-sm"
+                  >
+                    <CheckCircle className="w-4 h-4" /> Mark as Complete (No Questions)
+                  </button>
+                )}
+                {quizData && quizQuestions.length > 0 && !quizAttempted && (
+                  <button
+                    onClick={() => setActiveTab("quiz")}
+                    className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors text-sm"
+                  >
+                    Take Module Quiz <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -2473,26 +2617,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   <button
                     onClick={async () => {
-                      await onProgressUpdate(currentModule.id, "passed", 100);
-                      const nextIndex = selectedModuleIndex + 1;
-                      if (nextIndex < modules.length) {
-                        const { error } = await supabase
-                          .from("enrollments")
-                          .update({ current_module_index: nextIndex })
-                          .eq("id", enrollment?.id);
-                        
-                        if (!error) {
-                          await fetchEnrollmentData();
-                          await fetchProgress();
-                          setIsAdvancing(true);
-                          setSelectedModuleIndex(nextIndex);
-                          setActiveTab("content");
-                          fetchQuizForModule();
-                          setTimeout(() => setIsAdvancing(false), 300);
-                        }
-                      } else {
-                        onNavigate("student-courses");
-                      }
+                      await handleNoQuizAutoAdvance(100);
                     }}
                     className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
                   >
@@ -2616,36 +2741,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                         onClick={() => {
                           const nextIndex = selectedModuleIndex + 1;
                           if (nextIndex < modules.length) {
-                            const nextModule = modules[nextIndex];
-                            const nextProgress = progressData.find(p => p.module_id === nextModule.id);
-                            if (!nextProgress || nextProgress.status === "locked") {
-                              const checkAndAdvance = async () => {
-                                await fetchEnrollmentData();
-                                await fetchProgress();
-                                const { data: updated } = await supabase
-                                  .from("enrollments")
-                                  .select("*")
-                                  .eq("id", enrollment?.id)
-                                  .single();
-                                if (updated && updated.current_module_index > selectedModuleIndex) {
-                                  setIsAdvancing(true);
-                                  setSelectedModuleIndex(updated.current_module_index);
-                                  setActiveTab("content");
-                                  setQuizSubmitted(false);
-                                  setQuizAnswers({});
-                                  setQuizScore(0);
-                                  setQuizAttempted(false);
-                                  fetchQuizForModule();
-                                  setTimeout(() => setIsAdvancing(false), 300);
-                                } else {
-                                  alert("Module is unlocking... Please wait a moment.");
-                                  setTimeout(checkAndAdvance, 2000);
-                                }
-                              };
-                              checkAndAdvance();
-                            } else {
-                              handleModuleSelect(nextIndex);
-                            }
+                            handleModuleSelect(nextIndex);
                           } else {
                             onNavigate("student-courses");
                           }
@@ -2689,7 +2785,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                     {moduleProgress?.status === "passed" ? (
                       "✅ You have already passed this module! Great job!"
                     ) : (
-                      "Complete the quiz first to unlock the exam. The exam will test your overall understanding of this module."
+                      "Complete the quiz or assignment to unlock the exam."
                     )}
                   </p>
                   <div className="mt-6 flex flex-col items-center gap-4">
@@ -2705,7 +2801,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                           <Clock className="w-5 h-5 text-yellow-500" />
                         )}
                         <span className="text-sm text-foreground">
-                          {moduleProgress?.status === "passed" ? "Quiz Passed" : "Quiz Pending"}
+                          {moduleProgress?.status === "passed" ? "Quiz/Assignment Passed" : "Quiz/Assignment Pending"}
                         </span>
                       </div>
                     </div>
@@ -2728,7 +2824,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                     ) : (
                       <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl w-full">
                         <p className="text-sm text-yellow-800 text-center">
-                          ⏳ Complete the module quiz to unlock the exam.
+                          ⏳ Complete the module quiz or assignment to unlock the exam.
                         </p>
                         <button
                           onClick={() => setActiveTab("quiz")}
@@ -2851,6 +2947,11 @@ function StudentAssignments({ profile }: { profile: Profile }) {
                         }
                       }}
                     />
+                  </div>
+                )}
+                {sa.status === "submitted" && (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                    <p className="text-sm text-yellow-800">⏳ Assignment submitted, awaiting grading...</p>
                   </div>
                 )}
               </div>
@@ -5445,7 +5546,7 @@ export default function App() {
   return (
     <div className="h-screen flex overflow-hidden bg-background" style={{ fontFamily: "'Inter', sans-serif" }}>
       <Sidebar profile={profile} currentView={view} onNavigate={setView} onLogout={handleLogout} />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto md:pt-0 pt-16">
         {renderView()}
       </main>
       {viewingStudent && (
