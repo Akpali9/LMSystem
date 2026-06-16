@@ -1731,7 +1731,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   );
 }
 
-// ─── Student Module Viewer (WITH EXAM NAVIGATION) ────────────────────────────
+// ─── Student Module Viewer (WITH EXAM NAVIGATION & FIXED QUIZ FETCHING) ────────────
 
 function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
@@ -1755,6 +1755,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
   const [currentEnrollment, setCurrentEnrollment] = useState<Enrollment | null>(enrollment);
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [quizRefreshKey, setQuizRefreshKey] = useState(0);
 
   useEffect(() => {
     if (enrollment) {
@@ -1763,7 +1764,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       fetchProgress();
       fetchQuizForModule();
     }
-  }, [enrollment]);
+  }, [enrollment, quizRefreshKey]);
 
   useEffect(() => {
     if (enrollment) {
@@ -1800,7 +1801,14 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   };
 
   const fetchQuizForModule = async () => {
-    if (!currentModule) return;
+    if (!currentModule) {
+      setLoadingQuiz(false);
+      setQuizData(null);
+      setQuizQuestions([]);
+      return;
+    }
+    
+    console.log("Fetching quiz for module:", currentModule.id);
     setLoadingQuiz(true);
     setQuizSubmitted(false);
     setQuizAnswers({});
@@ -1808,22 +1816,45 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setQuizAttempted(false);
     
     try {
-      const { data: quiz, error } = await supabase
+      // First, check if a quiz exists for this module
+      const { data: quiz, error: quizError } = await supabase
         .from("quizzes")
         .select("*")
         .eq("module_id", currentModule.id)
         .maybeSingle();
       
+      if (quizError) {
+        console.error("Error fetching quiz:", quizError);
+        setQuizData(null);
+        setQuizQuestions([]);
+        setLoadingQuiz(false);
+        return;
+      }
+      
       if (quiz) {
+        console.log("✅ Quiz found for module:", quiz);
         setQuizData(quiz);
-        const { data: questions } = await supabase
+        
+        // Fetch questions for this quiz
+        const { data: questions, error: questionsError } = await supabase
           .from("quiz_questions")
           .select("*")
           .eq("quiz_id", quiz.id)
-          .order("order_index");
-        if (questions) setQuizQuestions(questions);
+          .order("order_index", { ascending: true });
         
-        const { data: attempt } = await supabase
+        if (questionsError) {
+          console.error("Error fetching quiz questions:", questionsError);
+          setQuizQuestions([]);
+        } else if (questions && questions.length > 0) {
+          console.log(`✅ Found ${questions.length} questions for quiz`);
+          setQuizQuestions(questions);
+        } else {
+          console.log("⚠️ No questions found for this quiz");
+          setQuizQuestions([]);
+        }
+        
+        // Check if student has already attempted this quiz
+        const { data: attempt, error: attemptError } = await supabase
           .from("quiz_attempts")
           .select("*")
           .eq("quiz_id", quiz.id)
@@ -1831,17 +1862,21 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           .eq("enrollment_id", enrollment?.id)
           .maybeSingle();
         
-        if (attempt) {
+        if (attemptError) {
+          console.error("Error fetching quiz attempt:", attemptError);
+        } else if (attempt) {
+          console.log("✅ Found existing quiz attempt:", attempt);
           setQuizAttempted(true);
           setQuizSubmitted(true);
           setQuizScore(attempt.score);
         }
       } else {
+        console.log("❌ No quiz found for module:", currentModule.id);
         setQuizData(null);
         setQuizQuestions([]);
       }
     } catch (error) {
-      console.error("Error fetching quiz:", error);
+      console.error("Error in fetchQuizForModule:", error);
       setQuizData(null);
       setQuizQuestions([]);
     }
@@ -2032,6 +2067,10 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                 {prog?.status === "failed" && (
                   <Badge variant="danger" className="text-[10px] px-1.5 py-0.5">✗</Badge>
                 )}
+                {/* Show quiz indicator */}
+                {!isLocked && quizData && quizQuestions.length > 0 && (
+                  <Badge variant="info" className="text-[10px] px-1.5 py-0.5">📝</Badge>
+                )}
               </button>
             );
           })}
@@ -2062,7 +2101,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
             {moduleProgress?.status === "passed" && <Badge variant="success">✅ Passed</Badge>}
             {moduleProgress?.status === "failed" && <Badge variant="danger">❌ Failed</Badge>}
             {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
-            {quizData && <Badge variant="info">📝 Quiz: {quizData.title}</Badge>}
+            {quizData && quizQuestions.length > 0 && <Badge variant="info">📝 Quiz: {quizData.title}</Badge>}
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
             {currentModule.title}
@@ -2073,7 +2112,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         </div>
 
         {/* Navigation Tabs - Content, Quiz, Exam */}
-        <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit mb-6">
+        <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit mb-6 flex-wrap">
           <button
             onClick={() => setActiveTab("content")}
             className={cn(
@@ -2105,6 +2144,19 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           >
             <Award className="w-4 h-4" /> Exam
           </button>
+          {/* Refresh button for quiz */}
+          {!isModuleLocked(selectedModuleIndex) && (
+            <button
+              onClick={() => {
+                setQuizRefreshKey(prev => prev + 1);
+                setActiveTab("quiz");
+              }}
+              className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-card/50 flex items-center gap-1"
+              title="Refresh quiz data"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Content Tab */}
@@ -2154,7 +2206,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           </div>
         )}
 
-        {/* Quiz Tab */}
+        {/* Quiz Tab - FIXED */}
         {activeTab === "quiz" && (
           <div className="space-y-5">
             {isModuleLocked(selectedModuleIndex) ? (
@@ -2175,14 +2227,26 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                 <HelpCircle className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
                 <h3 className="font-semibold text-foreground mb-2">No Quiz Available</h3>
                 <p className="text-sm text-muted-foreground">
-                  The instructor hasn't created a quiz for this module yet.
+                  {quizData && quizQuestions.length === 0 
+                    ? "A quiz exists for this module but has no questions. Please contact the administrator." 
+                    : "The instructor hasn't created a quiz for this module yet."}
                 </p>
-                <button
-                  onClick={() => setActiveTab("content")}
-                  className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  Back to Content
-                </button>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      setQuizRefreshKey(prev => prev + 1);
+                    }}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" /> Refresh Quiz
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("content")}
+                    className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+                  >
+                    Back to Content
+                  </button>
+                </div>
               </Card>
             ) : (
               <Card className="p-4 md:p-6">
@@ -2193,6 +2257,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                   )}
                   <p className="text-sm text-muted-foreground mt-2">
                     Pass score: <span className="font-semibold text-accent">{quizData.pass_score}%</span>
+                    {quizQuestions.length > 0 && ` · ${quizQuestions.length} questions`}
                   </p>
                 </div>
                 
@@ -2200,7 +2265,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                   <div key={q.id} className="mb-6 last:mb-0 border-b border-border pb-4 last:border-0 last:pb-0">
                     <p className="text-sm font-medium text-foreground mb-3">{qi + 1}. {q.question}</p>
                     <div className="space-y-2">
-                      {q.options.map((opt: string, oi: number) => {
+                      {q.options && q.options.map((opt: string, oi: number) => {
                         const selected = quizAnswers[qi] === oi;
                         const isCorrect = oi === q.correct_answer;
                         const showCorrect = quizSubmitted && isCorrect;
@@ -2273,6 +2338,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                           }
                           await fetchProgress();
                           await fetchEnrollmentData();
+                          setQuizRefreshKey(prev => prev + 1);
                         }}
                         className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
                       >
@@ -4331,25 +4397,35 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
   };
 
   const handleCreateQuiz = async () => {
-    if (!selectedModule || !quizTitle || questions.length === 0) return;
+    if (!selectedModule || !quizTitle || questions.length === 0) {
+      alert("Please fill in all required fields and add at least one question.");
+      return;
+    }
+    
     setLoading(true);
     
-    await onQuizCreate({
-      module_id: selectedModule,
-      title: quizTitle,
-      description: quizDescription,
-      pass_score: parseInt(passScore),
-      questions: questions,
-    });
-    
-    setShowCreateModal(false);
-    setQuizTitle("");
-    setQuizDescription("");
-    setPassScore("70");
-    setQuestions([]);
-    setSelectedModule("");
-    setLoading(false);
-    fetchQuizzes();
+    try {
+      await onQuizCreate({
+        module_id: selectedModule,
+        title: quizTitle,
+        description: quizDescription,
+        pass_score: parseInt(passScore),
+        questions: questions,
+      });
+      
+      setShowCreateModal(false);
+      setQuizTitle("");
+      setQuizDescription("");
+      setPassScore("70");
+      setQuestions([]);
+      setSelectedModule("");
+      setLoading(false);
+      fetchQuizzes();
+    } catch (error) {
+      console.error("Error creating quiz:", error);
+      alert("Failed to create quiz. Please try again.");
+      setLoading(false);
+    }
   };
 
   const availableModules = modules.filter(m => !quizzes.some(q => q.module_id === m.id));
@@ -4399,10 +4475,15 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <Badge variant="info">{course?.title || "Unknown"} → {module?.title || "Unknown Module"}</Badge>
                     <Badge variant="success">Pass: {quiz.pass_score}%</Badge>
+                    <Badge variant="default">{quiz.module_id ? "Has Questions" : "No Questions"}</Badge>
                   </div>
                 </div>
                 <button
-                  onClick={() => onQuizDelete(quiz.id)}
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this quiz? All questions and attempts will be lost.")) {
+                      onQuizDelete(quiz.id);
+                    }
+                  }}
                   className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200 transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -4438,6 +4519,9 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
                 );
               })}
             </select>
+            {availableModules.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">All modules already have quizzes. Create a module first if needed.</p>
+            )}
           </div>
           
           <Input label="Quiz Title" value={quizTitle} onChange={setQuizTitle} placeholder="e.g. Module 1 Assessment" required />
@@ -4941,7 +5025,12 @@ export default function App() {
       .select()
       .single();
 
-    if (quiz && !error) {
+    if (error) {
+      console.error("Error creating quiz:", error);
+      throw error;
+    }
+
+    if (quiz) {
       const questionsWithQuizId = quizData.questions.map((q: any) => ({
         quiz_id: quiz.id,
         question: q.question,
@@ -4949,7 +5038,16 @@ export default function App() {
         correct_answer: q.correctAnswer,
       }));
       
-      await supabase.from("quiz_questions").insert(questionsWithQuizId);
+      const { error: questionsError } = await supabase
+        .from("quiz_questions")
+        .insert(questionsWithQuizId);
+      
+      if (questionsError) {
+        console.error("Error creating quiz questions:", questionsError);
+        // Rollback: delete the quiz if questions fail
+        await supabase.from("quizzes").delete().eq("id", quiz.id);
+        throw questionsError;
+      }
     }
   };
 
@@ -4957,6 +5055,7 @@ export default function App() {
     await supabase.from("quiz_attempts").delete().eq("quiz_id", quizId);
     await supabase.from("quiz_questions").delete().eq("quiz_id", quizId);
     await supabase.from("quizzes").delete().eq("id", quizId);
+    // Refresh quizzes in AdminQuizzes component
   };
 
   if (loading) {
