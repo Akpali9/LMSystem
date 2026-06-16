@@ -1365,7 +1365,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
 
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Good morning, {profile.full_name?.split(" ")[0] || "Student"} 👋
+          Welcome back {profile.full_name?.split(" ")[0] || "Student"} ! 👋
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Here's your learning progress at a glance.</p>
       </div>
