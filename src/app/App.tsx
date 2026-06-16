@@ -1039,7 +1039,7 @@ function StudentProfile({ profile, onUpdate }: { profile: Profile; onUpdate: (up
   );
 }
 
-// ─── Student Dashboard (with Enrollment Feedback) ─────────────────────────────
+// ─── Student Dashboard ─────────────────────────────────────────────────────────────
 
 function StudentDashboard({ profile, onNavigate, enrollments, progress }: { 
   profile: Profile; 
@@ -1052,12 +1052,11 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
   const passedCount = progress.filter(p => p.status === "passed").length;
 
   return (
-    <div className="p-8 space-y-8 max-w-6xl">
-      {/* Pending Enrollments Alert */}
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
       {pendingEnrollments.length > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
           <div className="flex items-start gap-3">
-            <Clock className="w-5 h-5 text-yellow-600 mt-0.5" />
+            <Clock className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
               <p className="font-semibold text-yellow-800">Pending Enrollment{pendingEnrollments.length > 1 ? 's' : ''}</p>
               <p className="text-sm text-yellow-700 mt-1">
@@ -1076,13 +1075,13 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
       )}
 
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Good morning, {profile.full_name.split(" ")[0]} 👋
         </h1>
-        <p className="text-muted-foreground mt-1">Here's your learning progress at a glance.</p>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Here's your learning progress at a glance.</p>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         <StatCard icon={BookOpen} label="Enrolled Courses" value={enrollments.filter(e => e.status === "active").length} />
         <StatCard icon={CheckCircle} label="Modules Passed" value={passedCount} />
         <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
@@ -1090,10 +1089,10 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
       </div>
 
       {activeEnrollment && activeEnrollment.course && (
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card className="p-6">
-              <h2 className="font-semibold text-foreground mb-5" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="md:col-span-2">
+            <Card className="p-4 md:p-6">
+              <h2 className="font-semibold text-foreground mb-4 md:mb-5 text-lg md:text-xl" style={{ fontFamily: "'Playfair Display', serif" }}>
                 Active Course Progress
               </h2>
               <div className="flex gap-4 mb-5">
@@ -1101,8 +1100,8 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
                   <img src={activeEnrollment.course.thumbnail_url} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-semibold text-foreground">{activeEnrollment.course.title}</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">
+                  <p className="font-semibold text-foreground text-sm md:text-base">{activeEnrollment.course.title}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
                     Module {activeEnrollment.current_module_index + 1} · Expires {formatDate(activeEnrollment.expires_at || "")}
                   </p>
                   <StatusBadge status={activeEnrollment.status} />
@@ -1110,18 +1109,18 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
               </div>
               <button
                 onClick={() => onNavigate("student-module")}
-                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs md:text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
               >
                 <Play className="w-3.5 h-3.5" /> Continue Learning
               </button>
             </Card>
           </div>
 
-          <Card className="p-5">
+          <Card className="p-4 md:p-5">
             <h3 className="font-semibold text-foreground mb-4 text-sm">Certificate Status</h3>
             <div className="text-center py-6">
               <Award className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Complete all modules to receive your certificate via email.</p>
+              <p className="text-xs md:text-sm text-muted-foreground">Complete all modules to receive your certificate via email.</p>
             </div>
             <ProgressBar value={passedCount} max={5} />
             <p className="text-xs text-muted-foreground text-center mt-2">{passedCount} of 5 modules passed</p>
@@ -1132,7 +1131,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress }: {
   );
 }
 
-// ─── Student Courses (with Enrollment Feedback) ───────────────────────────────
+// ─── Student Courses (with Larger Course Cards) ───────────────────────────────
 
 function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }: { 
   profile: Profile; 
@@ -1153,7 +1152,6 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   
   const activeEnrollments = enrollments.filter(e => e.status === "active");
   const pendingEnrollments = enrollments.filter(e => e.status === "pending_payment" || e.status === "payment_submitted");
-  const completedEnrollments = enrollments.filter(e => e.status === "completed");
 
   const handleEnrollSubmit = async () => {
     if (!selectedCourse || !receiptFile) return;
@@ -1268,18 +1266,17 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   };
 
   return (
-    <div className="p-8 space-y-8 max-w-6xl">
-      {/* Success/Error Toast */}
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto">
       {submissionStatus.show && (
         <div className={cn(
-          "fixed top-20 right-4 z-50 p-4 rounded-xl shadow-lg animate-in slide-in-from-top-2",
+          "fixed top-20 right-4 z-50 p-4 rounded-xl shadow-lg animate-in slide-in-from-top-2 max-w-[90vw] md:max-w-md",
           submissionStatus.type === 'success' ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
         )}>
           <div className="flex items-center gap-3">
             {submissionStatus.type === 'success' ? (
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
             ) : (
-              <AlertCircle className="w-5 h-5 text-red-600" />
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
             )}
             <p className={cn(
               "text-sm",
@@ -1289,7 +1286,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
             </p>
             <button 
               onClick={() => setSubmissionStatus({ show: false, message: "", type: 'success' })}
-              className="ml-2 text-gray-400 hover:text-gray-600"
+              className="ml-2 text-gray-400 hover:text-gray-600 flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1297,44 +1294,43 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
             My Courses
           </h1>
-          <p className="text-muted-foreground mt-1">Manage your enrollments and track payment status.</p>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your enrollments and track payment status.</p>
         </div>
         <button
           onClick={() => setShowEnroll(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" /> Enroll in Course
         </button>
       </div>
 
-      {/* Active Enrollments Section */}
       {activeEnrollments.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-600" /> Active Courses ({activeEnrollments.length})
           </h2>
           <div className="space-y-4">
             {activeEnrollments.map((enrollment) => (
-              <Card key={enrollment.id} className="p-6">
-                <div className="flex gap-5">
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+              <Card key={enrollment.id} className="p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
                     <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
                       <div>
-                        <p className="font-bold text-foreground text-lg">{enrollment.course?.title}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
                           Enrolled: {formatDate(enrollment.enrolled_at || "")} · Expires: {formatDate(enrollment.expires_at || "")}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium", getStatusBadgeColor(enrollment.status))}>
+                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
                           {getStatusText(enrollment.status)}
                         </span>
                       </div>
@@ -1343,9 +1339,9 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                     <p className="text-xs text-muted-foreground mt-1">Module {enrollment.current_module_index + 1} of 5</p>
                     <button
                       onClick={() => onNavigate("student-module")}
-                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs md:text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
                     >
-                      <Play className="w-4 h-4" /> Continue Learning
+                      <Play className="w-3.5 h-3.5" /> Continue Learning
                     </button>
                   </div>
                 </div>
@@ -1355,29 +1351,28 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         </div>
       )}
 
-      {/* Pending Enrollments Section */}
       {pendingEnrollments.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-yellow-600" /> Pending Approvals ({pendingEnrollments.length})
           </h2>
           <div className="space-y-4">
             {pendingEnrollments.map((enrollment) => (
-              <Card key={enrollment.id} className="p-6 bg-yellow-50/30 border-yellow-200">
-                <div className="flex gap-5">
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+              <Card key={enrollment.id} className="p-4 md:p-6 bg-yellow-50/30 border-yellow-200">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
                     <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
                       <div>
-                        <p className="font-bold text-foreground text-lg">{enrollment.course?.title}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
                           Requested: {formatDate(enrollment.created_at)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium", getStatusBadgeColor(enrollment.status))}>
+                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
                           {getStatusText(enrollment.status)}
                         </span>
                       </div>
@@ -1394,7 +1389,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                           setSelectedCourse(enrollment.course || null);
                           setShowEnroll(true);
                         }}
-                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-600 text-white text-xs md:text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
                       >
                         <Upload className="w-4 h-4" /> Upload Payment Receipt
                       </button>
@@ -1407,26 +1402,34 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         </div>
       )}
 
-      {/* Available Courses Section */}
       {availableCourses.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Explore Programs</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4">Explore Programs</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {availableCourses.map((course) => (
-              <div key={course.id} className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-lg transition-shadow">
-                <div className="h-44 bg-muted overflow-hidden">
-                  <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div key={course.id} className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                <div className="relative h-48 md:h-56 bg-muted overflow-hidden">
+                  <img 
+                    src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
+                    alt={course.title} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                  />
+                  <div className="absolute top-3 right-3">
+                    <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
+                      {course.duration_months} months
+                    </span>
+                  </div>
                 </div>
-                <div className="p-5">
-                  <h3 className="font-semibold text-foreground mb-1 leading-snug">{course.title}</h3>
+                <div className="p-4 md:p-5">
+                  <h3 className="font-semibold text-foreground text-base md:text-lg mb-2 leading-snug">{course.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
                       {formatNaira(course.price)}
                     </span>
                     <button
                       onClick={() => { setSelectedCourse(course); setShowEnroll(true); }}
-                      className="px-4 py-2 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
+                      className="px-4 md:px-5 py-2 md:py-2.5 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
                     >
                       Enroll Now
                     </button>
@@ -1438,7 +1441,6 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         </div>
       )}
 
-      {/* No Courses Message */}
       {activeEnrollments.length === 0 && pendingEnrollments.length === 0 && availableCourses.length === 0 && (
         <Card className="p-12 text-center">
           <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
@@ -1446,7 +1448,6 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         </Card>
       )}
 
-      {/* Enroll Modal */}
       <Modal open={showEnroll} onClose={() => { setShowEnroll(false); setSelectedCourse(null); setReceiptFile(null); }} title="Enroll in a Course">
         {!selectedCourse ? (
           <div className="space-y-3">
@@ -1584,7 +1585,7 @@ function ModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center gap-3">
         <button
           onClick={() => onNavigate("student-courses")}
@@ -1598,19 +1599,19 @@ function ModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate
         <div className="flex items-center gap-3 mb-1">
           <Badge variant="info">Module {enrollment.current_module_index + 1} of {modules.length}</Badge>
         </div>
-        <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           {currentModule.title}
         </h1>
         <p className="text-muted-foreground text-sm mt-1">Pass with ≥{currentModule.pass_score}% to unlock the next module.</p>
       </div>
 
-      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit overflow-x-auto">
         {(["content", "quiz", "assignment"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize",
+              "px-4 md:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize whitespace-nowrap",
               activeTab === tab ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -1626,24 +1627,24 @@ function ModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate
           )}
           
           {currentContent?.content_type === "text" && currentContent.content_text && (
-            <Card className="p-6">
+            <Card className="p-4 md:p-6">
               <h3 className="font-semibold text-foreground mb-3">{currentContent.title}</h3>
               <div className="prose prose-sm max-w-none text-muted-foreground">
-                <p className="whitespace-pre-wrap">{currentContent.content_text}</p>
+                <p className="whitespace-pre-wrap text-sm md:text-base">{currentContent.content_text}</p>
               </div>
             </Card>
           )}
           
           {!currentContent && (
-            <Card className="p-6">
+            <Card className="p-4 md:p-6">
               <p className="text-center text-muted-foreground">No content available for this module yet.</p>
             </Card>
           )}
           
-          <Card className="p-6 space-y-4">
+          <Card className="p-4 md:p-6 space-y-4">
             <h3 className="font-semibold text-foreground">Module Overview</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">{currentModule.description}</p>
-            <div className="grid sm:grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               {["Core concepts explained", "Practical examples", "Hands-on exercises", "Best practices"].map((item) => (
                 <div key={item} className="flex items-center gap-2.5">
                   <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
@@ -1665,7 +1666,7 @@ function ModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate
 
       {activeTab === "quiz" && (
         <div className="space-y-5">
-          <Card className="p-6">
+          <Card className="p-4 md:p-6">
             <h3 className="font-semibold text-foreground mb-1">Module Assessment</h3>
             <p className="text-sm text-muted-foreground mb-6">Answer all questions. You need {currentModule.pass_score}% to pass and unlock the next module.</p>
             <div className="space-y-6">
@@ -1741,7 +1742,7 @@ function ModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate
 
       {activeTab === "assignment" && (
         <div className="space-y-5">
-          <Card className="p-6">
+          <Card className="p-4 md:p-6">
             <p className="text-center text-muted-foreground py-8">Assignments will appear here when created by your instructor.</p>
           </Card>
         </div>
@@ -1800,27 +1801,27 @@ function StudentAssignments({ profile }: { profile: Profile }) {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-4xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Assignments
         </h1>
-        <p className="text-muted-foreground mt-1">Your assigned work from all enrolled courses.</p>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Your assigned work from all enrolled courses.</p>
       </div>
       <div className="space-y-4">
         {assignments.map((sa) => (
-          <Card key={sa.id} className="p-6">
-            <div className="flex items-start gap-4">
+          <Card key={sa.id} className="p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row items-start gap-4">
               <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
                 <FileText className="w-5 h-5 text-accent" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-semibold text-foreground">{sa.assignment?.title}</h3>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <h3 className="font-semibold text-foreground text-sm md:text-base">{sa.assignment?.title}</h3>
                   <StatusBadge status={sa.status} />
                 </div>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{sa.assignment?.description}</p>
-                <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Assigned: {formatDate(sa.assigned_at)}</span>
                   {sa.submitted_at && <span>Submitted: {formatDate(sa.submitted_at)}</span>}
                   <span>Max score: {sa.assignment?.max_score}</span>
@@ -1895,15 +1896,15 @@ function StudentPayments({ profile }: { profile: Profile }) {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-4xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Payments
         </h1>
-        <p className="text-muted-foreground mt-1">Manage your payment receipts and enrollment status.</p>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your payment receipts and enrollment status.</p>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-4 md:p-6">
         <h2 className="font-semibold text-foreground mb-4">How Payment Works</h2>
         <ol className="space-y-3">
           {[
@@ -1929,8 +1930,8 @@ function StudentPayments({ profile }: { profile: Profile }) {
           </Card>
         ) : (
           payments.map((p) => (
-            <Card key={p.id} className="p-5">
-              <div className="flex items-center gap-4">
+            <Card key={p.id} className="p-4 md:p-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
                   <FileText className="w-5 h-5 text-accent" />
                 </div>
@@ -1957,15 +1958,15 @@ function StudentPayments({ profile }: { profile: Profile }) {
 
 function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; stats: { students: number; courses: number; pendingPayments: number; submittedAssignments: number } }) {
   return (
-    <div className="p-8 space-y-8 max-w-6xl">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Admin Dashboard
         </h1>
-        <p className="text-muted-foreground mt-1">Platform overview and quick actions.</p>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Platform overview and quick actions.</p>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         <StatCard icon={Users} label="Total Students" value={stats.students} />
         <StatCard icon={BookOpen} label="Active Courses" value={stats.courses} />
         <StatCard icon={DollarSign} label="Pending Payments" value={stats.pendingPayments} />
@@ -1986,9 +1987,9 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h2 className="font-semibold text-foreground mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>Quick Actions</h2>
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="p-4 md:p-6">
+          <h2 className="font-semibold text-foreground mb-4 text-lg md:text-xl" style={{ fontFamily: "'Playfair Display', serif" }}>Quick Actions</h2>
           <div className="space-y-2">
             {[
               { label: "Add new course", view: "admin-courses" as View, icon: Plus },
@@ -2104,17 +2105,17 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
             Courses & Modules
           </h1>
-          <p className="text-muted-foreground mt-1">Manage your course catalog, modules, and video content.</p>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your course catalog, modules, and video content.</p>
         </div>
         <button
           onClick={openCreateCourse}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" /> New Course
         </button>
@@ -2124,9 +2125,9 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         {courses.map((course) => {
           const courseModules = modules[course.id] || [];
           return (
-            <Card key={course.id} className="p-6">
-              <div className="flex gap-5">
-                <div className="w-20 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
+            <Card key={course.id} className="p-4 md:p-6">
+              <div className="flex flex-col md:flex-row gap-4 md:gap-5">
+                <div className="w-full md:w-20 h-40 md:h-16 rounded-xl overflow-hidden bg-muted shrink-0">
                   <img 
                     src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
                     alt="" 
@@ -2134,9 +2135,9 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-3">
                     <div>
-                      <h3 className="font-bold text-foreground">{course.title}</h3>
+                      <h3 className="font-bold text-foreground text-base md:text-lg">{course.title}</h3>
                       <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">{course.description}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -2144,7 +2145,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                       <Badge variant="info">{course.duration_months}mo</Badge>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 mt-3">
+                  <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-3">
                     <span className="text-xs text-muted-foreground">{courseModules.length} modules</span>
                     <button
                       onClick={() => { setActiveCourse(course); setShowModuleModal(true); }}
@@ -2170,8 +2171,8 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                       {courseModules.map((m) => {
                         const content = moduleContents.find(c => c.module_id === m.id);
                         return (
-                          <div key={m.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-2">
-                            <div className="flex items-center gap-2 flex-1">
+                          <div key={m.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/30 rounded-lg p-2 gap-2">
+                            <div className="flex items-center gap-2 flex-1 flex-wrap">
                               {content?.content_type === "video" ? (
                                 <Video className="w-3.5 h-3.5 text-accent" />
                               ) : (
@@ -2185,7 +2186,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               {!content && (
                                 <button
                                   onClick={() => { setActiveModule(m); setShowContentModal(true); }}
@@ -2399,7 +2400,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
   );
 }
 
-// ─── Admin Students (with View Profile and Send Assignment) ───────────────────
+// ─── Admin Students (with Progress Tracking) ─────────────────────────────────
 
 function AdminStudents({ students, onSendAssignment, onViewProfile }: { 
   students: Profile[];
@@ -2419,16 +2420,54 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   const [courses, setCourses] = useState<Course[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(false);
+  const [studentProgress, setStudentProgress] = useState<Record<string, { passed: number; total: number }>>({});
 
   useEffect(() => {
     fetchCoursesAndModules();
+    fetchAllStudentProgress();
   }, []);
 
   const fetchCoursesAndModules = async () => {
-    const { data: coursesData } = await supabase.from("courses").select("*");
-    const { data: modulesData } = await supabase.from("modules").select("*");
-    if (coursesData) setCourses(coursesData);
-    if (modulesData) setModules(modulesData);
+    const [coursesRes, modulesRes] = await Promise.all([
+      supabase.from("courses").select("*"),
+      supabase.from("modules").select("*"),
+    ]);
+    if (coursesRes.data) setCourses(coursesRes.data);
+    if (modulesRes.data) setModules(modulesRes.data);
+  };
+
+  const fetchAllStudentProgress = async () => {
+    const { data: enrollments } = await supabase
+      .from("enrollments")
+      .select("id, student_id, course_id")
+      .eq("status", "active");
+
+    if (!enrollments) return;
+
+    const enrollmentIds = enrollments.map(e => e.id);
+    const { data: progressData } = await supabase
+      .from("module_progress")
+      .select("*")
+      .in("enrollment_id", enrollmentIds);
+
+    if (!progressData) return;
+
+    const progressMap: Record<string, { passed: number; total: number }> = {};
+    
+    enrollments.forEach((enrollment) => {
+      const studentId = enrollment.student_id;
+      const studentModules = modules.filter(m => m.course_id === enrollment.course_id);
+      const total = studentModules.length;
+      const passed = progressData.filter(p => p.enrollment_id === enrollment.id && p.status === "passed").length;
+      
+      if (!progressMap[studentId]) {
+        progressMap[studentId] = { passed: 0, total: 0 };
+      }
+      progressMap[studentId].passed += passed;
+      progressMap[studentId].total += total;
+    });
+
+    setStudentProgress(progressMap);
   };
 
   const filtered = students.filter(
@@ -2449,12 +2488,12 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   const availableModules = modules.filter(m => m.course_id === assignmentData.module_id);
 
   return (
-    <div className="p-8 space-y-6 max-w-6xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Students
         </h1>
-        <p className="text-muted-foreground mt-1">View, manage, and send assignments to students.</p>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">View, manage, and track student progress.</p>
       </div>
 
       <div className="relative max-w-sm">
@@ -2469,46 +2508,61 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[700px]">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Student</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Joined</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
+                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Student</th>
+                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</th>
+                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Progress</th>
+                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</th>
+                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Joined</th>
+                <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((s) => (
-                <tr key={s.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={s.full_name} size="sm" src={s.avatar_url} />
-                      <p className="text-sm font-semibold text-foreground">{s.full_name}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">{s.email}</td>
-                  <td className="px-6 py-4"><Badge variant="default">{s.role}</Badge></td>
-                  <td className="px-6 py-4 text-xs text-muted-foreground font-mono">{formatDate(s.created_at)}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onViewProfile(s)}
-                        className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors"
-                      >
-                        <Eye className="w-3 h-3" /> View
-                      </button>
-                      <button
-                        onClick={() => { setSelectedStudent(s); setShowAssignmentModal(true); }}
-                        className="flex items-center gap-1 px-2 py-1 bg-accent/15 text-accent text-xs rounded-lg hover:bg-accent/25 transition-colors"
-                      >
-                        <Send className="w-3 h-3" /> Send Assignment
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((s) => {
+                const progress = studentProgress[s.id] || { passed: 0, total: 0 };
+                const pct = progress.total > 0 ? Math.round((progress.passed / progress.total) * 100) : 0;
+                
+                return (
+                  <tr key={s.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={s.full_name} size="sm" src={s.avatar_url} />
+                        <p className="text-sm font-semibold text-foreground truncate max-w-[100px] md:max-w-none">{s.full_name}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-4 text-sm text-muted-foreground truncate max-w-[120px] md:max-w-none">{s.email}</td>
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="min-w-[100px]">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">{progress.passed}/{progress.total} modules</span>
+                          <span className="font-medium">{pct}%</span>
+                        </div>
+                        <ProgressBar value={progress.passed} max={progress.total || 1} className="mt-1" />
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-4"><Badge variant="default">{s.role}</Badge></td>
+                    <td className="px-4 md:px-6 py-4 text-xs text-muted-foreground font-mono hidden md:table-cell">{formatDate(s.created_at)}</td>
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => onViewProfile(s)}
+                          className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors"
+                        >
+                          <Eye className="w-3 h-3" /> View
+                        </button>
+                        <button
+                          onClick={() => { setSelectedStudent(s); setShowAssignmentModal(true); }}
+                          className="flex items-center gap-1 px-2 py-1 bg-accent/15 text-accent text-xs rounded-lg hover:bg-accent/25 transition-colors"
+                        >
+                          <Send className="w-3 h-3" /> Send
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -2592,24 +2646,64 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   );
 }
 
-// ─── Admin Student Profile View ──────────────────────────────────────────────
+// ─── Admin Student Profile View (with Progress Tracking) ─────────────────────
 
 function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: () => void }) {
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [progress, setProgress] = useState<ModuleProgress[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modules, setModules] = useState<Module[]>([]);
 
   useEffect(() => {
     fetchStudentDetails();
   }, [student.id]);
 
   const fetchStudentDetails = async () => {
-    const [profileRes, enrollmentsRes] = await Promise.all([
+    setLoading(true);
+    
+    const [profileRes, enrollmentsRes, modulesRes] = await Promise.all([
       supabase.from("student_profiles").select("*").eq("user_id", student.id).single(),
       supabase.from("enrollments").select("*, course:course_id(*)").eq("student_id", student.id),
+      supabase.from("modules").select("*"),
     ]);
+    
     if (profileRes.data) setStudentProfile(profileRes.data);
     if (enrollmentsRes.data) setEnrollments(enrollmentsRes.data as Enrollment[]);
+    if (modulesRes.data) setModules(modulesRes.data as Module[]);
+
+    if (enrollmentsRes.data) {
+      const enrollmentIds = (enrollmentsRes.data as Enrollment[]).map(e => e.id);
+      if (enrollmentIds.length > 0) {
+        const { data: progressData } = await supabase
+          .from("module_progress")
+          .select("*")
+          .in("enrollment_id", enrollmentIds);
+        if (progressData) setProgress(progressData as ModuleProgress[]);
+      }
+    }
+    
+    setLoading(false);
   };
+
+  const getModuleCountForCourse = (courseId: string) => {
+    return modules.filter(m => m.course_id === courseId).length;
+  };
+
+  const getPassedModules = (enrollmentId: string) => {
+    return progress.filter(p => p.enrollment_id === enrollmentId && p.status === "passed").length;
+  };
+
+  if (loading) {
+    return (
+      <Modal open={true} onClose={onClose} title={`Student Profile: ${student.full_name}`}>
+        <div className="text-center py-8">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-accent" />
+          <p className="text-muted-foreground mt-4">Loading student data...</p>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal open={true} onClose={onClose} title={`Student Profile: ${student.full_name}`}>
@@ -2617,7 +2711,7 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
         <div className="flex items-center gap-4 pb-4 border-b border-border">
           <Avatar name={student.full_name} size="lg" src={student.avatar_url} />
           <div>
-            <h3 className="font-semibold text-foreground">{student.full_name}</h3>
+            <h3 className="font-semibold text-foreground text-lg">{student.full_name}</h3>
             <p className="text-sm text-muted-foreground">{student.email}</p>
             <p className="text-xs text-muted-foreground mt-1">Member since {formatDate(student.created_at)}</p>
           </div>
@@ -2648,14 +2742,27 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
         )}
         
         <div>
-          <h4 className="font-semibold text-foreground text-sm mb-2">Enrolled Courses</h4>
-          <div className="space-y-2">
-            {enrollments.map((e) => (
-              <div key={e.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                <span className="text-sm text-foreground">{e.course?.title}</span>
-                <StatusBadge status={e.status} />
-              </div>
-            ))}
+          <h4 className="font-semibold text-foreground text-sm mb-3">Enrolled Courses & Progress</h4>
+          <div className="space-y-4">
+            {enrollments.map((e) => {
+              const totalModules = getModuleCountForCourse(e.course_id);
+              const passed = getPassedModules(e.id);
+              const progressPct = totalModules > 0 ? Math.round((passed / totalModules) * 100) : 0;
+              
+              return (
+                <div key={e.id} className="p-4 bg-muted rounded-xl">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 gap-2">
+                    <span className="font-semibold text-foreground">{e.course?.title}</span>
+                    <StatusBadge status={e.status} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <span>📚 {passed}/{totalModules} modules passed</span>
+                    <span>📊 {progressPct}% complete</span>
+                  </div>
+                  <ProgressBar value={passed} max={totalModules || 1} className="mt-2" />
+                </div>
+              );
+            })}
             {enrollments.length === 0 && (
               <p className="text-sm text-muted-foreground">No enrolled courses</p>
             )}
@@ -2777,15 +2884,15 @@ function AdminPayments() {
   const pendingCount = payments.filter(p => p.status === "pending").length;
 
   return (
-    <div className="p-8 space-y-6 max-w-6xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
           Payment Approvals
         </h1>
-        <p className="text-muted-foreground mt-1">Review and approve student payment receipts.</p>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Review and approve student payment receipts.</p>
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
         <StatCard icon={Clock} label="Pending" value={pendingCount} />
         <StatCard icon={CheckCircle} label="Approved" value={payments.filter(p => p.status === "approved").length} />
         <StatCard icon={XCircle} label="Rejected" value={payments.filter(p => p.status === "rejected").length} />
@@ -2799,13 +2906,13 @@ function AdminPayments() {
           </Card>
         ) : (
           payments.map((p) => (
-            <Card key={p.id} className="p-5">
-              <div className="flex items-start gap-4">
+            <Card key={p.id} className="p-4 md:p-5">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
                   <FileText className="w-5 h-5 text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between flex-wrap gap-2">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
                     <div>
                       <p className="font-semibold text-foreground">{p.student_name}</p>
                       <p className="text-xs text-muted-foreground">{p.student_email}</p>
@@ -2971,17 +3078,17 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   const availableModules = modules.filter(m => m.course_id === newAssignment.course_id);
 
   return (
-    <div className="p-8 space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
             Assignments
           </h1>
-          <p className="text-muted-foreground mt-1">Create assignments and grade student submissions.</p>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">Create assignments and grade student submissions.</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" /> Create Assignment
         </button>
@@ -2990,8 +3097,8 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       <div className="space-y-4">
         <h2 className="font-semibold text-foreground">Pending Submissions ({submissions.length})</h2>
         {submissions.map((sa) => (
-          <Card key={sa.id} className="p-5">
-            <div className="flex items-center gap-4">
+          <Card key={sa.id} className="p-4 md:p-5">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
               <Avatar name={sa.profiles?.full_name || sa.student_id.slice(0, 8)} size="sm" />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-foreground text-sm">{sa.profiles?.full_name || "Unknown"}</p>
