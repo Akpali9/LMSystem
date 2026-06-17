@@ -25,6 +25,7 @@ import {
   FileText,
   Award,
   ChevronRight,
+  ChevronLeft,
   X,
   Plus,
   Eye,
@@ -57,7 +58,6 @@ import {
   HelpCircle,
   FileQuestion,
   MessageCircle,
-  GraduationCap as GraduationIcon,
   Gift,
 } from "lucide-react";
 
@@ -72,6 +72,7 @@ type View =
   | "student-assignments"
   | "student-payment"
   | "student-profile"
+  | "student-chat"
   | "student-scholarship"
   | "admin-dashboard"
   | "admin-courses"
@@ -80,7 +81,33 @@ type View =
   | "admin-assignments"
   | "admin-student-profile"
   | "admin-quizzes"
-  | "admin-messages";
+  | "admin-chat"
+  | "admin-scholarship";
+
+interface Scholarship {
+  id: string;
+  student_id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  course_id: string;
+  course_title: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  submitted_at: string;
+  reviewed_at?: string;
+  admin_notes?: string;
+}
+
+interface ChatMessage {
+  id: string;
+  course_id: string;
+  user_id: string;
+  user_name: string;
+  user_avatar?: string;
+  message: string;
+  created_at: string;
+}
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -94,6 +121,14 @@ function formatDate(dateStr: string) {
     year: "numeric",
     month: "short",
     day: "numeric",
+  });
+}
+
+function formatTime(dateStr: string) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -115,15 +150,16 @@ function formatNaira(amount: number) {
   }).format(amount);
 }
 
-// ─── Circular Progress Component ─────────────────────────────────────────────
+// ─── Circular Progress ──────────────────────────────────────────────────────
 
-function CircularProgress({ value, max, size = 80, strokeWidth = 6, label, showPercentage = true }: { 
+function CircularProgress({ value, max, size = 80, strokeWidth = 6, label, showPercentage = true, onClick }: { 
   value: number; 
   max: number; 
   size?: number; 
   strokeWidth?: number;
   label?: string;
   showPercentage?: boolean;
+  onClick?: () => void;
 }) {
   const safeMax = max || 1;
   const safeValue = Math.min(value || 0, safeMax);
@@ -134,7 +170,7 @@ function CircularProgress({ value, max, size = 80, strokeWidth = 6, label, showP
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="relative inline-flex flex-col items-center">
+    <div className={cn("relative inline-flex flex-col items-center", onClick && "cursor-pointer")} onClick={onClick}>
       <div className="relative inline-flex items-center justify-center">
         <svg width={size} height={size} className="transform -rotate-90">
           <circle
@@ -173,7 +209,7 @@ function CircularProgress({ value, max, size = 80, strokeWidth = 6, label, showP
   );
 }
 
-// ─── ProgressBar Component ────────────────────────────────────────────────────
+// ─── ProgressBar ─────────────────────────────────────────────────────────────
 
 function ProgressBar({ value, max, className }: { value: number; max: number; className?: string }) {
   const safeMax = max || 1;
@@ -189,7 +225,7 @@ function ProgressBar({ value, max, className }: { value: number; max: number; cl
   );
 }
 
-// ─── Secure Video Player (DRM Protected) ─────────────────────────────────────
+// ─── Secure Video Player ─────────────────────────────────────────────────────
 
 function SecureVideoPlayer({ url, title, onProgress }: { 
   url: string; 
@@ -373,13 +409,19 @@ function StatCard({ icon: Icon, label, value, trend, onClick }: { icon: any; lab
   );
 }
 
-function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+function Modal({ open, onClose, title, children, maxWidth = "max-w-lg" }: { 
+  open: boolean; 
+  onClose: () => void; 
+  title: string; 
+  children: React.ReactNode;
+  maxWidth?: string;
+}) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card rounded-2xl border border-border shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-border">
+      <div className={cn("relative bg-card rounded-2xl border border-border shadow-2xl w-full max-h-[90vh] overflow-y-auto", maxWidth)}>
+        <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
           <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: "'Poppins', sans-serif" }}>{title}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
             <X className="w-4 h-4" />
@@ -391,12 +433,12 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
   );
 }
 
-function Input({ label, type = "text", value, onChange, placeholder, required, accept, disabled }: {
+function Input({ label, type = "text", value, onChange, placeholder, required, accept, disabled, className }: {
   label: string; type?: string; value?: string; onChange?: (v: string) => void;
-  placeholder?: string; required?: boolean; accept?: string; disabled?: boolean;
+  placeholder?: string; required?: boolean; accept?: string; disabled?: boolean; className?: string;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className={cn("space-y-1.5", className)}>
       <label className="block text-sm font-medium text-foreground">
         {label} {required && <span className="text-destructive">*</span>}
       </label>
@@ -409,7 +451,6 @@ function Input({ label, type = "text", value, onChange, placeholder, required, a
         accept={accept}
         disabled={disabled}
         className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ fontFamily: "'Poppins', sans-serif" }}
       />
     </div>
   );
@@ -430,24 +471,7 @@ function Textarea({ label, value, onChange, placeholder, rows = 3, required }: {
         rows={rows}
         required={required}
         className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground resize-none"
-        style={{ fontFamily: "'Poppins', sans-serif" }}
       />
-    </div>
-  );
-}
-
-// ─── Message Component ───────────────────────────────────────────────────────
-
-function MessageBubble({ message, isOwn, timestamp }: { message: string; isOwn: boolean; timestamp: string }) {
-  return (
-    <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
-      <div className={cn(
-        "max-w-[75%] p-3 rounded-xl",
-        isOwn ? "bg-accent text-accent-foreground" : "bg-muted text-foreground"
-      )}>
-        <p className="text-sm">{message}</p>
-        <p className="text-[10px] opacity-70 mt-1">{formatDate(timestamp)}</p>
-      </div>
     </div>
   );
 }
@@ -460,7 +484,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <nav className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/image/logo.png" alt="Pruta Academy" className="h-10 w-auto" />
+            <img src="./image/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain" />
             <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -662,7 +686,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <footer className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <img src="/image/logo.png" alt="Pruta Academy" className="h-8 w-auto" />
+            <img src="./image/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
             <span className="font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>Pruta Academy</span>
           </div>
           <p className="text-sm text-muted-foreground"></p>
@@ -770,6 +794,25 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError("");
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || "Google authentication failed");
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background grid lg:grid-cols-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="hidden lg:block relative overflow-hidden">
@@ -781,7 +824,10 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-transparent" />
         <div className="absolute bottom-0 left-0 p-10 text-white">
           <div className="flex items-center gap-2.5 mb-8">
-            <img src="/image/logo.png" alt="Pruta Academy" className="h-10 w-auto" />
+            <img src="./image/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain bg-white/10 p-1" />
+            <span className="text-xl font-bold" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              Pruta Academy
+            </span>
           </div>
           <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
             "Education is the most powerful weapon you can use to change the world."
@@ -794,7 +840,10 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="w-full max-w-md">
           <div className="mb-8">
             <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-              <img src="/image/logo.png" alt="Pruta Academy" className="h-10 w-auto" />
+              <img src="./image/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain" />
+              <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                Pruta Academy
+              </span>
             </div>
             <h1 className="text-3xl font-bold text-primary mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
               {mode === "login" ? "Welcome back" : "Join Pruta Academy"}
@@ -827,6 +876,31 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
               {mode === "login" ? "Sign In" : "Create Account"}
             </button>
           </form>
+
+          <div className="mt-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="mt-4 w-full flex items-center justify-center gap-3 py-2.5 bg-white border border-border rounded-xl hover:bg-muted/50 transition-colors disabled:opacity-60"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              <span className="text-sm font-medium text-foreground">Google</span>
+            </button>
+          </div>
 
           <div className="mt-6 text-center">
             <button
@@ -897,8 +971,9 @@ function Sidebar({
     { view: "student-module" as View, icon: Video, label: "Learning" },
     { view: "student-assignments" as View, icon: ClipboardList, label: "Assignments" },
     { view: "student-payment" as View, icon: DollarSign, label: "Payments" },
-    { view: "student-profile" as View, icon: User, label: "My Profile" },
+    { view: "student-chat" as View, icon: MessageCircle, label: "Chat" },
     { view: "student-scholarship" as View, icon: Gift, label: "Scholarship" },
+    { view: "student-profile" as View, icon: User, label: "My Profile" },
   ];
 
   const adminNav = [
@@ -908,7 +983,8 @@ function Sidebar({
     { view: "admin-payments" as View, icon: DollarSign, label: "Payments" },
     { view: "admin-assignments" as View, icon: ClipboardList, label: "Assignments" },
     { view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes" },
-    { view: "admin-messages" as View, icon: MessageCircle, label: "Messages" },
+    { view: "admin-chat" as View, icon: MessageCircle, label: "Chat" },
+    { view: "admin-scholarship" as View, icon: Gift, label: "Scholarships" },
   ];
 
   const nav = profile.role === "admin" ? adminNav : studentNav;
@@ -932,7 +1008,7 @@ function Sidebar({
           )}
         >
           <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-            <img src="/image/logo.png" alt="Pruta Academy" className="h-9 w-auto" />
+            <img src="./image/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
             <span className="font-bold text-sidebar-foreground text-lg flex-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -994,26 +1070,17 @@ function Sidebar({
   return (
     <aside
       className={cn(
-        "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0 hidden md:flex",
+        "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 shrink-0 hidden md:flex relative",
         collapsed ? "w-16" : "w-60"
       )}
     >
       <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-        <img src="/image/logo.png" alt="Pruta Academy" className={cn("h-auto", collapsed ? "w-8" : "h-9")} />
+        <img src="./image/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
         {!collapsed && (
           <span className="font-bold text-sidebar-foreground text-lg" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Pruta Academy
           </span>
         )}
-        <button
-          onClick={toggleSidebar}
-          className={cn(
-            "ml-auto w-7 h-7 rounded-lg hover:bg-sidebar-accent flex items-center justify-center transition-colors",
-            collapsed && "mx-auto ml-0"
-          )}
-        >
-          <Menu className="w-4 h-4 text-sidebar-foreground" />
-        </button>
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -1055,400 +1122,26 @@ function Sidebar({
           {!collapsed && "Sign Out"}
         </button>
       </div>
+
+      {/* Toggle button - outside the sidebar */}
+      <button
+        onClick={toggleSidebar}
+        className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-sidebar border border-sidebar-border shadow-md hover:bg-sidebar-accent flex items-center justify-center transition-colors hidden md:flex z-10"
+      >
+        {collapsed ? <ChevronRight className="w-4 h-4 text-sidebar-foreground" /> : <ChevronLeft className="w-4 h-4 text-sidebar-foreground" />}
+      </button>
     </aside>
-  );
-}
-
-// ─── Scholarship Page ─────────────────────────────────────────────────────────
-
-function ScholarshipPage({ profile }: { profile: Profile }) {
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    courseInterest: "",
-    reason: "",
-    experience: "",
-    goals: "",
-  });
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (profile) {
-      setFormData(prev => ({
-        ...prev,
-        fullName: profile.full_name || "",
-        email: profile.email || "",
-      }));
-    }
-  }, [profile]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const { error: submitError } = await supabase
-        .from("scholarship_applications")
-        .insert({
-          user_id: profile.id,
-          ...formData,
-          status: "pending",
-          submitted_at: new Date().toISOString(),
-        });
-
-      if (submitError) throw submitError;
-
-      setSubmitted(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to submit application. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (submitted) {
-    return (
-      <div className="p-4 md:p-8 max-w-3xl mx-auto">
-        <Card className="p-8 text-center">
-          <div className="flex flex-col items-center">
-            <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
-              Application Submitted! 🎉
-            </h2>
-            <p className="text-muted-foreground">
-              Thank you for applying for the scholarship. We will review your application and get back to you within 5-7 business days.
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-6 px-6 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors"
-            >
-              Submit Another Application
-            </button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 md:p-8 max-w-3xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Scholarship Application
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm md:text-base">
-          Apply for a scholarship to access our premium courses for free. We believe talent should never be limited by finances.
-        </p>
-      </div>
-
-      <Card className="p-6">
-        <div className="bg-accent/10 border border-accent/20 rounded-xl p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <Gift className="w-5 h-5 text-accent" />
-            <div>
-              <p className="font-semibold text-foreground">Scholarship Benefits</p>
-              <p className="text-sm text-muted-foreground">Full access to any course, mentorship, and career guidance</p>
-            </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Full Name"
-              value={formData.fullName}
-              onChange={(v) => setFormData(prev => ({ ...prev, fullName: v }))}
-              placeholder="John Doe"
-              required
-              disabled={!!profile}
-            />
-            <Input
-              label="Email Address"
-              type="email"
-              value={formData.email}
-              onChange={(v) => setFormData(prev => ({ ...prev, email: v }))}
-              placeholder="you@example.com"
-              required
-              disabled={!!profile}
-            />
-          </div>
-
-          <Input
-            label="Phone Number"
-            value={formData.phone}
-            onChange={(v) => setFormData(prev => ({ ...prev, phone: v }))}
-            placeholder="+234 XXX XXX XXXX"
-            required
-          />
-
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-foreground">Course Interested In <span className="text-destructive">*</span></label>
-            <select
-              value={formData.courseInterest}
-              onChange={(e) => setFormData(prev => ({ ...prev, courseInterest: e.target.value }))}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all"
-              required
-            >
-              <option value="">Select a course...</option>
-              <option value="web_development">Web Development</option>
-              <option value="data_science">Data Science</option>
-              <option value="mobile_app">Mobile App Development</option>
-              <option value="cloud_computing">Cloud Computing</option>
-              <option value="ui_ux">UI/UX Design</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <Textarea
-            label="Why do you want to learn this course?"
-            value={formData.reason}
-            onChange={(v) => setFormData(prev => ({ ...prev, reason: v }))}
-            placeholder="Tell us why you're passionate about this field..."
-            rows={3}
-            required
-          />
-
-          <Textarea
-            label="What experience or skills do you currently have?"
-            value={formData.experience}
-            onChange={(v) => setFormData(prev => ({ ...prev, experience: v }))}
-            placeholder="Share your background, any relevant experience, or projects..."
-            rows={3}
-            required
-          />
-
-          <Textarea
-            label="What are your career goals?"
-            value={formData.goals}
-            onChange={(v) => setFormData(prev => ({ ...prev, goals: v }))}
-            placeholder="Where do you see yourself in 2-3 years after completing this course?"
-            rows={3}
-            required
-          />
-
-          {error && (
-            <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 rounded-xl px-4 py-3">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Submit Application</>}
-          </button>
-        </form>
-      </Card>
-    </div>
-  );
-}
-
-// ─── Admin Messages ──────────────────────────────────────────────────────────
-
-function AdminMessages({ profile }: { profile: Profile }) {
-  const [messages, setMessages] = useState<any[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [selectedStudent, setSelectedStudent] = useState<string>("all");
-  const [students, setStudents] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetchMessages();
-    fetchStudents();
-  }, []);
-
-  const fetchMessages = async () => {
-    const { data } = await supabase
-      .from("messages")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (data) setMessages(data);
-  };
-
-  const fetchStudents = async () => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("role", "student");
-    if (data) setStudents(data as Profile[]);
-  };
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-    setLoading(true);
-
-    try {
-      const messageData = {
-        sender_id: profile.id,
-        sender_name: profile.full_name,
-        message: newMessage,
-        recipient_id: selectedStudent === "all" ? null : selectedStudent,
-        is_global: selectedStudent === "all",
-        created_at: new Date().toISOString(),
-      };
-
-      const { error } = await supabase.from("messages").insert(messageData);
-      if (error) throw error;
-
-      setNewMessage("");
-      fetchMessages();
-    } catch (error) {
-      console.error("Error sending message:", error);
-      alert("Failed to send message. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Messages
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm md:text-base">
-          Send announcements and messages to students
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 space-y-4">
-          <Card className="p-4">
-            <h3 className="font-semibold text-foreground mb-3">Send Message</h3>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-foreground">Recipient</label>
-                <select
-                  value={selectedStudent}
-                  onChange={(e) => setSelectedStudent(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-                >
-                  <option value="all">All Students</option>
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>{s.full_name}</option>
-                  ))}
-                </select>
-              </div>
-              <Textarea
-                label="Message"
-                value={newMessage}
-                onChange={setNewMessage}
-                placeholder="Type your message here..."
-                rows={4}
-                required
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={loading || !newMessage.trim()}
-                className="w-full py-2.5 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Send Message</>}
-              </button>
-            </div>
-          </Card>
-        </div>
-
-        <div className="md:col-span-2">
-          <Card className="p-4">
-            <h3 className="font-semibold text-foreground mb-3">Message History</h3>
-            <div className="space-y-3 max-h-[500px] overflow-y-auto">
-              {messages.map((msg) => (
-                <div key={msg.id} className="p-3 bg-muted rounded-xl">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-sm text-foreground">{msg.sender_name}</span>
-                    <span className="text-xs text-muted-foreground">{formatDate(msg.created_at)}</span>
-                  </div>
-                  <p className="text-sm text-foreground">{msg.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {msg.is_global ? "📢 Sent to all students" : `📨 Sent to ${msg.recipient_id ? "specific student" : "all"}`}
-                  </p>
-                </div>
-              ))}
-              {messages.length === 0 && (
-                <div className="text-center py-8">
-                  <MessageCircle className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                  <p className="text-muted-foreground">No messages sent yet.</p>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Student Messages ─────────────────────────────────────────────────────────
-
-function StudentMessages({ profile }: { profile: Profile }) {
-  const [messages, setMessages] = useState<any[]>([]);
-
-  useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  const fetchMessages = async () => {
-    const { data } = await supabase
-      .from("messages")
-      .select("*")
-      .or(`recipient_id.eq.${profile.id},is_global.eq.true,recipient_id.is.null`)
-      .order("created_at", { ascending: false });
-    if (data) setMessages(data);
-  };
-
-  return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Messages
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm md:text-base">
-          View announcements and messages from your instructors
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        {messages.map((msg) => (
-          <Card key={msg.id} className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Badge variant={msg.is_global ? "info" : "default"}>
-                  {msg.is_global ? "📢 Announcement" : "📨 Message"}
-                </Badge>
-                <span className="font-semibold text-foreground">{msg.sender_name}</span>
-              </div>
-              <span className="text-xs text-muted-foreground">{formatDate(msg.created_at)}</span>
-            </div>
-            <p className="text-sm text-foreground whitespace-pre-wrap">{msg.message}</p>
-          </Card>
-        ))}
-        {messages.length === 0 && (
-          <Card className="p-8 text-center">
-            <MessageCircle className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-muted-foreground">No messages yet.</p>
-          </Card>
-        )}
-      </div>
-    </div>
   );
 }
 
 // ─── Student Profile Page ────────────────────────────────────────────────────
 
-function StudentProfile({ profile, onUpdate, enrollments, progress, modules, onNavigate }: { 
+function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: { 
   profile: Profile; 
   onUpdate: (updates: Partial<Profile>, avatarFile?: File) => Promise<void>;
   enrollments: Enrollment[];
   progress: ModuleProgress[];
   modules: Module[];
-  onNavigate: (v: View) => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState(profile.full_name);
@@ -1512,7 +1205,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules, onN
   const totalModules = modules?.length || 0;
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           My Profile
@@ -1627,24 +1320,15 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules, onN
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-foreground mb-4">Your Learning Progress</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard 
-            icon={BookOpen} 
-            label="Active Courses" 
-            value={activeEnrollments.length} 
-            onClick={() => onNavigate("student-courses")}
-          />
-          <StatCard 
-            icon={CheckCircle} 
-            label="Modules Passed" 
-            value={passedCount} 
-            onClick={() => onNavigate("student-module")}
-          />
-          <StatCard 
-            icon={Award} 
-            label="Overall Progress" 
-            value={totalModules > 0 ? `${Math.round((passedCount / totalModules) * 100)}%` : "0%"}
-            onClick={() => onNavigate("student-module")}
-          />
+          <Card className="p-6 flex flex-col items-center">
+            <CircularProgress value={activeEnrollments.length} max={10} size={80} label="Active Courses" />
+          </Card>
+          <Card className="p-6 flex flex-col items-center">
+            <CircularProgress value={passedCount} max={totalModules || 1} size={80} label="Modules Passed" onClick={() => {}} />
+          </Card>
+          <Card className="p-6 flex flex-col items-center">
+            <CircularProgress value={totalModules > 0 ? Math.round((passedCount / totalModules) * 100) : 0} max={100} size={80} label="Overall Progress" />
+          </Card>
         </div>
       </div>
 
@@ -1659,7 +1343,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules, onN
               ) || [];
               
               return (
-                <Card key={enrollment.id} className="p-4 md:p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigate("student-module")}>
+                <Card key={enrollment.id} className="p-4 md:p-6">
                   <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
                       <img 
@@ -1694,14 +1378,15 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules, onN
   );
 }
 
-// ─── Student Dashboard ─────────────────────────────────────────────────────────────
+// ─── Student Dashboard ──────────────────────────────────────────────────────
 
-function StudentDashboard({ profile, onNavigate, enrollments, progress, modules }: { 
+function StudentDashboard({ profile, onNavigate, enrollments, progress, modules, courses }: { 
   profile: Profile; 
   onNavigate: (v: View) => void;
   enrollments: Enrollment[];
   progress: ModuleProgress[];
   modules: Module[];
+  courses: Course[];
 }) {
   const safeEnrollments = enrollments || [];
   const safeProgress = progress || [];
@@ -1709,7 +1394,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
   
   const activeEnrollment = safeEnrollments.find(e => e?.status === "active") || null;
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
-  const allEnrollments = safeEnrollments.filter(e => e?.status === "active" || e?.status === "pending_payment" || e?.status === "payment_submitted");
+  const [scholarshipApplications, setScholarshipApplications] = useState<any[]>([]);
   
   let passedCount = 0;
   let totalModulesForActiveCourse = 0;
@@ -1724,6 +1409,22 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
     ).length;
   }
 
+  useEffect(() => {
+    fetchScholarshipStatus();
+  }, [profile.id]);
+
+  const fetchScholarshipStatus = async () => {
+    const { data } = await supabase
+      .from("scholarships")
+      .select("*")
+      .eq("student_id", profile.id)
+      .order("submitted_at", { ascending: false });
+    if (data) setScholarshipApplications(data);
+  };
+
+  const hasPendingScholarship = scholarshipApplications.some(s => s.status === "pending");
+  const hasApprovedScholarship = scholarshipApplications.some(s => s.status === "approved");
+
   if (!profile) {
     return (
       <div className="p-8 text-center">
@@ -1734,7 +1435,55 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      {/* Scholarship Placard */}
+      <div 
+        className={cn(
+          "p-4 rounded-2xl border cursor-pointer hover:shadow-md transition-all flex items-center gap-4",
+          hasApprovedScholarship 
+            ? "bg-green-50 border-green-200" 
+            : hasPendingScholarship 
+              ? "bg-amber-50 border-amber-200" 
+              : "bg-gradient-to-r from-accent/10 to-primary/5 border-accent/20"
+        )}
+        onClick={() => onNavigate("student-scholarship")}
+      >
+        <div className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+          hasApprovedScholarship 
+            ? "bg-green-100" 
+            : hasPendingScholarship 
+              ? "bg-amber-100" 
+              : "bg-accent/20"
+        )}>
+          <Gift className={cn(
+            "w-6 h-6",
+            hasApprovedScholarship 
+              ? "text-green-600" 
+              : hasPendingScholarship 
+                ? "text-amber-600" 
+                : "text-accent"
+          )} />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-foreground">
+            {hasApprovedScholarship 
+              ? "🎉 Scholarship Approved!" 
+              : hasPendingScholarship 
+                ? "⏳ Scholarship Application Pending" 
+                : "🎓 Apply for a Scholarship"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {hasApprovedScholarship 
+              ? "Your scholarship has been approved. Check your email for details." 
+              : hasPendingScholarship 
+                ? "Your application is being reviewed by the admin." 
+                : "Apply for a scholarship to get financial support for your education."}
+          </p>
+        </div>
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </div>
+
       {pendingEnrollments.length > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
           <div className="flex items-start gap-3">
@@ -1757,44 +1506,38 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
 
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Welcome back {profile.full_name?.split(" ")[0] || "Student"}! 👋
+          Welcome back, {profile.full_name?.split(" ")[0] || "Student"}! 👋
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Here's your learning progress at a glance.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-        <StatCard 
-          icon={BookOpen} 
-          label="Enrolled Courses" 
-          value={allEnrollments.length} 
-          onClick={() => onNavigate("student-courses")}
-        />
+        <StatCard icon={BookOpen} label="Enrolled Courses" value={safeEnrollments.filter(e => e?.status === "active").length} />
         <StatCard 
           icon={CheckCircle} 
           label="Modules Passed" 
           value={passedCount} 
-          onClick={() => onNavigate("student-module")}
+          onClick={() => activeEnrollment && onNavigate("student-module")}
         />
-        <StatCard 
-          icon={ClipboardList} 
-          label="Assignments" 
-          value={0} 
-          onClick={() => onNavigate("student-assignments")}
-        />
-        <StatCard 
-          icon={Award} 
-          label="Certificates" 
-          value={activeEnrollment?.status === "completed" ? 1 : 0} 
-        />
+        <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
+        <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
       </div>
 
       {activeEnrollment && activeEnrollment.course && (
         <div className="grid md:grid-cols-4 gap-6">
           <div className="md:col-span-3">
             <Card className="p-4 md:p-6">
-              <h2 className="font-semibold text-foreground mb-4 md:mb-5 text-lg md:text-xl" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                Active Course Progress
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-foreground text-lg md:text-xl" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  Active Course Progress
+                </h2>
+                <button
+                  onClick={() => onNavigate("student-module")}
+                  className="text-xs text-accent hover:underline flex items-center gap-1"
+                >
+                  View Details <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
               <div className="flex flex-col md:flex-row gap-4 mb-5">
                 <div className="w-full md:w-24 h-32 md:h-24 rounded-xl overflow-hidden bg-muted shrink-0">
                   <img 
@@ -1831,7 +1574,12 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
           <div className="flex items-center justify-center">
             <Card className="p-6 w-full flex flex-col items-center">
               <h3 className="font-semibold text-foreground mb-4 text-sm text-center">Overall Progress</h3>
-              <CircularProgress value={passedCount} max={totalModulesForActiveCourse || 5} size={120} />
+              <CircularProgress 
+                value={passedCount} 
+                max={totalModulesForActiveCourse || 5} 
+                size={120}
+                onClick={() => onNavigate("student-module")}
+              />
               <p className="text-xs text-muted-foreground mt-3 text-center">
                 {passedCount} of {totalModulesForActiveCourse || 5} modules passed
               </p>
@@ -1845,10 +1593,10 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
         </div>
       )}
 
-      {allEnrollments.length === 0 && (
+      {!activeEnrollment && safeEnrollments.length === 0 && (
         <Card className="p-12 text-center">
           <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-          <h3 className="font-semibold text-foreground mb-2">No Courses Yet</h3>
+          <h3 className="font-semibold text-foreground mb-2">No Active Courses</h3>
           <p className="text-sm text-muted-foreground">
             You haven't enrolled in any courses yet. Browse our programs and start learning!
           </p>
@@ -1885,6 +1633,8 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   
   const activeEnrollments = enrollments?.filter(e => e.status === "active") || [];
   const pendingEnrollments = enrollments?.filter(e => e.status === "pending_payment" || e.status === "payment_submitted") || [];
+  
+  const otherCourses = courses?.filter(c => !enrolledCourseIds.includes(c.id)) || [];
 
   const handleEnrollSubmit = async () => {
     if (!selectedCourse || !receiptFile) return;
@@ -1999,7 +1749,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       {submissionStatus.show && (
         <div className={cn(
           "fixed top-20 right-4 z-50 p-4 rounded-xl shadow-lg animate-in slide-in-from-top-2 max-w-[90vw] md:max-w-md",
@@ -2042,145 +1792,139 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         </button>
       </div>
 
-      {/* Show all courses in one place - Active, Pending, and Available */}
-      <div className="space-y-6">
-        {/* Active Courses */}
-        {activeEnrollments.length > 0 && (
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" /> Active Courses ({activeEnrollments.length})
-            </h2>
-            <div className="space-y-4">
-              {activeEnrollments.map((enrollment) => (
-                <Card key={enrollment.id} className="p-4 md:p-6">
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-                    <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
-                      <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
-                        <div>
-                          <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
-                          <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                            Enrolled: {formatDate(enrollment.enrolled_at || "")} · Expires: {formatDate(enrollment.expires_at || "")}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
-                            {getStatusText(enrollment.status)}
-                          </span>
-                        </div>
-                      </div>
-                      <ProgressBar value={enrollment.current_module_index + 1} max={5} className="mt-4" />
-                      <p className="text-xs text-muted-foreground mt-1">Module {enrollment.current_module_index + 1} of 5</p>
-                      <button
-                        onClick={() => onNavigate("student-module")}
-                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs md:text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-                      >
-                        <Play className="w-3.5 h-3.5" /> Continue Learning
-                      </button>
-                    </div>
+      {activeEnrollments.length > 0 && (
+        <div>
+          <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-600" /> Active Courses ({activeEnrollments.length})
+          </h2>
+          <div className="space-y-4">
+            {activeEnrollments.map((enrollment) => (
+              <Card key={enrollment.id} className="p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                    <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
                   </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Pending Enrollments */}
-        {pendingEnrollments.length > 0 && (
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-yellow-600" /> Pending Approvals ({pendingEnrollments.length})
-            </h2>
-            <div className="space-y-4">
-              {pendingEnrollments.map((enrollment) => (
-                <Card key={enrollment.id} className="p-4 md:p-6 bg-yellow-50/30 border-yellow-200">
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-                    <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
-                      <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
-                        <div>
-                          <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
-                          <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                            Requested: {formatDate(enrollment.created_at)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
-                            {getStatusText(enrollment.status)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mt-3 p-3 bg-yellow-100/50 rounded-lg">
-                        <p className="text-sm text-yellow-800 flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          Your enrollment is pending admin approval. You will receive access once your payment is verified.
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+                      <div>
+                        <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                          Enrolled: {formatDate(enrollment.enrolled_at || "")} · Expires: {formatDate(enrollment.expires_at || "")}
                         </p>
                       </div>
-                      {enrollment.status === "pending_payment" && (
-                        <button
-                          onClick={() => {
-                            setSelectedCourse(enrollment.course || null);
-                            setShowEnroll(true);
-                          }}
-                          className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-600 text-white text-xs md:text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
-                        >
-                          <Upload className="w-4 h-4" /> Upload Payment Receipt
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
+                          {getStatusText(enrollment.status)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Available Courses */}
-        {availableCourses.length > 0 && (
-          <div>
-            <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4">Explore Programs</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {availableCourses.map((course) => (
-                <div key={course.id} className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                  <div className="relative h-48 md:h-56 bg-muted overflow-hidden">
-                    <img 
-                      src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
-                      alt={course.title} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                    />
-                    <div className="absolute top-3 right-3">
-                      <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
-                        {course.duration_months} months
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-4 md:p-5">
-                    <h3 className="font-semibold text-foreground text-base md:text-lg mb-2 leading-snug">{course.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                        {formatNaira(course.price)}
-                      </span>
-                      <button
-                        onClick={() => { setSelectedCourse(course); setShowEnroll(true); }}
-                        className="px-4 md:px-5 py-2 md:py-2.5 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
-                      >
-                        Enroll Now
-                      </button>
-                    </div>
+                    <ProgressBar value={enrollment.current_module_index + 1} max={5} className="mt-4" />
+                    <p className="text-xs text-muted-foreground mt-1">Module {enrollment.current_module_index + 1} of 5</p>
+                    <button
+                      onClick={() => onNavigate("student-module")}
+                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs md:text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      <Play className="w-3.5 h-3.5" /> Continue Learning
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </Card>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {activeEnrollments.length === 0 && pendingEnrollments.length === 0 && availableCourses.length === 0 && (
+      {pendingEnrollments.length > 0 && (
+        <div>
+          <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-yellow-600" /> Pending Approvals ({pendingEnrollments.length})
+          </h2>
+          <div className="space-y-4">
+            {pendingEnrollments.map((enrollment) => (
+              <Card key={enrollment.id} className="p-4 md:p-6 bg-yellow-50/30 border-yellow-200">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                    <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+                      <div>
+                        <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                          Requested: {formatDate(enrollment.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
+                          {getStatusText(enrollment.status)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 p-3 bg-yellow-100/50 rounded-lg">
+                      <p className="text-sm text-yellow-800 flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Your enrollment is pending admin approval. You will receive access once your payment is verified.
+                      </p>
+                    </div>
+                    {enrollment.status === "pending_payment" && (
+                      <button
+                        onClick={() => {
+                          setSelectedCourse(enrollment.course || null);
+                          setShowEnroll(true);
+                        }}
+                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-600 text-white text-xs md:text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+                      >
+                        <Upload className="w-4 h-4" /> Upload Payment Receipt
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {otherCourses.length > 0 && (
+        <div>
+          <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4">Explore Other Programs</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {otherCourses.map((course) => (
+              <div key={course.id} className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                <div className="relative h-48 md:h-56 bg-muted overflow-hidden">
+                  <img 
+                    src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
+                    alt={course.title} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                  />
+                  <div className="absolute top-3 right-3">
+                    <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
+                      {course.duration_months} months
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4 md:p-5">
+                  <h3 className="font-semibold text-foreground text-base md:text-lg mb-2 leading-snug">{course.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      {formatNaira(course.price)}
+                    </span>
+                    <button
+                      onClick={() => { setSelectedCourse(course); setShowEnroll(true); }}
+                      className="px-4 md:px-5 py-2 md:py-2.5 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
+                    >
+                      Enroll Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeEnrollments.length === 0 && pendingEnrollments.length === 0 && otherCourses.length === 0 && (
         <Card className="p-12 text-center">
           <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
           <p className="text-muted-foreground">No courses available at the moment.</p>
@@ -2191,7 +1935,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         {!selectedCourse ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground mb-3">Select a course to enroll:</p>
-            {availableCourses.map((c) => (
+            {otherCourses.map((c) => (
               <button
                 key={c.id}
                 onClick={() => setSelectedCourse(c)}
@@ -2268,7 +2012,706 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   );
 }
 
-// ─── Student Module Viewer ────────────────────────────────────────────────────
+// ─── Student Chat ──────────────────────────────────────────────────────────
+
+function StudentChat({ profile, courses, enrollments }: { profile: Profile; courses: Course[]; enrollments: Enrollment[] }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const activeEnrollments = enrollments.filter(e => e.status === "active");
+  const enrolledCourses = courses.filter(c => activeEnrollments.some(e => e.course_id === c.id));
+
+  useEffect(() => {
+    if (selectedCourseId) {
+      fetchMessages();
+      
+      const subscription = supabase
+        .channel(`chat-${selectedCourseId}`)
+        .on("postgres_changes", 
+          { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
+          () => fetchMessages()
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [selectedCourseId]);
+
+  const fetchMessages = async () => {
+    if (!selectedCourseId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("course_id", selectedCourseId)
+      .order("created_at", { ascending: true });
+    if (data) setMessages(data as ChatMessage[]);
+    setLoading(false);
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedCourseId || sending) return;
+    setSending(true);
+    
+    const { error } = await supabase.from("chat_messages").insert({
+      course_id: selectedCourseId,
+      user_id: profile.id,
+      user_name: profile.full_name,
+      user_avatar: profile.avatar_url,
+      message: newMessage.trim(),
+    });
+    
+    if (!error) {
+      setNewMessage("");
+      fetchMessages();
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="p-4 md:p-8 max-w-6xl mx-auto h-[calc(100vh-100px)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          Course Chat
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Connect with other students in your courses.</p>
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-6 h-[calc(100%-80px)]">
+        <div className="md:col-span-1 bg-card rounded-2xl border border-border p-4 overflow-y-auto">
+          <h3 className="font-semibold text-foreground text-sm mb-3">Your Courses</h3>
+          <div className="space-y-2">
+            {enrolledCourses.length === 0 && (
+              <p className="text-xs text-muted-foreground">No active courses yet.</p>
+            )}
+            {enrolledCourses.map((course) => (
+              <button
+                key={course.id}
+                onClick={() => setSelectedCourseId(course.id)}
+                className={cn(
+                  "w-full text-left p-3 rounded-xl text-sm transition-all",
+                  selectedCourseId === course.id
+                    ? "bg-accent/20 text-accent border border-accent/30"
+                    : "hover:bg-muted text-foreground/70"
+                )}
+              >
+                <p className="font-medium truncate">{course.title}</p>
+                <p className="text-xs text-muted-foreground">Click to chat</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="md:col-span-3 bg-card rounded-2xl border border-border flex flex-col">
+          {!selectedCourseId ? (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                <p>Select a course to start chatting</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="p-4 border-b border-border">
+                <p className="font-semibold text-foreground">
+                  {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
+                </p>
+              </div>
+
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    <p>No messages yet. Start the conversation!</p>
+                  </div>
+                ) : (
+                  messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={cn(
+                        "flex items-start gap-3 max-w-[80%]",
+                        msg.user_id === profile.id ? "ml-auto flex-row-reverse" : ""
+                      )}
+                    >
+                      <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
+                      <div className={cn(
+                        "p-3 rounded-xl text-sm",
+                        msg.user_id === profile.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-foreground"
+                      )}>
+                        <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
+                        <p className="mt-0.5">{msg.message}</p>
+                        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="p-4 border-t border-border flex gap-3">
+                <input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder="Type a message..."
+                  className="flex-1 px-4 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || sending}
+                  className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Student Scholarship ───────────────────────────────────────────────────
+
+function StudentScholarship({ profile, courses }: { profile: Profile; courses: Course[] }) {
+  const [applications, setApplications] = useState<Scholarship[]>([]);
+  const [showApply, setShowApply] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [reason, setReason] = useState("");
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchApplications();
+  }, [profile.id]);
+
+  const fetchApplications = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("scholarships")
+      .select("*")
+      .eq("student_id", profile.id)
+      .order("submitted_at", { ascending: false });
+    if (data) setApplications(data as Scholarship[]);
+    setLoading(false);
+  };
+
+  const handleApply = async () => {
+    if (!selectedCourse || !reason || !phone) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    setSubmitting(true);
+    const course = courses.find(c => c.id === selectedCourse);
+    
+    const { error } = await supabase.from("scholarships").insert({
+      student_id: profile.id,
+      full_name: profile.full_name,
+      email: profile.email,
+      phone: phone,
+      course_id: selectedCourse,
+      course_title: course?.title || "",
+      reason: reason,
+      status: "pending",
+    });
+
+    if (!error) {
+      alert("Scholarship application submitted successfully!");
+      setShowApply(false);
+      setSelectedCourse("");
+      setReason("");
+      setPhone("");
+      fetchApplications();
+    } else {
+      alert("Failed to submit application. Please try again.");
+    }
+    setSubmitting(false);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved": return "text-green-600 bg-green-50 border-green-200";
+      case "rejected": return "text-red-600 bg-red-50 border-red-200";
+      default: return "text-amber-600 bg-amber-50 border-amber-200";
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-8 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            Scholarships
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">Apply for financial support for your education.</p>
+        </div>
+        <button
+          onClick={() => setShowApply(true)}
+          className="px-4 py-2.5 bg-accent text-accent-foreground text-sm font-medium rounded-xl hover:bg-accent/90 transition-colors flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" /> Apply for Scholarship
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {applications.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Gift className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+            <h3 className="font-semibold text-foreground mb-2">No Applications</h3>
+            <p className="text-sm text-muted-foreground">
+              You haven't applied for any scholarships yet.
+            </p>
+            <button
+              onClick={() => setShowApply(true)}
+              className="mt-4 px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 transition-colors"
+            >
+              Apply Now
+            </button>
+          </Card>
+        ) : (
+          applications.map((app) => (
+            <Card key={app.id} className="p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-foreground">{app.course_title}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{app.reason}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Submitted: {formatDate(app.submitted_at)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-xs font-medium border",
+                    getStatusColor(app.status)
+                  )}>
+                    {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                  </span>
+                  {app.status === "approved" && (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  )}
+                  {app.status === "rejected" && (
+                    <XCircle className="w-5 h-5 text-red-600" />
+                  )}
+                </div>
+              </div>
+              {app.admin_notes && (
+                <div className="mt-3 p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+                  <p className="font-medium">Admin Note:</p>
+                  <p>{app.admin_notes}</p>
+                </div>
+              )}
+            </Card>
+          ))
+        )}
+      </div>
+
+      <Modal open={showApply} onClose={() => setShowApply(false)} title="Apply for Scholarship">
+        <div className="space-y-4">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <p className="text-sm text-blue-800">
+              📝 Apply for a scholarship to get financial support for your chosen course.
+              Your application will be reviewed by the admin.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-foreground">Select Course <span className="text-destructive">*</span></label>
+            <select
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+            >
+              <option value="">Select a course...</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.title} - {formatNaira(c.price)}</option>
+              ))}
+            </select>
+          </div>
+
+          <Input
+            label="Phone Number"
+            type="tel"
+            value={phone}
+            onChange={setPhone}
+            placeholder="+234 XXX XXX XXXX"
+            required
+          />
+
+          <Textarea
+            label="Why do you need a scholarship?"
+            value={reason}
+            onChange={setReason}
+            placeholder="Explain why you need financial support and how this course will help you..."
+            rows={4}
+            required
+          />
+
+          <button
+            onClick={handleApply}
+            disabled={submitting || !selectedCourse || !reason || !phone}
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Submit Application
+          </button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ─── Admin Scholarship ─────────────────────────────────────────────────────
+
+function AdminScholarship() {
+  const [applications, setApplications] = useState<Scholarship[]>([]);
+  const [selectedApp, setSelectedApp] = useState<Scholarship | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchApplications();
+    
+    const subscription = supabase
+      .channel("admin-scholarships")
+      .on("postgres_changes", { event: "*", schema: "public", table: "scholarships" }, () => fetchApplications())
+      .subscribe();
+
+    return () => { subscription.unsubscribe(); };
+  }, []);
+
+  const fetchApplications = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("scholarships")
+      .select("*")
+      .order("submitted_at", { ascending: false });
+    if (data) setApplications(data as Scholarship[]);
+    setLoading(false);
+  };
+
+  const handleAction = async (id: string, action: "approved" | "rejected") => {
+    const { error } = await supabase
+      .from("scholarships")
+      .update({ 
+        status: action, 
+        reviewed_at: new Date().toISOString(),
+        admin_notes: adminNotes || null
+      })
+      .eq("id", id);
+
+    if (!error) {
+      setSelectedApp(null);
+      setAdminNotes("");
+      fetchApplications();
+    } else {
+      alert("Failed to update application");
+    }
+  };
+
+  const pendingCount = applications.filter(a => a.status === "pending").length;
+
+  return (
+    <div className="p-4 md:p-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            Scholarship Applications
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">Review and manage student scholarship applications.</p>
+        </div>
+        {pendingCount > 0 && (
+          <Badge variant="warning">{pendingCount} Pending</Badge>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <StatCard icon={Clock} label="Pending" value={pendingCount} />
+        <StatCard icon={CheckCircle} label="Approved" value={applications.filter(a => a.status === "approved").length} />
+        <StatCard icon={XCircle} label="Rejected" value={applications.filter(a => a.status === "rejected").length} />
+      </div>
+
+      <div className="space-y-4">
+        {applications.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Gift className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">No scholarship applications yet.</p>
+          </Card>
+        ) : (
+          applications.map((app) => (
+            <Card key={app.id} className="p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={app.full_name} size="sm" />
+                    <div>
+                      <p className="font-semibold text-foreground">{app.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{app.email}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm mt-2"><span className="font-medium">Course:</span> {app.course_title}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{app.reason}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Submitted: {formatDate(app.submitted_at)}
+                  </p>
+                  {app.admin_notes && (
+                    <div className="mt-2 p-2 bg-muted rounded-lg text-xs text-muted-foreground">
+                      Admin note: {app.admin_notes}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-xs font-medium border",
+                    app.status === "approved" ? "text-green-600 bg-green-50 border-green-200" :
+                    app.status === "rejected" ? "text-red-600 bg-red-50 border-red-200" :
+                    "text-amber-600 bg-amber-50 border-amber-200"
+                  )}>
+                    {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                  </span>
+                  {app.status === "pending" && (
+                    <button
+                      onClick={() => setSelectedApp(app)}
+                      className="px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      Review
+                    </button>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <Modal open={!!selectedApp} onClose={() => setSelectedApp(null)} title="Review Scholarship Application">
+        {selectedApp && (
+          <div className="space-y-4">
+            <div className="p-4 bg-muted rounded-xl space-y-2">
+              <div className="flex items-center gap-3">
+                <Avatar name={selectedApp.full_name} size="md" />
+                <div>
+                  <p className="font-semibold text-foreground">{selectedApp.full_name}</p>
+                  <p className="text-xs text-muted-foreground">{selectedApp.email}</p>
+                </div>
+              </div>
+              <p className="text-sm"><span className="font-medium">Course:</span> {selectedApp.course_title}</p>
+              <p className="text-sm"><span className="font-medium">Phone:</span> {selectedApp.phone}</p>
+              <div className="p-3 bg-card rounded-lg border border-border">
+                <p className="text-sm font-medium mb-1">Reason:</p>
+                <p className="text-sm text-muted-foreground">{selectedApp.reason}</p>
+              </div>
+            </div>
+
+            <Textarea
+              label="Admin Notes"
+              value={adminNotes}
+              onChange={setAdminNotes}
+              placeholder="Add notes about this application..."
+              rows={3}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleAction(selectedApp.id, "rejected")}
+                className="py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                <XCircle className="w-4 h-4" /> Reject
+              </button>
+              <button
+                onClick={() => handleAction(selectedApp.id, "approved")}
+                className="py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" /> Approve
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+// ─── Admin Chat ────────────────────────────────────────────────────────────
+
+function AdminChat({ courses, students }: { courses: Course[]; students: Profile[] }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (selectedCourseId) {
+      fetchMessages();
+      
+      const subscription = supabase
+        .channel(`admin-chat-${selectedCourseId}`)
+        .on("postgres_changes", 
+          { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
+          () => fetchMessages()
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [selectedCourseId]);
+
+  const fetchMessages = async () => {
+    if (!selectedCourseId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("course_id", selectedCourseId)
+      .order("created_at", { ascending: true });
+    if (data) setMessages(data as ChatMessage[]);
+    setLoading(false);
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedCourseId || sending) return;
+    setSending(true);
+    
+    const adminName = "Admin";
+    
+    const { error } = await supabase.from("chat_messages").insert({
+      course_id: selectedCourseId,
+      user_id: "admin",
+      user_name: adminName,
+      user_avatar: null,
+      message: newMessage.trim(),
+    });
+    
+    if (!error) {
+      setNewMessage("");
+      fetchMessages();
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="p-4 md:p-8 max-w-6xl mx-auto h-[calc(100vh-100px)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          Course Chat Management
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Monitor and participate in course discussions.</p>
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-6 h-[calc(100%-80px)]">
+        <div className="md:col-span-1 bg-card rounded-2xl border border-border p-4 overflow-y-auto">
+          <h3 className="font-semibold text-foreground text-sm mb-3">Courses</h3>
+          <div className="space-y-2">
+            {courses.length === 0 && (
+              <p className="text-xs text-muted-foreground">No courses available.</p>
+            )}
+            {courses.map((course) => (
+              <button
+                key={course.id}
+                onClick={() => setSelectedCourseId(course.id)}
+                className={cn(
+                  "w-full text-left p-3 rounded-xl text-sm transition-all",
+                  selectedCourseId === course.id
+                    ? "bg-accent/20 text-accent border border-accent/30"
+                    : "hover:bg-muted text-foreground/70"
+                )}
+              >
+                <p className="font-medium truncate">{course.title}</p>
+                <p className="text-xs text-muted-foreground">Click to view chat</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="md:col-span-3 bg-card rounded-2xl border border-border flex flex-col">
+          {!selectedCourseId ? (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                <p>Select a course to view messages</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="p-4 border-b border-border">
+                <p className="font-semibold text-foreground">
+                  {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
+                </p>
+              </div>
+
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    <p>No messages yet.</p>
+                  </div>
+                ) : (
+                  messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={cn(
+                        "flex items-start gap-3 max-w-[80%]",
+                        msg.user_id === "admin" ? "ml-auto flex-row-reverse" : ""
+                      )}
+                    >
+                      <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
+                      <div className={cn(
+                        "p-3 rounded-xl text-sm",
+                        msg.user_id === "admin"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-foreground"
+                      )}>
+                        <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
+                        <p className="mt-0.5">{msg.message}</p>
+                        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="p-4 border-t border-border flex gap-3">
+                <input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder="Reply as Admin..."
+                  className="flex-1 px-4 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || sending}
+                  className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Student Module Viewer ──────────────────────────────────────────────────
 
 function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
@@ -2363,7 +2806,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       return;
     }
     
-    console.log("Fetching quiz for module:", currentModule.id);
     setLoadingQuiz(true);
     setQuizSubmitted(false);
     setQuizAnswers({});
@@ -2386,7 +2828,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       }
       
       if (quiz) {
-        console.log("✅ Quiz found for module:", quiz);
         setQuizData(quiz);
         
         const { data: questions, error: questionsError } = await supabase
@@ -2401,10 +2842,8 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           setLoadingQuiz(false);
           return;
         } else if (questions && questions.length > 0) {
-          console.log(`✅ Found ${questions.length} questions for quiz`);
           setQuizQuestions(questions);
         } else {
-          console.log("⚠️ No questions found for this quiz");
           setQuizQuestions([]);
           setLoadingQuiz(false);
           return;
@@ -2421,13 +2860,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         if (attemptError) {
           console.error("Error fetching quiz attempt:", attemptError);
         } else if (attempt) {
-          console.log("✅ Found existing quiz attempt:", attempt);
           setQuizAttempted(true);
           setQuizSubmitted(true);
           setQuizScore(attempt.score);
         }
       } else {
-        console.log("❌ No quiz found for module:", currentModule.id);
         setQuizData(null);
         setQuizQuestions([]);
       }
@@ -2437,6 +2874,62 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       setQuizQuestions([]);
     }
     setLoadingQuiz(false);
+  };
+
+  const canPassModule = async (moduleId: string): Promise<{ canPass: boolean; score: number; reason: string }> => {
+    const existingProgress = progressData.find(p => p.module_id === moduleId);
+    if (existingProgress?.status === "passed") {
+      return { canPass: true, score: existingProgress.score || 100, reason: "Already passed" };
+    }
+
+    const { data: quiz } = await supabase
+      .from("quizzes")
+      .select("id")
+      .eq("module_id", moduleId)
+      .maybeSingle();
+
+    if (quiz) {
+      const { data: questions } = await supabase
+        .from("quiz_questions")
+        .select("id")
+        .eq("quiz_id", quiz.id)
+        .limit(1);
+      
+      if (questions && questions.length > 0) {
+        const { data: attempt } = await supabase
+          .from("quiz_attempts")
+          .select("score, passed")
+          .eq("quiz_id", quiz.id)
+          .eq("student_id", profile.id)
+          .eq("enrollment_id", enrollment?.id)
+          .maybeSingle();
+        
+        if (attempt && attempt.passed) {
+          return { canPass: true, score: attempt.score, reason: "Quiz passed" };
+        }
+        return { canPass: false, score: 0, reason: "Quiz not passed yet" };
+      }
+    }
+
+    const moduleAssignments = studentAssignments.filter(
+      sa => sa.assignment?.module_id === moduleId
+    );
+    
+    const gradedAssignment = moduleAssignments.find(sa => sa.status === "graded");
+    if (gradedAssignment && gradedAssignment.score && gradedAssignment.score >= 50) {
+      return { 
+        canPass: true, 
+        score: Math.round((gradedAssignment.score / (gradedAssignment.assignment?.max_score || 100)) * 100),
+        reason: "Assignment graded and passed" 
+      };
+    }
+
+    const submittedAssignments = moduleAssignments.filter(sa => sa.status === "submitted");
+    if (submittedAssignments.length > 0) {
+      return { canPass: false, score: 0, reason: "Assignment submitted, awaiting grading" };
+    }
+
+    return { canPass: false, score: 0, reason: "Complete the quiz or assignment to pass this module" };
   };
 
   const handleModuleSelect = (index: number) => {
@@ -2566,15 +3059,10 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setManualCompleteLoading(true);
     
     try {
-      // Check if there's a graded assignment
-      const moduleAssignments = studentAssignments.filter(
-        sa => sa.assignment?.module_id === currentModule.id
-      );
-      const gradedAssignment = moduleAssignments.find(sa => sa.status === "graded");
+      const result = await canPassModule(currentModule.id);
       
-      if (gradedAssignment && gradedAssignment.score && gradedAssignment.score >= 50) {
-        const score = Math.round((gradedAssignment.score / (gradedAssignment.assignment?.max_score || 100)) * 100);
-        await onProgressUpdate(currentModule.id, "passed", score);
+      if (result.canPass) {
+        await onProgressUpdate(currentModule.id, "passed", result.score);
         await fetchEnrollmentData();
         await fetchProgress();
         
@@ -2592,12 +3080,8 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
             setTimeout(() => setIsAdvancing(false), 300);
           }, 500);
         }
-      } else if (quizData && quizQuestions.length > 0 && quizAttempted && quizScore >= (quizData.pass_score || 70)) {
-        await onProgressUpdate(currentModule.id, "passed", quizScore);
-        await fetchEnrollmentData();
-        await fetchProgress();
       } else {
-        alert("Complete the quiz or assignment to pass this module.");
+        alert(result.reason || "Complete the quiz or assignment to pass this module.");
       }
     } catch (error) {
       console.error("Error in manual complete:", error);
@@ -2615,6 +3099,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   );
 
   const hasPassedQuiz = quizAttempted && quizScore >= (quizData?.pass_score || 70);
+
   const canCompleteModule = hasPassedQuiz || hasGradedAssignment;
 
   if (!enrollment || !currentModule) {
@@ -2627,7 +3112,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-full">
+    <div className="flex flex-col md:flex-row h-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="w-full md:w-64 bg-muted/30 border-b md:border-b-0 md:border-r border-border p-4 shrink-0 overflow-y-auto max-h-[calc(100vh-80px)]">
         <h3 className="font-semibold text-foreground mb-3 text-sm">Course Modules</h3>
         <div className="space-y-1">
@@ -2767,8 +3252,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
             )}
             disabled={isModuleLocked(selectedModuleIndex)}
           >
-            <Award className="w-4 h-4" /> Exam
-          </button>
+            <Award className="w-4 h-4" /> Exam          </button>
           <button
             onClick={() => {
               setQuizRefreshKey(prev => prev + 1);
@@ -3154,7 +3638,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Assignments
@@ -3350,7 +3834,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Payments
@@ -3485,7 +3969,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
 
 function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; stats: { students: number; courses: number; pendingPayments: number; submittedAssignments: number } }) {
   return (
-    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Admin Dashboard
@@ -3494,30 +3978,10 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-        <StatCard 
-          icon={Users} 
-          label="Total Students" 
-          value={stats.students} 
-          onClick={() => onNavigate("admin-students")}
-        />
-        <StatCard 
-          icon={BookOpen} 
-          label="Active Courses" 
-          value={stats.courses} 
-          onClick={() => onNavigate("admin-courses")}
-        />
-        <StatCard 
-          icon={DollarSign} 
-          label="Pending Payments" 
-          value={stats.pendingPayments} 
-          onClick={() => onNavigate("admin-payments")}
-        />
-        <StatCard 
-          icon={ClipboardList} 
-          label="Open Assignments" 
-          value={stats.submittedAssignments} 
-          onClick={() => onNavigate("admin-assignments")}
-        />
+        <StatCard icon={Users} label="Total Students" value={stats.students} />
+        <StatCard icon={BookOpen} label="Active Courses" value={stats.courses} />
+        <StatCard icon={DollarSign} label="Pending Payments" value={stats.pendingPayments} />
+        <StatCard icon={ClipboardList} label="Open Assignments" value={stats.submittedAssignments} />
       </div>
 
       {stats.pendingPayments > 0 && (
@@ -3544,7 +4008,7 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
               { label: "Create assignment", view: "admin-assignments" as View, icon: ClipboardList },
               { label: "Manage students", view: "admin-students" as View, icon: Users },
               { label: "Create quiz", view: "admin-quizzes" as View, icon: HelpCircle },
-              { label: "Send message", view: "admin-messages" as View, icon: MessageCircle },
+              { label: "View scholarships", view: "admin-scholarship" as View, icon: Gift },
             ].map(({ label, view, icon: Icon }) => (
               <button
                 key={label}
@@ -3759,7 +4223,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -3876,6 +4340,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         })}
       </div>
 
+      {/* Modals - kept from original */}
       <Modal open={showCourseModal} onClose={() => setShowCourseModal(false)} title={editingCourse ? "Edit Course" : "Create New Course"}>
         <div className="space-y-4">
           <Input label="Course Title" value={courseForm.title} onChange={(v) => setCourseForm((p) => ({ ...p, title: v }))} placeholder="e.g. Advanced Data Science" required />
@@ -4205,7 +4670,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   const availableModules = modules.filter(m => m.course_id === assignmentData.module_id);
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Students
@@ -4220,7 +4685,6 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search students..."
           className="w-full pl-10 pr-4 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
         />
       </div>
 
@@ -4571,7 +5035,7 @@ function AdminPayments() {
   const pendingCount = payments.filter(p => p.status === "pending").length;
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Payment Approvals
@@ -4765,7 +5229,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   const availableModules = modules.filter(m => m.course_id === newAssignment.course_id);
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -5072,7 +5536,7 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
   const availableModules = modules.filter(m => !quizzes.some(q => q.module_id === m.id));
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -5313,6 +5777,23 @@ export default function App() {
       }
     });
 
+    const handleOAuthRedirect = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        const profile = await ensureProfile(
+          data.session.user.id,
+          data.session.user.email!,
+          data.session.user.user_metadata?.full_name || data.session.user.email?.split('@')[0]
+        );
+        if (profile) {
+          const userProfile = profile as Profile;
+          setProfile(userProfile);
+          setView(userProfile.role === "admin" ? "admin-dashboard" : "student-dashboard");
+        }
+      }
+    };
+    handleOAuthRedirect();
+
     return () => {
       subscription.unsubscribe();
     };
@@ -5384,16 +5865,6 @@ export default function App() {
     }
     const { data } = await query;
     if (data) setEnrollments(data as Enrollment[]);
-  };
-
-  const fetchProgress = async () => {
-    const enrollmentIds = enrollments.map(e => e.id);
-    if (enrollmentIds.length === 0) return;
-    const { data } = await supabase
-      .from("module_progress")
-      .select("*")
-      .in("enrollment_id", enrollmentIds);
-    if (data) setProgress(data as ModuleProgress[]);
   };
 
   const fetchStudents = async () => {
@@ -5763,8 +6234,10 @@ export default function App() {
             onQuizCreate={handleQuizCreate}
             onQuizDelete={handleQuizDelete}
           />;
-        case "admin-messages":
-          return <AdminMessages profile={profile} />;
+        case "admin-chat":
+          return <AdminChat courses={courses || []} students={students || []} />;
+        case "admin-scholarship":
+          return <AdminScholarship />;
         default:
           return <AdminDashboard onNavigate={setView} stats={{ students: 0, courses: 0, pendingPayments: 0, submittedAssignments: 0 }} />;
       }
@@ -5778,6 +6251,7 @@ export default function App() {
             enrollments={enrollments || []} 
             progress={progress || []}
             modules={modules || []}
+            courses={courses || []}
           />;
         case "student-courses":
           return <StudentCourses 
@@ -5800,6 +6274,10 @@ export default function App() {
           return <StudentAssignments profile={profile} />;
         case "student-payment":
           return <StudentPayments profile={profile} />;
+        case "student-chat":
+          return <StudentChat profile={profile} courses={courses || []} enrollments={enrollments || []} />;
+        case "student-scholarship":
+          return <StudentScholarship profile={profile} courses={courses || []} />;
         case "student-profile":
           return <StudentProfile 
             profile={profile} 
@@ -5807,10 +6285,7 @@ export default function App() {
             enrollments={enrollments || []}
             progress={progress || []}
             modules={modules || []}
-            onNavigate={setView}
           />;
-        case "student-scholarship":
-          return <ScholarshipPage profile={profile} />;
         default:
           return <StudentDashboard 
             profile={profile} 
@@ -5818,6 +6293,7 @@ export default function App() {
             enrollments={enrollments || []} 
             progress={progress || []}
             modules={modules || []}
+            courses={courses || []}
           />;
       }
     }
