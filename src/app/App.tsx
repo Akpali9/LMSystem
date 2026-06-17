@@ -56,6 +56,9 @@ import {
   Info,
   HelpCircle,
   FileQuestion,
+  MessageCircle,
+  GraduationCap as GraduationIcon,
+  Gift,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -69,13 +72,15 @@ type View =
   | "student-assignments"
   | "student-payment"
   | "student-profile"
+  | "student-scholarship"
   | "admin-dashboard"
   | "admin-courses"
   | "admin-students"
   | "admin-payments"
   | "admin-assignments"
   | "admin-student-profile"
-  | "admin-quizzes";
+  | "admin-quizzes"
+  | "admin-messages";
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -351,13 +356,13 @@ function Card({ children, className }: { children: React.ReactNode; className?: 
   );
 }
 
-function StatCard({ icon: Icon, label, value, trend }: { icon: any; label: string; value: string | number; trend?: string }) {
+function StatCard({ icon: Icon, label, value, trend, onClick }: { icon: any; label: string; value: string | number; trend?: string; onClick?: () => void }) {
   return (
-    <Card className="p-6">
+    <Card className={cn("p-6", onClick && "cursor-pointer hover:shadow-md transition-shadow")} onClick={onClick}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-muted-foreground font-medium">{label}</p>
-          <p className="text-3xl font-bold text-foreground mt-1" style={{ fontFamily: "'Playfair Display', serif" }}>{value}</p>
+          <p className="text-3xl font-bold text-foreground mt-1" style={{ fontFamily: "'Poppins', sans-serif" }}>{value}</p>
           {trend && <p className="text-xs text-green-600 mt-1 font-medium">{trend}</p>}
         </div>
         <div className="w-11 h-11 rounded-xl bg-accent/15 flex items-center justify-center">
@@ -375,7 +380,7 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-card rounded-2xl border border-border shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>{title}</h2>
+          <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: "'Poppins', sans-serif" }}>{title}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
             <X className="w-4 h-4" />
           </button>
@@ -404,6 +409,7 @@ function Input({ label, type = "text", value, onChange, placeholder, required, a
         accept={accept}
         disabled={disabled}
         className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ fontFamily: "'Poppins', sans-serif" }}
       />
     </div>
   );
@@ -424,7 +430,24 @@ function Textarea({ label, value, onChange, placeholder, rows = 3, required }: {
         rows={rows}
         required={required}
         className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground resize-none"
+        style={{ fontFamily: "'Poppins', sans-serif" }}
       />
+    </div>
+  );
+}
+
+// ─── Message Component ───────────────────────────────────────────────────────
+
+function MessageBubble({ message, isOwn, timestamp }: { message: string; isOwn: boolean; timestamp: string }) {
+  return (
+    <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+      <div className={cn(
+        "max-w-[75%] p-3 rounded-xl",
+        isOwn ? "bg-accent text-accent-foreground" : "bg-muted text-foreground"
+      )}>
+        <p className="text-sm">{message}</p>
+        <p className="text-[10px] opacity-70 mt-1">{formatDate(timestamp)}</p>
+      </div>
     </div>
   );
 }
@@ -433,14 +456,12 @@ function Textarea({ label, value, onChange, placeholder, rows = 3, required }: {
 
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <nav className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-accent" />
-            </div>
-            <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <img src="/image/logo.png" alt="Pruta Academy" className="h-10 w-auto" />
+            <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
           </div>
@@ -464,7 +485,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <Star className="w-3.5 h-3.5 text-accent fill-current" />
             <span className="text-xs font-semibold text-accent tracking-wide uppercase">Globally Certified Programs</span>
           </div>
-          <h1 className="text-5xl lg:text-6xl font-bold text-primary leading-[1.1]" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-5xl lg:text-6xl font-bold text-primary leading-[1.1]" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Learn Without
             <span className="block text-accent italic">Limits.</span>
           </h1>
@@ -488,7 +509,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           <div className="flex items-center gap-8 pt-2">
             {[["1,200+", "Students Enrolled"], ["96%", "Completion Rate"], ["4.9★", "Avg. Rating"]].map(([v, l]) => (
               <div key={l}>
-                <p className="text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>{v}</p>
+                <p className="text-2xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>{v}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{l}</p>
               </div>
             ))}
@@ -520,7 +541,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
 
       <section id="courses" className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-primary mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h2 className="text-3xl font-bold text-primary mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Featured Programs
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
@@ -550,7 +571,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
                 <h3 className="font-semibold text-foreground text-sm leading-snug mb-2">{course.title}</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  <span className="text-lg font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
                     {formatNaira(course.price)}
                   </span>
                   <span className="text-xs text-accent font-medium flex items-center gap-1">
@@ -566,7 +587,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <section id="how" className="bg-primary py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-primary-foreground mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <h2 className="text-3xl font-bold text-primary-foreground mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
               How It Works
             </h2>
             <p className="text-primary-foreground/60 max-w-xl mx-auto">
@@ -600,7 +621,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <section id="why" className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-8">
-            <h2 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <h2 className="text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Built for Serious Learners
             </h2>
             <div className="space-y-5">
@@ -641,10 +662,8 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <footer className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
-              <GraduationCap className="w-4 h-4 text-accent" />
-            </div>
-            <span className="font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>Pruta Academy</span>
+            <img src="/image/logo.png" alt="Pruta Academy" className="h-8 w-auto" />
+            <span className="font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>Pruta Academy</span>
           </div>
           <p className="text-sm text-muted-foreground"></p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -752,7 +771,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-background grid lg:grid-cols-2">
+    <div className="min-h-screen bg-background grid lg:grid-cols-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="hidden lg:block relative overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=900&h=1000&fit=crop&auto=format"
@@ -762,14 +781,9 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-transparent" />
         <div className="absolute bottom-0 left-0 p-10 text-white">
           <div className="flex items-center gap-2.5 mb-8">
-            <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Pruta Academy
-            </span>
+            <img src="/image/logo.png" alt="Pruta Academy" className="h-10 w-auto" />
           </div>
-          <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
             "Education is the most powerful weapon you can use to change the world."
           </blockquote>
           <p className="text-white/60 text-sm">— Nelson Mandela</p>
@@ -780,14 +794,9 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="w-full max-w-md">
           <div className="mb-8">
             <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-accent" />
-              </div>
-              <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Pruta Academy
-              </span>
+              <img src="/image/logo.png" alt="Pruta Academy" className="h-10 w-auto" />
             </div>
-            <h1 className="text-3xl font-bold text-primary mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <h1 className="text-3xl font-bold text-primary mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
               {mode === "login" ? "Welcome back" : "Join Pruta Academy"}
             </h1>
             <p className="text-muted-foreground">
@@ -828,8 +837,6 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
               <span className="text-accent font-semibold">{mode === "login" ? "Register" : "Sign In"}</span>
             </button>
           </div>
-
-         
         </div>
       </div>
     </div>
@@ -891,6 +898,7 @@ function Sidebar({
     { view: "student-assignments" as View, icon: ClipboardList, label: "Assignments" },
     { view: "student-payment" as View, icon: DollarSign, label: "Payments" },
     { view: "student-profile" as View, icon: User, label: "My Profile" },
+    { view: "student-scholarship" as View, icon: Gift, label: "Scholarship" },
   ];
 
   const adminNav = [
@@ -900,6 +908,7 @@ function Sidebar({
     { view: "admin-payments" as View, icon: DollarSign, label: "Payments" },
     { view: "admin-assignments" as View, icon: ClipboardList, label: "Assignments" },
     { view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes" },
+    { view: "admin-messages" as View, icon: MessageCircle, label: "Messages" },
   ];
 
   const nav = profile.role === "admin" ? adminNav : studentNav;
@@ -923,10 +932,8 @@ function Sidebar({
           )}
         >
           <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
-              <GraduationCap className="w-5 h-5 text-primary" />
-            </div>
-            <span className="font-bold text-sidebar-foreground text-lg flex-1" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <img src="/image/logo.png" alt="Pruta Academy" className="h-9 w-auto" />
+            <span className="font-bold text-sidebar-foreground text-lg flex-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
             <button
@@ -992,11 +999,9 @@ function Sidebar({
       )}
     >
       <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
-          <GraduationCap className="w-5 h-5 text-primary" />
-        </div>
+        <img src="/image/logo.png" alt="Pruta Academy" className={cn("h-auto", collapsed ? "w-8" : "h-9")} />
         {!collapsed && (
-          <span className="font-bold text-sidebar-foreground text-lg" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <span className="font-bold text-sidebar-foreground text-lg" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Pruta Academy
           </span>
         )}
@@ -1054,14 +1059,396 @@ function Sidebar({
   );
 }
 
+// ─── Scholarship Page ─────────────────────────────────────────────────────────
+
+function ScholarshipPage({ profile }: { profile: Profile }) {
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    courseInterest: "",
+    reason: "",
+    experience: "",
+    goals: "",
+  });
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (profile) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: profile.full_name || "",
+        email: profile.email || "",
+      }));
+    }
+  }, [profile]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const { error: submitError } = await supabase
+        .from("scholarship_applications")
+        .insert({
+          user_id: profile.id,
+          ...formData,
+          status: "pending",
+          submitted_at: new Date().toISOString(),
+        });
+
+      if (submitError) throw submitError;
+
+      setSubmitted(true);
+    } catch (err: any) {
+      setError(err.message || "Failed to submit application. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="p-4 md:p-8 max-w-3xl mx-auto">
+        <Card className="p-8 text-center">
+          <div className="flex flex-col items-center">
+            <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
+            <h2 className="text-2xl font-bold text-foreground mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              Application Submitted! 🎉
+            </h2>
+            <p className="text-muted-foreground">
+              Thank you for applying for the scholarship. We will review your application and get back to you within 5-7 business days.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-6 px-6 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors"
+            >
+              Submit Another Application
+            </button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 md:p-8 max-w-3xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          Scholarship Application
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">
+          Apply for a scholarship to access our premium courses for free. We believe talent should never be limited by finances.
+        </p>
+      </div>
+
+      <Card className="p-6">
+        <div className="bg-accent/10 border border-accent/20 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <Gift className="w-5 h-5 text-accent" />
+            <div>
+              <p className="font-semibold text-foreground">Scholarship Benefits</p>
+              <p className="text-sm text-muted-foreground">Full access to any course, mentorship, and career guidance</p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Full Name"
+              value={formData.fullName}
+              onChange={(v) => setFormData(prev => ({ ...prev, fullName: v }))}
+              placeholder="John Doe"
+              required
+              disabled={!!profile}
+            />
+            <Input
+              label="Email Address"
+              type="email"
+              value={formData.email}
+              onChange={(v) => setFormData(prev => ({ ...prev, email: v }))}
+              placeholder="you@example.com"
+              required
+              disabled={!!profile}
+            />
+          </div>
+
+          <Input
+            label="Phone Number"
+            value={formData.phone}
+            onChange={(v) => setFormData(prev => ({ ...prev, phone: v }))}
+            placeholder="+234 XXX XXX XXXX"
+            required
+          />
+
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-foreground">Course Interested In <span className="text-destructive">*</span></label>
+            <select
+              value={formData.courseInterest}
+              onChange={(e) => setFormData(prev => ({ ...prev, courseInterest: e.target.value }))}
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all"
+              required
+            >
+              <option value="">Select a course...</option>
+              <option value="web_development">Web Development</option>
+              <option value="data_science">Data Science</option>
+              <option value="mobile_app">Mobile App Development</option>
+              <option value="cloud_computing">Cloud Computing</option>
+              <option value="ui_ux">UI/UX Design</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <Textarea
+            label="Why do you want to learn this course?"
+            value={formData.reason}
+            onChange={(v) => setFormData(prev => ({ ...prev, reason: v }))}
+            placeholder="Tell us why you're passionate about this field..."
+            rows={3}
+            required
+          />
+
+          <Textarea
+            label="What experience or skills do you currently have?"
+            value={formData.experience}
+            onChange={(v) => setFormData(prev => ({ ...prev, experience: v }))}
+            placeholder="Share your background, any relevant experience, or projects..."
+            rows={3}
+            required
+          />
+
+          <Textarea
+            label="What are your career goals?"
+            value={formData.goals}
+            onChange={(v) => setFormData(prev => ({ ...prev, goals: v }))}
+            placeholder="Where do you see yourself in 2-3 years after completing this course?"
+            rows={3}
+            required
+          />
+
+          {error && (
+            <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 rounded-xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Submit Application</>}
+          </button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Admin Messages ──────────────────────────────────────────────────────────
+
+function AdminMessages({ profile }: { profile: Profile }) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<string>("all");
+  const [students, setStudents] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchMessages();
+    fetchStudents();
+  }, []);
+
+  const fetchMessages = async () => {
+    const { data } = await supabase
+      .from("messages")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setMessages(data);
+  };
+
+  const fetchStudents = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("role", "student");
+    if (data) setStudents(data as Profile[]);
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    setLoading(true);
+
+    try {
+      const messageData = {
+        sender_id: profile.id,
+        sender_name: profile.full_name,
+        message: newMessage,
+        recipient_id: selectedStudent === "all" ? null : selectedStudent,
+        is_global: selectedStudent === "all",
+        created_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase.from("messages").insert(messageData);
+      if (error) throw error;
+
+      setNewMessage("");
+      fetchMessages();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Failed to send message. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          Messages
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">
+          Send announcements and messages to students
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="md:col-span-1 space-y-4">
+          <Card className="p-4">
+            <h3 className="font-semibold text-foreground mb-3">Send Message</h3>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-foreground">Recipient</label>
+                <select
+                  value={selectedStudent}
+                  onChange={(e) => setSelectedStudent(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                >
+                  <option value="all">All Students</option>
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>{s.full_name}</option>
+                  ))}
+                </select>
+              </div>
+              <Textarea
+                label="Message"
+                value={newMessage}
+                onChange={setNewMessage}
+                placeholder="Type your message here..."
+                rows={4}
+                required
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={loading || !newMessage.trim()}
+                className="w-full py-2.5 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Send Message</>}
+              </button>
+            </div>
+          </Card>
+        </div>
+
+        <div className="md:col-span-2">
+          <Card className="p-4">
+            <h3 className="font-semibold text-foreground mb-3">Message History</h3>
+            <div className="space-y-3 max-h-[500px] overflow-y-auto">
+              {messages.map((msg) => (
+                <div key={msg.id} className="p-3 bg-muted rounded-xl">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-sm text-foreground">{msg.sender_name}</span>
+                    <span className="text-xs text-muted-foreground">{formatDate(msg.created_at)}</span>
+                  </div>
+                  <p className="text-sm text-foreground">{msg.message}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {msg.is_global ? "📢 Sent to all students" : `📨 Sent to ${msg.recipient_id ? "specific student" : "all"}`}
+                  </p>
+                </div>
+              ))}
+              {messages.length === 0 && (
+                <div className="text-center py-8">
+                  <MessageCircle className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-muted-foreground">No messages sent yet.</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Student Messages ─────────────────────────────────────────────────────────
+
+function StudentMessages({ profile }: { profile: Profile }) {
+  const [messages, setMessages] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
+  const fetchMessages = async () => {
+    const { data } = await supabase
+      .from("messages")
+      .select("*")
+      .or(`recipient_id.eq.${profile.id},is_global.eq.true,recipient_id.is.null`)
+      .order("created_at", { ascending: false });
+    if (data) setMessages(data);
+  };
+
+  return (
+    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          Messages
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">
+          View announcements and messages from your instructors
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {messages.map((msg) => (
+          <Card key={msg.id} className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Badge variant={msg.is_global ? "info" : "default"}>
+                  {msg.is_global ? "📢 Announcement" : "📨 Message"}
+                </Badge>
+                <span className="font-semibold text-foreground">{msg.sender_name}</span>
+              </div>
+              <span className="text-xs text-muted-foreground">{formatDate(msg.created_at)}</span>
+            </div>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{msg.message}</p>
+          </Card>
+        ))}
+        {messages.length === 0 && (
+          <Card className="p-8 text-center">
+            <MessageCircle className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">No messages yet.</p>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Student Profile Page ────────────────────────────────────────────────────
 
-function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: { 
+function StudentProfile({ profile, onUpdate, enrollments, progress, modules, onNavigate }: { 
   profile: Profile; 
   onUpdate: (updates: Partial<Profile>, avatarFile?: File) => Promise<void>;
   enrollments: Enrollment[];
   progress: ModuleProgress[];
   modules: Module[];
+  onNavigate: (v: View) => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState(profile.full_name);
@@ -1127,7 +1514,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           My Profile
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your personal information and view your progress</p>
@@ -1240,15 +1627,24 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-foreground mb-4">Your Learning Progress</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="p-6 flex flex-col items-center">
-            <CircularProgress value={activeEnrollments.length} max={10} size={80} label="Active Courses" />
-          </Card>
-          <Card className="p-6 flex flex-col items-center">
-            <CircularProgress value={passedCount} max={totalModules || 1} size={80} label="Modules Passed" />
-          </Card>
-          <Card className="p-6 flex flex-col items-center">
-            <CircularProgress value={totalModules > 0 ? Math.round((passedCount / totalModules) * 100) : 0} max={100} size={80} label="Overall Progress" />
-          </Card>
+          <StatCard 
+            icon={BookOpen} 
+            label="Active Courses" 
+            value={activeEnrollments.length} 
+            onClick={() => onNavigate("student-courses")}
+          />
+          <StatCard 
+            icon={CheckCircle} 
+            label="Modules Passed" 
+            value={passedCount} 
+            onClick={() => onNavigate("student-module")}
+          />
+          <StatCard 
+            icon={Award} 
+            label="Overall Progress" 
+            value={totalModules > 0 ? `${Math.round((passedCount / totalModules) * 100)}%` : "0%"}
+            onClick={() => onNavigate("student-module")}
+          />
         </div>
       </div>
 
@@ -1263,7 +1659,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
               ) || [];
               
               return (
-                <Card key={enrollment.id} className="p-4 md:p-6">
+                <Card key={enrollment.id} className="p-4 md:p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigate("student-module")}>
                   <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
                       <img 
@@ -1313,6 +1709,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
   
   const activeEnrollment = safeEnrollments.find(e => e?.status === "active") || null;
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
+  const allEnrollments = safeEnrollments.filter(e => e?.status === "active" || e?.status === "pending_payment" || e?.status === "payment_submitted");
   
   let passedCount = 0;
   let totalModulesForActiveCourse = 0;
@@ -1359,24 +1756,43 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
       )}
 
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Welcome back {profile.full_name?.split(" ")[0] || "Student"} ! 👋
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          Welcome back {profile.full_name?.split(" ")[0] || "Student"}! 👋
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Here's your learning progress at a glance.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-        <StatCard icon={BookOpen} label="Enrolled Courses" value={safeEnrollments.filter(e => e?.status === "active").length} />
-        <StatCard icon={CheckCircle} label="Modules Passed" value={passedCount} />
-        <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
-        <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
+        <StatCard 
+          icon={BookOpen} 
+          label="Enrolled Courses" 
+          value={allEnrollments.length} 
+          onClick={() => onNavigate("student-courses")}
+        />
+        <StatCard 
+          icon={CheckCircle} 
+          label="Modules Passed" 
+          value={passedCount} 
+          onClick={() => onNavigate("student-module")}
+        />
+        <StatCard 
+          icon={ClipboardList} 
+          label="Assignments" 
+          value={0} 
+          onClick={() => onNavigate("student-assignments")}
+        />
+        <StatCard 
+          icon={Award} 
+          label="Certificates" 
+          value={activeEnrollment?.status === "completed" ? 1 : 0} 
+        />
       </div>
 
       {activeEnrollment && activeEnrollment.course && (
         <div className="grid md:grid-cols-4 gap-6">
           <div className="md:col-span-3">
             <Card className="p-4 md:p-6">
-              <h2 className="font-semibold text-foreground mb-4 md:mb-5 text-lg md:text-xl" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h2 className="font-semibold text-foreground mb-4 md:mb-5 text-lg md:text-xl" style={{ fontFamily: "'Poppins', sans-serif" }}>
                 Active Course Progress
               </h2>
               <div className="flex flex-col md:flex-row gap-4 mb-5">
@@ -1429,10 +1845,10 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules 
         </div>
       )}
 
-      {!activeEnrollment && safeEnrollments.length === 0 && (
+      {allEnrollments.length === 0 && (
         <Card className="p-12 text-center">
           <BookOpen className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-          <h3 className="font-semibold text-foreground mb-2">No Active Courses</h3>
+          <h3 className="font-semibold text-foreground mb-2">No Courses Yet</h3>
           <p className="text-sm text-muted-foreground">
             You haven't enrolled in any courses yet. Browse our programs and start learning!
           </p>
@@ -1613,149 +2029,156 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
             My Courses
           </h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your enrollments and track payment status.</p>
         </div>
-        <button          onClick={() => setShowEnroll(true)}
+        <button
+          onClick={() => setShowEnroll(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" /> Enroll in Course
         </button>
       </div>
 
-      {activeEnrollments.length > 0 && (
-        <div>
-          <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-600" /> Active Courses ({activeEnrollments.length})
-          </h2>
-          <div className="space-y-4">
-            {activeEnrollments.map((enrollment) => (
-              <Card key={enrollment.id} className="p-4 md:p-6">
-                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
-                    <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
-                      <div>
-                        <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
-                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                          Enrolled: {formatDate(enrollment.enrolled_at || "")} · Expires: {formatDate(enrollment.expires_at || "")}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
-                          {getStatusText(enrollment.status)}
-                        </span>
-                      </div>
+      {/* Show all courses in one place - Active, Pending, and Available */}
+      <div className="space-y-6">
+        {/* Active Courses */}
+        {activeEnrollments.length > 0 && (
+          <div>
+            <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" /> Active Courses ({activeEnrollments.length})
+            </h2>
+            <div className="space-y-4">
+              {activeEnrollments.map((enrollment) => (
+                <Card key={enrollment.id} className="p-4 md:p-6">
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                    <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                      <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
                     </div>
-                    <ProgressBar value={enrollment.current_module_index + 1} max={5} className="mt-4" />
-                    <p className="text-xs text-muted-foreground mt-1">Module {enrollment.current_module_index + 1} of 5</p>
-                    <button
-                      onClick={() => onNavigate("student-module")}
-                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs md:text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-                    >
-                      <Play className="w-3.5 h-3.5" /> Continue Learning
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {pendingEnrollments.length > 0 && (
-        <div>
-          <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-yellow-600" /> Pending Approvals ({pendingEnrollments.length})
-          </h2>
-          <div className="space-y-4">
-            {pendingEnrollments.map((enrollment) => (
-              <Card key={enrollment.id} className="p-4 md:p-6 bg-yellow-50/30 border-yellow-200">
-                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
-                    <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
-                      <div>
-                        <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
-                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                          Requested: {formatDate(enrollment.created_at)}
-                        </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+                        <div>
+                          <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                            Enrolled: {formatDate(enrollment.enrolled_at || "")} · Expires: {formatDate(enrollment.expires_at || "")}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
+                            {getStatusText(enrollment.status)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
-                          {getStatusText(enrollment.status)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-3 p-3 bg-yellow-100/50 rounded-lg">
-                      <p className="text-sm text-yellow-800 flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        Your enrollment is pending admin approval. You will receive access once your payment is verified.
-                      </p>
-                    </div>
-                    {enrollment.status === "pending_payment" && (
+                      <ProgressBar value={enrollment.current_module_index + 1} max={5} className="mt-4" />
+                      <p className="text-xs text-muted-foreground mt-1">Module {enrollment.current_module_index + 1} of 5</p>
                       <button
-                        onClick={() => {
-                          setSelectedCourse(enrollment.course || null);
-                          setShowEnroll(true);
-                        }}
-                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-600 text-white text-xs md:text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+                        onClick={() => onNavigate("student-module")}
+                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs md:text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
                       >
-                        <Upload className="w-4 h-4" /> Upload Payment Receipt
+                        <Play className="w-3.5 h-3.5" /> Continue Learning
                       </button>
-                    )}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {availableCourses.length > 0 && (
-        <div>
-          <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4">Explore Programs</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {availableCourses.map((course) => (
-              <div key={course.id} className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="relative h-48 md:h-56 bg-muted overflow-hidden">
-                  <img 
-                    src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
-                    alt={course.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                  />
-                  <div className="absolute top-3 right-3">
-                    <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
-                      {course.duration_months} months
-                    </span>
+        {/* Pending Enrollments */}
+        {pendingEnrollments.length > 0 && (
+          <div>
+            <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-yellow-600" /> Pending Approvals ({pendingEnrollments.length})
+            </h2>
+            <div className="space-y-4">
+              {pendingEnrollments.map((enrollment) => (
+                <Card key={enrollment.id} className="p-4 md:p-6 bg-yellow-50/30 border-yellow-200">
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                    <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                      <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+                        <div>
+                          <p className="font-bold text-foreground text-base md:text-lg">{enrollment.course?.title}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                            Requested: {formatDate(enrollment.created_at)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap", getStatusBadgeColor(enrollment.status))}>
+                            {getStatusText(enrollment.status)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3 p-3 bg-yellow-100/50 rounded-lg">
+                        <p className="text-sm text-yellow-800 flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          Your enrollment is pending admin approval. You will receive access once your payment is verified.
+                        </p>
+                      </div>
+                      {enrollment.status === "pending_payment" && (
+                        <button
+                          onClick={() => {
+                            setSelectedCourse(enrollment.course || null);
+                            setShowEnroll(true);
+                          }}
+                          className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-600 text-white text-xs md:text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+                        >
+                          <Upload className="w-4 h-4" /> Upload Payment Receipt
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="p-4 md:p-5">
-                  <h3 className="font-semibold text-foreground text-base md:text-lg mb-2 leading-snug">{course.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-                      {formatNaira(course.price)}
-                    </span>
-                    <button
-                      onClick={() => { setSelectedCourse(course); setShowEnroll(true); }}
-                      className="px-4 md:px-5 py-2 md:py-2.5 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
-                    >
-                      Enroll Now
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Available Courses */}
+        {availableCourses.length > 0 && (
+          <div>
+            <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4">Explore Programs</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {availableCourses.map((course) => (
+                <div key={course.id} className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <div className="relative h-48 md:h-56 bg-muted overflow-hidden">
+                    <img 
+                      src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
+                      alt={course.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    />
+                    <div className="absolute top-3 right-3">
+                      <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
+                        {course.duration_months} months
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4 md:p-5">
+                    <h3 className="font-semibold text-foreground text-base md:text-lg mb-2 leading-snug">{course.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">{course.description}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        {formatNaira(course.price)}
+                      </span>
+                      <button
+                        onClick={() => { setSelectedCourse(course); setShowEnroll(true); }}
+                        className="px-4 md:px-5 py-2 md:py-2.5 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
+                      >
+                        Enroll Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {activeEnrollments.length === 0 && pendingEnrollments.length === 0 && availableCourses.length === 0 && (
         <Card className="p-12 text-center">
@@ -1845,7 +2268,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   );
 }
 
-// ─── Student Module Viewer (NO AUTO-PASS) ────────────────────────────────────
+// ─── Student Module Viewer ────────────────────────────────────────────────────
 
 function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
@@ -1873,7 +2296,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
   const [manualCompleteLoading, setManualCompleteLoading] = useState(false);
 
-  // Fetch student assignments for this enrollment
   useEffect(() => {
     if (enrollment) {
       fetchStudentAssignments();
@@ -2017,70 +2439,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setLoadingQuiz(false);
   };
 
-  // Check if a module can be passed (only quiz passed OR assignment graded)
-  const canPassModule = async (moduleId: string): Promise<{ canPass: boolean; score: number; reason: string }> => {
-    // Check if already passed
-    const existingProgress = progressData.find(p => p.module_id === moduleId);
-    if (existingProgress?.status === "passed") {
-      return { canPass: true, score: existingProgress.score || 100, reason: "Already passed" };
-    }
-
-    // Check if there's a quiz with questions
-    const { data: quiz } = await supabase
-      .from("quizzes")
-      .select("id")
-      .eq("module_id", moduleId)
-      .maybeSingle();
-
-    if (quiz) {
-      const { data: questions } = await supabase
-        .from("quiz_questions")
-        .select("id")
-        .eq("quiz_id", quiz.id)
-        .limit(1);
-      
-      if (questions && questions.length > 0) {
-        // Check if quiz is passed
-        const { data: attempt } = await supabase
-          .from("quiz_attempts")
-          .select("score, passed")
-          .eq("quiz_id", quiz.id)
-          .eq("student_id", profile.id)
-          .eq("enrollment_id", enrollment?.id)
-          .maybeSingle();
-        
-        if (attempt && attempt.passed) {
-          return { canPass: true, score: attempt.score, reason: "Quiz passed" };
-        }
-        // Quiz exists but not passed
-        return { canPass: false, score: 0, reason: "Quiz not passed yet" };
-      }
-    }
-
-    // Check if there's a graded assignment for this module
-    const moduleAssignments = studentAssignments.filter(
-      sa => sa.assignment?.module_id === moduleId
-    );
-    
-    const gradedAssignment = moduleAssignments.find(sa => sa.status === "graded");
-    if (gradedAssignment && gradedAssignment.score && gradedAssignment.score >= 50) {
-      return { 
-        canPass: true, 
-        score: Math.round((gradedAssignment.score / (gradedAssignment.assignment?.max_score || 100)) * 100),
-        reason: "Assignment graded and passed" 
-      };
-    }
-
-    // Check if there are any submitted assignments pending grading
-    const submittedAssignments = moduleAssignments.filter(sa => sa.status === "submitted");
-    if (submittedAssignments.length > 0) {
-      return { canPass: false, score: 0, reason: "Assignment submitted, awaiting grading" };
-    }
-
-    // NO AUTO-PASS - require quiz or assignment
-    return { canPass: false, score: 0, reason: "Complete the quiz or assignment to pass this module" };
-  };
-
   const handleModuleSelect = (index: number) => {
     const currentIndex = currentEnrollment?.current_module_index || 0;
     if (index <= currentIndex + 1) {
@@ -2208,10 +2566,15 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
     setManualCompleteLoading(true);
     
     try {
-      const result = await canPassModule(currentModule.id);
+      // Check if there's a graded assignment
+      const moduleAssignments = studentAssignments.filter(
+        sa => sa.assignment?.module_id === currentModule.id
+      );
+      const gradedAssignment = moduleAssignments.find(sa => sa.status === "graded");
       
-      if (result.canPass) {
-        await onProgressUpdate(currentModule.id, "passed", result.score);
+      if (gradedAssignment && gradedAssignment.score && gradedAssignment.score >= 50) {
+        const score = Math.round((gradedAssignment.score / (gradedAssignment.assignment?.max_score || 100)) * 100);
+        await onProgressUpdate(currentModule.id, "passed", score);
         await fetchEnrollmentData();
         await fetchProgress();
         
@@ -2229,8 +2592,12 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
             setTimeout(() => setIsAdvancing(false), 300);
           }, 500);
         }
+      } else if (quizData && quizQuestions.length > 0 && quizAttempted && quizScore >= (quizData.pass_score || 70)) {
+        await onProgressUpdate(currentModule.id, "passed", quizScore);
+        await fetchEnrollmentData();
+        await fetchProgress();
       } else {
-        alert(result.reason || "Complete the quiz or assignment to pass this module.");
+        alert("Complete the quiz or assignment to pass this module.");
       }
     } catch (error) {
       console.error("Error in manual complete:", error);
@@ -2243,15 +2610,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const currentContent = moduleContents?.find(c => c.module_id === currentModule?.id) || null;
   const moduleProgress = progressData.find(p => p.module_id === currentModule?.id);
 
-  // Check if there's a graded assignment for current module
   const hasGradedAssignment = studentAssignments.some(
     sa => sa.assignment?.module_id === currentModule?.id && sa.status === "graded"
   );
 
-  // Check if there's a quiz attempt that passed
   const hasPassedQuiz = quizAttempted && quizScore >= (quizData?.pass_score || 70);
-
-  // Check if module can be completed (quiz passed OR assignment graded)
   const canCompleteModule = hasPassedQuiz || hasGradedAssignment;
 
   if (!enrollment || !currentModule) {
@@ -2354,7 +2717,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
               <Badge variant="warning">⚠️ No Quiz - Complete Assignment</Badge>
             )}
           </div>
-          <h1 className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
             {currentModule.title}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -2451,7 +2814,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
               </Card>
             )}
             
-            {/* Completion button - only enabled when quiz or assignment is passed */}
             {!isModuleLocked(selectedModuleIndex) && currentContent && moduleProgress?.status !== "passed" && (
               <div className="flex justify-end">
                 <button
@@ -2794,7 +3156,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Assignments
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Your assigned work from all enrolled courses.</p>
@@ -2990,7 +3352,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Payments
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your payment receipts and enrollment status.</p>
@@ -3005,7 +3367,6 @@ function StudentPayments({ profile }: { profile: Profile }) {
               <p className="text-sm text-yellow-700 mt-1">
                 You have {pendingEnrollments.length} enrollment{pendingEnrollments.length > 1 ? 's' : ''} that need payment confirmation.
               </p>
-          
             </div>
           </div>
         </div>
@@ -3126,17 +3487,37 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Admin Dashboard
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Platform overview and quick actions.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-        <StatCard icon={Users} label="Total Students" value={stats.students} />
-        <StatCard icon={BookOpen} label="Active Courses" value={stats.courses} />
-        <StatCard icon={DollarSign} label="Pending Payments" value={stats.pendingPayments} />
-        <StatCard icon={ClipboardList} label="Open Assignments" value={stats.submittedAssignments} />
+        <StatCard 
+          icon={Users} 
+          label="Total Students" 
+          value={stats.students} 
+          onClick={() => onNavigate("admin-students")}
+        />
+        <StatCard 
+          icon={BookOpen} 
+          label="Active Courses" 
+          value={stats.courses} 
+          onClick={() => onNavigate("admin-courses")}
+        />
+        <StatCard 
+          icon={DollarSign} 
+          label="Pending Payments" 
+          value={stats.pendingPayments} 
+          onClick={() => onNavigate("admin-payments")}
+        />
+        <StatCard 
+          icon={ClipboardList} 
+          label="Open Assignments" 
+          value={stats.submittedAssignments} 
+          onClick={() => onNavigate("admin-assignments")}
+        />
       </div>
 
       {stats.pendingPayments > 0 && (
@@ -3155,7 +3536,7 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="p-4 md:p-6">
-          <h2 className="font-semibold text-foreground mb-4 text-lg md:text-xl" style={{ fontFamily: "'Playfair Display', serif" }}>Quick Actions</h2>
+          <h2 className="font-semibold text-foreground mb-4 text-lg md:text-xl" style={{ fontFamily: "'Poppins', sans-serif" }}>Quick Actions</h2>
           <div className="space-y-2">
             {[
               { label: "Add new course", view: "admin-courses" as View, icon: Plus },
@@ -3163,6 +3544,7 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
               { label: "Create assignment", view: "admin-assignments" as View, icon: ClipboardList },
               { label: "Manage students", view: "admin-students" as View, icon: Users },
               { label: "Create quiz", view: "admin-quizzes" as View, icon: HelpCircle },
+              { label: "Send message", view: "admin-messages" as View, icon: MessageCircle },
             ].map(({ label, view, icon: Icon }) => (
               <button
                 key={label}
@@ -3380,7 +3762,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
     <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Courses & Modules
           </h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your course catalog, modules, and video content.</p>
@@ -3825,7 +4207,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Students
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">View, manage, and track student progress.</p>
@@ -3838,6 +4220,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search students..."
           className="w-full pl-10 pr-4 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+          style={{ fontFamily: "'Poppins', sans-serif" }}
         />
       </div>
 
@@ -4190,7 +4573,7 @@ function AdminPayments() {
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
           Payment Approvals
         </h1>
         <p className="text-muted-foreground mt-1 text-sm md:text-base">Review and approve student payment receipts.</p>
@@ -4385,7 +4768,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
     <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Assignments
           </h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">Create assignments and grade student submissions.</p>
@@ -4692,7 +5075,7 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
     <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Quizzes
           </h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">Create and manage module quizzes.</p>
@@ -5380,6 +5763,8 @@ export default function App() {
             onQuizCreate={handleQuizCreate}
             onQuizDelete={handleQuizDelete}
           />;
+        case "admin-messages":
+          return <AdminMessages profile={profile} />;
         default:
           return <AdminDashboard onNavigate={setView} stats={{ students: 0, courses: 0, pendingPayments: 0, submittedAssignments: 0 }} />;
       }
@@ -5422,7 +5807,10 @@ export default function App() {
             enrollments={enrollments || []}
             progress={progress || []}
             modules={modules || []}
+            onNavigate={setView}
           />;
+        case "student-scholarship":
+          return <ScholarshipPage profile={profile} />;
         default:
           return <StudentDashboard 
             profile={profile} 
@@ -5436,7 +5824,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-background" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="h-screen flex overflow-hidden bg-background" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <Sidebar profile={profile} currentView={view} onNavigate={setView} onLogout={handleLogout} />
       <main className="flex-1 overflow-y-auto md:pt-0 pt-16">
         {renderView()}
