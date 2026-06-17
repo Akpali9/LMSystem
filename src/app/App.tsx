@@ -484,7 +484,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <nav className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="../image/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain" />
+            <img src="https://github.com/user-attachments/assets/c2843eda-65a9-4e26-9bf8-d5a0473c5c9b" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain" />
             <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -686,7 +686,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <footer className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <img src="../image/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
+            <img src="https://github.com/user-attachments/assets/c2843eda-65a9-4e26-9bf8-d5a0473c5c9b" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
             <span className="font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>Pruta Academy</span>
           </div>
           <p className="text-sm text-muted-foreground"></p>
@@ -824,7 +824,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-transparent" />
         <div className="absolute bottom-0 left-0 p-10 text-white">
           <div className="flex items-center gap-2.5 mb-8">
-            <img src="../image/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain bg-white/10 p-1" />
+            <img src="https://github.com/user-attachments/assets/c2843eda-65a9-4e26-9bf8-d5a0473c5c9b" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain bg-white/10 p-1" />
             <span className="text-xl font-bold" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -840,7 +840,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="w-full max-w-md">
           <div className="mb-8">
             <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-              <img src="../image/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain" />
+              <img src="https://github.com/user-attachments/assets/c2843eda-65a9-4e26-9bf8-d5a0473c5c9b" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain" />
               <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
                 Pruta Academy
               </span>
@@ -1008,7 +1008,7 @@ function Sidebar({
           )}
         >
           <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-            <img src="../image/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
+            <img src="https://github.com/user-attachments/assets/c2843eda-65a9-4e26-9bf8-d5a0473c5c9b" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
             <span className="font-bold text-sidebar-foreground text-lg flex-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -1075,7 +1075,7 @@ function Sidebar({
       )}
     >
       <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-        <img src="../image/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
+        <img src="https://github.com/user-attachments/assets/c2843eda-65a9-4e26-9bf8-d5a0473c5c9b" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
         {!collapsed && (
           <span className="font-bold text-sidebar-foreground text-lg" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Pruta Academy
