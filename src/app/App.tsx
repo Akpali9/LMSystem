@@ -73,6 +73,7 @@ type View =
   | "student-payment"
   | "student-profile"
   | "student-chat"
+  | "student-personal-messages"
   | "student-scholarship"
   | "admin-dashboard"
   | "admin-courses"
@@ -148,6 +149,62 @@ function formatNaira(amount: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+// ─── Phone Number Validation ──────────────────────────────────────────────────
+
+// Country codes mapping
+const COUNTRY_CODES = [
+  { code: "+234", country: "Nigeria", flag: "🇳🇬" },
+  { code: "+1", country: "USA/Canada", flag: "🇺🇸" },
+  { code: "+44", country: "UK", flag: "🇬🇧" },
+  { code: "+91", country: "India", flag: "🇮🇳" },
+  { code: "+61", country: "Australia", flag: "🇦🇺" },
+  { code: "+81", country: "Japan", flag: "🇯🇵" },
+  { code: "+86", country: "China", flag: "🇨🇳" },
+  { code: "+49", country: "Germany", flag: "🇩🇪" },
+  { code: "+33", country: "France", flag: "🇫🇷" },
+  { code: "+39", country: "Italy", flag: "🇮🇹" },
+  { code: "+34", country: "Spain", flag: "🇪🇸" },
+  { code: "+55", country: "Brazil", flag: "🇧🇷" },
+  { code: "+27", country: "South Africa", flag: "🇿🇦" },
+  { code: "+254", country: "Kenya", flag: "🇰🇪" },
+  { code: "+233", country: "Ghana", flag: "🇬🇭" },
+  { code: "+234", country: "Nigeria", flag: "🇳🇬" },
+  { code: "+1", country: "USA/Canada", flag: "🇺🇸" },
+  { code: "+44", country: "UK", flag: "🇬🇧" },
+];
+
+// Validate phone number with country code
+function validatePhoneNumber(phone: string): boolean {
+  // Remove spaces and special characters
+  const clean = phone.replace(/[\s\-\(\)]/g, '');
+  // Check if it starts with a valid country code
+  const validCodes = COUNTRY_CODES.map(c => c.code);
+  const hasValidCode = validCodes.some(code => clean.startsWith(code));
+  if (!hasValidCode) return false;
+  
+  // Check if the number part has at least 7 digits after the country code
+  const codeMatch = validCodes.find(code => clean.startsWith(code));
+  if (!codeMatch) return false;
+  
+  const numberPart = clean.slice(codeMatch.length);
+  return numberPart.length >= 7 && /^\d+$/.test(numberPart);
+}
+
+// Format phone number with country code
+function formatPhoneNumber(phone: string): string {
+  // Remove spaces and special characters
+  const clean = phone.replace(/[\s\-\(\)]/g, '');
+  // Find matching country code
+  const validCodes = COUNTRY_CODES.map(c => c.code);
+  const codeMatch = validCodes.find(code => clean.startsWith(code));
+  if (!codeMatch) return phone;
+  
+  const numberPart = clean.slice(codeMatch.length);
+  // Format as: +234 812 345 6789
+  const formatted = numberPart.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+  return `${codeMatch} ${formatted}`;
 }
 
 // ─── Circular Progress ──────────────────────────────────────────────────────
@@ -386,7 +443,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function Card({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("bg-card rounded-2xl border border-border shadow-sm", className)}>
+    <div className={cn("bg-card rounded-xl border border-border shadow-sm", className)}>
       {children}
     </div>
   );
@@ -420,7 +477,7 @@ function Modal({ open, onClose, title, children, maxWidth = "max-w-lg" }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className={cn("relative bg-card rounded-2xl border border-border shadow-2xl w-full max-h-[90vh] overflow-y-auto", maxWidth)}>
+      <div className={cn("relative bg-card rounded-xl border border-border shadow-2xl w-full max-h-[90vh] overflow-y-auto", maxWidth)}>
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
           <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: "'Poppins', sans-serif" }}>{title}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
@@ -450,7 +507,7 @@ function Input({ label, type = "text", value, onChange, placeholder, required, a
         required={required}
         accept={accept}
         disabled={disabled}
-        className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
       />
     </div>
   );
@@ -470,8 +527,85 @@ function Textarea({ label, value, onChange, placeholder, rows = 3, required }: {
         placeholder={placeholder}
         rows={rows}
         required={required}
-        className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground resize-none"
+        className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground resize-none"
       />
+    </div>
+  );
+}
+
+// ─── Phone Input Component ──────────────────────────────────────────────────
+
+function PhoneInput({ label, value, onChange, placeholder, required, disabled, className }: {
+  label: string; value?: string; onChange?: (v: string) => void; placeholder?: string; required?: boolean; disabled?: boolean; className?: string;
+}) {
+  const [selectedCode, setSelectedCode] = useState("+234");
+  const [number, setNumber] = useState("");
+  const [isValid, setIsValid] = useState(true);
+
+  useEffect(() => {
+    if (value) {
+      const clean = value.replace(/[\s\-\(\)]/g, '');
+      const validCodes = COUNTRY_CODES.map(c => c.code);
+      const codeMatch = validCodes.find(code => clean.startsWith(code));
+      if (codeMatch) {
+        setSelectedCode(codeMatch);
+        setNumber(clean.slice(codeMatch.length));
+      } else {
+        setNumber(clean);
+      }
+    }
+  }, [value]);
+
+  const handleNumberChange = (num: string) => {
+    const cleanNum = num.replace(/\D/g, '');
+    setNumber(cleanNum);
+    const fullNumber = `${selectedCode}${cleanNum}`;
+    setIsValid(validatePhoneNumber(fullNumber));
+    onChange?.(fullNumber);
+  };
+
+  const handleCodeChange = (code: string) => {
+    setSelectedCode(code);
+    const fullNumber = `${code}${number}`;
+    setIsValid(validatePhoneNumber(fullNumber));
+    onChange?.(fullNumber);
+  };
+
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      <label className="block text-sm font-medium text-foreground">
+        {label} {required && <span className="text-destructive">*</span>}
+      </label>
+      <div className="flex gap-2">
+        <select
+          value={selectedCode}
+          onChange={(e) => handleCodeChange(e.target.value)}
+          disabled={disabled}
+          className="px-3 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed w-[120px] shrink-0"
+        >
+          {COUNTRY_CODES.map(({ code, country, flag }) => (
+            <option key={code} value={code}>
+              {flag} {code}
+            </option>
+          ))}
+        </select>
+        <input
+          type="tel"
+          value={number}
+          onChange={(e) => handleNumberChange(e.target.value)}
+          placeholder={placeholder || "812 345 6789"}
+          required={required}
+          disabled={disabled}
+          className={cn(
+            "flex-1 px-3.5 py-2.5 bg-input-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed",
+            isValid ? "border-border" : "border-destructive"
+          )}
+        />
+      </div>
+      {!isValid && number.length > 0 && (
+        <p className="text-xs text-destructive">Please enter a valid phone number (at least 7 digits after country code)</p>
+      )}
+      <p className="text-xs text-muted-foreground">Example: {selectedCode} 812 345 6789</p>
     </div>
   );
 }
@@ -481,10 +615,10 @@ function Textarea({ label, value, onChange, placeholder, rows = 3, required }: {
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <nav className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
+      <nav className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border rounded-b-lg">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="https://drive.google.com/file/d/1Yd_gF-XFYBoIssa-4ubs27n6KMYwkCv8/view?usp=sharing" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain" />
+            <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain" />
             <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -496,7 +630,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </div>
           <button
             onClick={onAuth}
-            className="px-5 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors"
+            className="px-5 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
           >
             Get Started
           </button>
@@ -519,13 +653,13 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           <div className="flex flex-wrap gap-4">
             <button
               onClick={onAuth}
-              className="inline-flex items-center gap-2 px-7 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/20"
+              className="inline-flex items-center gap-2 px-7 py-3.5 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/20"
             >
               Enroll Now <ArrowRight className="w-4 h-4" />
             </button>
             <button
               onClick={onAuth}
-              className="inline-flex items-center gap-2 px-7 py-3.5 bg-secondary text-secondary-foreground font-semibold rounded-xl hover:bg-secondary/80 transition-colors"
+              className="inline-flex items-center gap-2 px-7 py-3.5 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-secondary/80 transition-colors"
             >
               Browse Courses
             </button>
@@ -540,15 +674,15 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </div>
         </div>
         <div className="relative">
-          <div className="rounded-3xl overflow-hidden shadow-2xl shadow-primary/10 border border-border">
+          <div className="rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 border border-border">
             <img
               src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format"
               alt="Students learning"
               className="w-full object-cover"
             />
           </div>
-          <div className="absolute -bottom-6 -left-6 bg-card rounded-2xl border border-border shadow-xl p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+          <div className="absolute -bottom-6 -left-6 bg-card rounded-xl border border-border shadow-xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
             <div>
@@ -556,7 +690,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               <p className="text-xs text-muted-foreground">Score: 92/100</p>
             </div>
           </div>
-          <div className="absolute -top-4 -right-4 bg-accent rounded-2xl shadow-xl p-4">
+          <div className="absolute -top-4 -right-4 bg-accent rounded-xl shadow-xl p-4">
             <p className="text-primary text-sm font-bold">3 Month</p>
             <p className="text-primary/70 text-xs">Duration</p>
           </div>
@@ -576,7 +710,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           {courses.map((course) => (
             <div
               key={course.id}
-              className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-lg hover:shadow-primary/8 hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
+              className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg hover:shadow-primary/8 hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
               onClick={onAuth}
             >
               <div className="relative h-40 bg-muted overflow-hidden">
@@ -656,7 +790,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
                 { icon: Award, title: "Verified Certificates", desc: "Certificates issued personally via email upon course completion." },
               ].map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="flex gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center shrink-0 mt-0.5">
                     <Icon className="w-5 h-5 text-accent" />
                   </div>
                   <div>
@@ -668,12 +802,12 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             </div>
             <button
               onClick={onAuth}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-accent-foreground font-semibold rounded-xl hover:bg-accent/90 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-accent-foreground font-semibold rounded-lg hover:bg-accent/90 transition-colors"
             >
               Start Learning Today <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-          <div className="rounded-3xl overflow-hidden shadow-xl border border-border">
+          <div className="rounded-2xl overflow-hidden shadow-xl border border-border">
             <img
               src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=700&h=550&fit=crop&auto=format"
               alt="Student studying"
@@ -686,7 +820,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <footer className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <img src="https://drive.google.com/file/d/1Yd_gF-XFYBoIssa-4ubs27n6KMYwkCv8/view?usp=sharing" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
+            <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
             <span className="font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>Pruta Academy</span>
           </div>
           <p className="text-sm text-muted-foreground"></p>
@@ -824,7 +958,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-transparent" />
         <div className="absolute bottom-0 left-0 p-10 text-white">
           <div className="flex items-center gap-2.5 mb-8">
-            <img src="https://drive.google.com/file/d/1Yd_gF-XFYBoIssa-4ubs27n6KMYwkCv8/view?usp=sharing" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain bg-white/10 p-1" />
+            <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain bg-white/10 p-1" />
             <span className="text-xl font-bold" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -840,7 +974,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="w-full max-w-md">
           <div className="mb-8">
             <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-              <img src="https://drive.google.com/file/d/1Yd_gF-XFYBoIssa-4ubs27n6KMYwkCv8/view?usp=sharing" alt="Pruta Academy" className="h-9 w-9 rounded-xl object-contain" />
+              <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain" />
               <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
                 Pruta Academy
               </span>
@@ -861,7 +995,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
             <Input label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••" required />
 
             {error && (
-              <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 rounded-xl px-4 py-3">
+              <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 rounded-lg px-4 py-3">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
               </div>
@@ -870,7 +1004,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all disabled:opacity-60"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {mode === "login" ? "Sign In" : "Create Account"}
@@ -890,7 +1024,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
             <button
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="mt-4 w-full flex items-center justify-center gap-3 py-2.5 bg-white border border-border rounded-xl hover:bg-muted/50 transition-colors disabled:opacity-60"
+              className="mt-4 w-full flex items-center justify-center gap-3 py-2.5 bg-white border border-border rounded-lg hover:bg-muted/50 transition-colors disabled:opacity-60"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -932,6 +1066,7 @@ function Sidebar({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -949,6 +1084,33 @@ function Sidebar({
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Fetch unread message count for admin
+  useEffect(() => {
+    if (profile?.role === 'admin') {
+      fetchUnreadCount();
+      
+      const subscription = supabase
+        .channel('admin-unread')
+        .on('postgres_changes', 
+          { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `receiver_id=eq.${profile.id}` },
+          () => fetchUnreadCount()
+        )
+        .subscribe();
+      
+      return () => subscription.unsubscribe();
+    }
+  }, [profile?.id]);
+
+  const fetchUnreadCount = async () => {
+    if (!profile) return;
+    const { data } = await supabase
+      .from('personal_messages')
+      .select('id', { count: 'exact' })
+      .eq('receiver_id', profile.id)
+      .eq('read', false);
+    setUnreadCount(data?.length || 0);
+  };
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
@@ -971,7 +1133,8 @@ function Sidebar({
     { view: "student-module" as View, icon: Video, label: "Learning" },
     { view: "student-assignments" as View, icon: ClipboardList, label: "Assignments" },
     { view: "student-payment" as View, icon: DollarSign, label: "Payments" },
-    { view: "student-chat" as View, icon: MessageCircle, label: "Chat" },
+    { view: "student-chat" as View, icon: MessageCircle, label: "Course Chat" },
+    { view: "student-personal-messages" as View, icon: Mail, label: "Messages" },
     { view: "student-scholarship" as View, icon: Gift, label: "Scholarship" },
     { view: "student-profile" as View, icon: User, label: "My Profile" },
   ];
@@ -1008,7 +1171,7 @@ function Sidebar({
           )}
         >
           <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-            <img src="https://drive.google.com/file/d/1Yd_gF-XFYBoIssa-4ubs27n6KMYwkCv8/view?usp=sharing" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
+            <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
             <span className="font-bold text-sidebar-foreground text-lg flex-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -1026,7 +1189,7 @@ function Sidebar({
                 key={view}
                 onClick={() => handleNavigate(view)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all",
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all",
                   currentView === view
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -1034,6 +1197,11 @@ function Sidebar({
               >
                 <Icon className="w-5 h-5 shrink-0" />
                 <span>{label}</span>
+                {view === "admin-chat" && unreadCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -1048,7 +1216,7 @@ function Sidebar({
             </div>
             <button
               onClick={onLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all mt-1"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all mt-1"
             >
               <LogOut className="w-4 h-4 shrink-0" />
               <span>Sign Out</span>
@@ -1058,7 +1226,7 @@ function Sidebar({
 
         <button
           onClick={toggleSidebar}
-          className="fixed top-4 left-4 z-30 w-10 h-10 rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center md:hidden"
+          className="fixed top-4 left-4 z-30 w-10 h-10 rounded-lg bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center md:hidden"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -1075,7 +1243,7 @@ function Sidebar({
       )}
     >
       <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-        <img src="https://drive.google.com/file/d/1Yd_gF-XFYBoIssa-4ubs27n6KMYwkCv8/view?usp=sharing" alt="Pruta Academy" className="h-8 w-8 rounded-xl object-contain" />
+        <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
         {!collapsed && (
           <span className="font-bold text-sidebar-foreground text-lg" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Pruta Academy
@@ -1089,7 +1257,7 @@ function Sidebar({
             key={view}
             onClick={() => onNavigate(view)}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
               currentView === view
                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -1097,6 +1265,11 @@ function Sidebar({
           >
             <Icon className="w-4.5 h-4.5 shrink-0" />
             {!collapsed && <span>{label}</span>}
+            {view === "admin-chat" && unreadCount > 0 && (
+              <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
           </button>
         ))}
       </nav>
@@ -1114,7 +1287,7 @@ function Sidebar({
         <button
           onClick={onLogout}
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all",
+            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all",
             collapsed && "justify-center"
           )}
         >
@@ -1247,7 +1420,12 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
                 />
                 <Input label="Email" value={profile.email} disabled />
                 <Textarea label="Bio" value={bio} onChange={setBio} placeholder="Tell us about yourself..." rows={3} />
-                <Input label="Phone Number" value={phone} onChange={setPhone} placeholder="+234 XXX XXX XXXX" />
+                <PhoneInput 
+                  label="Phone Number" 
+                  value={phone} 
+                  onChange={setPhone}
+                  placeholder="812 345 6789" 
+                />
                 <Textarea label="Address" value={address} onChange={setAddress} placeholder="Your address" rows={2} />
                 <Input label="Date of Birth" type="date" value={dateOfBirth} onChange={setDateOfBirth} />
                 
@@ -1255,13 +1433,13 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
                   <button
                     onClick={handleSave}
                     disabled={loading}
-                    className="px-6 py-2 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors"
+                    className="px-6 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Save Changes"}
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-6 py-2 bg-secondary text-secondary-foreground font-medium rounded-xl hover:bg-secondary/80 transition-colors"
+                    className="px-6 py-2 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1286,7 +1464,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
                 {phone && (
                   <div className="border-b border-border pb-4">
                     <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="text-foreground">{phone}</p>
+                    <p className="text-foreground">{formatPhoneNumber(phone)}</p>
                   </div>
                 )}
                 {address && (
@@ -1307,7 +1485,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
                 </div>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="mt-4 px-6 py-2 bg-accent/15 text-accent font-medium rounded-xl hover:bg-accent/25 transition-colors flex items-center gap-2 w-fit"
+                  className="mt-4 px-6 py-2 bg-accent/15 text-accent font-medium rounded-lg hover:bg-accent/25 transition-colors flex items-center gap-2 w-fit"
                 >
                   <Edit className="w-4 h-4" /> Edit Profile
                 </button>
@@ -1345,7 +1523,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
               return (
                 <Card key={enrollment.id} className="p-4 md:p-6">
                   <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
                       <img 
                         src={enrollment.course?.thumbnail_url} 
                         alt="" 
@@ -1439,7 +1617,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
       {/* Scholarship Placard */}
       <div 
         className={cn(
-          "p-4 rounded-2xl border cursor-pointer hover:shadow-md transition-all flex items-center gap-4",
+          "p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all flex items-center gap-4",
           hasApprovedScholarship 
             ? "bg-green-50 border-green-200" 
             : hasPendingScholarship 
@@ -1449,7 +1627,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
         onClick={() => onNavigate("student-scholarship")}
       >
         <div className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+          "w-12 h-12 rounded-lg flex items-center justify-center shrink-0",
           hasApprovedScholarship 
             ? "bg-green-100" 
             : hasPendingScholarship 
@@ -1485,7 +1663,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
       </div>
 
       {pendingEnrollments.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
           <div className="flex items-start gap-3">
             <Clock className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
@@ -1539,7 +1717,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                 </button>
               </div>
               <div className="flex flex-col md:flex-row gap-4 mb-5">
-                <div className="w-full md:w-24 h-32 md:h-24 rounded-xl overflow-hidden bg-muted shrink-0">
+                <div className="w-full md:w-24 h-32 md:h-24 rounded-lg overflow-hidden bg-muted shrink-0">
                   <img 
                     src={activeEnrollment.course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
                     alt="" 
@@ -1752,7 +1930,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       {submissionStatus.show && (
         <div className={cn(
-          "fixed top-20 right-4 z-50 p-4 rounded-xl shadow-lg animate-in slide-in-from-top-2 max-w-[90vw] md:max-w-md",
+          "fixed top-20 right-4 z-50 p-4 rounded-lg shadow-lg animate-in slide-in-from-top-2 max-w-[90vw] md:max-w-md",
           submissionStatus.type === 'success' ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
         )}>
           <div className="flex items-center gap-3">
@@ -1786,7 +1964,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         </div>
         <button
           onClick={() => setShowEnroll(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" /> Enroll in Course
         </button>
@@ -1801,7 +1979,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
             {activeEnrollments.map((enrollment) => (
               <Card key={enrollment.id} className="p-4 md:p-6">
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-lg overflow-hidden bg-muted shrink-0">
                     <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -1843,7 +2021,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
             {pendingEnrollments.map((enrollment) => (
               <Card key={enrollment.id} className="p-4 md:p-6 bg-yellow-50/30 border-yellow-200">
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                  <div className="w-full sm:w-20 h-40 sm:h-20 rounded-lg overflow-hidden bg-muted shrink-0">
                     <img src={enrollment.course?.thumbnail_url} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -1890,7 +2068,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
           <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-4">Explore Other Programs</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {otherCourses.map((course) => (
-              <div key={course.id} className="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+              <div key={course.id} className="bg-card rounded-xl border border-border overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                 <div className="relative h-48 md:h-56 bg-muted overflow-hidden">
                   <img 
                     src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
@@ -1912,7 +2090,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                     </span>
                     <button
                       onClick={() => { setSelectedCourse(course); setShowEnroll(true); }}
-                      className="px-4 md:px-5 py-2 md:py-2.5 bg-accent text-accent-foreground text-sm font-semibold rounded-xl hover:bg-accent/80 transition-colors"
+                      className="px-4 md:px-5 py-2 md:py-2.5 bg-accent text-accent-foreground text-sm font-semibold rounded-lg hover:bg-accent/80 transition-colors"
                     >
                       Enroll Now
                     </button>
@@ -1939,7 +2117,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
               <button
                 key={c.id}
                 onClick={() => setSelectedCourse(c)}
-                className="w-full text-left p-4 rounded-xl border border-border hover:border-accent hover:bg-accent/5 transition-all flex items-center gap-4"
+                className="w-full text-left p-4 rounded-lg border border-border hover:border-accent hover:bg-accent/5 transition-all flex items-center gap-4"
               >
                 <img src={c.thumbnail_url} alt="" className="w-14 h-10 rounded-lg object-cover" />
                 <div className="flex-1">
@@ -1952,12 +2130,12 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="p-4 bg-muted rounded-xl">
+            <div className="p-4 bg-muted rounded-lg">
               <p className="font-semibold text-foreground">{selectedCourse.title}</p>
               <p className="text-sm text-muted-foreground mt-1">{formatNaira(selectedCourse.price)} · {selectedCourse.duration_months} months access</p>
             </div>
             
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm font-semibold text-blue-800 flex items-center gap-2">
                 <Info className="w-4 h-4" /> How it works:
               </p>
@@ -1969,7 +2147,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
               </ol>
             </div>
             
-            <div className="p-4 bg-accent/10 border border-accent/20 rounded-xl space-y-2">
+            <div className="p-4 bg-accent/10 border border-accent/20 rounded-lg space-y-2">
               <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-accent" /> Payment Details
               </p>
@@ -1983,7 +2161,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
             </div>
             
             <div 
-              className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-accent transition-colors cursor-pointer"
+              className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-accent transition-colors cursor-pointer"
               onClick={() => document.getElementById("receipt-upload")?.click()}
             >
               <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
@@ -2001,7 +2179,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
             <button
               onClick={handleEnrollSubmit}
               disabled={!receiptFile || uploading}
-              className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Submit Enrollment Request</>}
             </button>
@@ -2083,7 +2261,7 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
       </div>
 
       <div className="grid md:grid-cols-4 gap-6 h-[calc(100%-80px)]">
-        <div className="md:col-span-1 bg-card rounded-2xl border border-border p-4 overflow-y-auto">
+        <div className="md:col-span-1 bg-card rounded-xl border border-border p-4 overflow-y-auto">
           <h3 className="font-semibold text-foreground text-sm mb-3">Your Courses</h3>
           <div className="space-y-2">
             {enrolledCourses.length === 0 && (
@@ -2094,7 +2272,7 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
                 key={course.id}
                 onClick={() => setSelectedCourseId(course.id)}
                 className={cn(
-                  "w-full text-left p-3 rounded-xl text-sm transition-all",
+                  "w-full text-left p-3 rounded-lg text-sm transition-all",
                   selectedCourseId === course.id
                     ? "bg-accent/20 text-accent border border-accent/30"
                     : "hover:bg-muted text-foreground/70"
@@ -2107,7 +2285,7 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
           </div>
         </div>
 
-        <div className="md:col-span-3 bg-card rounded-2xl border border-border flex flex-col">
+        <div className="md:col-span-3 bg-card rounded-xl border border-border flex flex-col">
           {!selectedCourseId ? (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
@@ -2143,7 +2321,7 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
                     >
                       <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
                       <div className={cn(
-                        "p-3 rounded-xl text-sm",
+                        "p-3 rounded-lg text-sm",
                         msg.user_id === profile.id
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-foreground"
@@ -2163,18 +2341,164 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                  className="flex-1 px-4 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || sending}
-                  className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  className="px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>
               </div>
             </>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Student Personal Messages ────────────────────────────────────────────
+
+function StudentPersonalMessages({ profile }: { profile: Profile }) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      fetchMessages();
+      
+      const subscription = supabase
+        .channel('student-personal')
+        .on('postgres_changes', 
+          { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `receiver_id=eq.${profile.id}` },
+          () => fetchMessages()
+        )
+        .subscribe();
+
+      return () => subscription.unsubscribe();
+    }
+  }, [profile?.id]);
+
+  const fetchMessages = async () => {
+    if (!profile) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("personal_messages")
+      .select("*")
+      .or(`sender_id.eq.${profile.id},receiver_id.eq.${profile.id}`)
+      .order("created_at", { ascending: true });
+    if (data) {
+      setMessages(data);
+      // Mark messages as read
+      await supabase
+        .from("personal_messages")
+        .update({ read: true })
+        .eq('receiver_id', profile.id);
+    }
+    setLoading(false);
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || sending || !profile) return;
+    setSending(true);
+    
+    // Find admin ID (first admin in the system)
+    const { data: admin } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin')
+      .limit(1)
+      .single();
+
+    if (!admin) {
+      alert('No admin found to send message to.');
+      setSending(false);
+      return;
+    }
+
+    const { error } = await supabase.from("personal_messages").insert({
+      sender_id: profile.id,
+      receiver_id: admin.id,
+      message: newMessage.trim(),
+    });
+    
+    if (!error) {
+      setNewMessage("");
+      fetchMessages();
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="p-4 md:p-8 max-w-4xl mx-auto h-[calc(100vh-100px)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          Messages
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Chat with the admin directly.</p>
+      </div>
+
+      <div className="bg-card rounded-xl border border-border flex flex-col h-[calc(100%-80px)]">
+        <div className="flex-1 p-4 overflow-y-auto space-y-3">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-accent" />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+              <p>No messages yet.</p>
+              <p className="text-xs mt-1">Send a message to the admin for support.</p>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={cn(
+                  "flex items-start gap-3 max-w-[80%]",
+                  msg.sender_id === profile?.id ? "ml-auto flex-row-reverse" : ""
+                )}
+              >
+                <Avatar 
+                  name={msg.sender_id === profile?.id ? profile?.full_name || "You" : "Admin"} 
+                  size="sm" 
+                />
+                <div className={cn(
+                  "p-3 rounded-lg text-sm",
+                  msg.sender_id === profile?.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-foreground"
+                )}>
+                  <p className="text-xs font-medium opacity-70">
+                    {msg.sender_id === profile?.id ? "You" : "Admin"}
+                  </p>
+                  <p className="mt-0.5">{msg.message}</p>
+                  <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="p-4 border-t border-border flex gap-3">
+          <input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            placeholder="Message admin..."
+            className="flex-1 px-4 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!newMessage.trim() || sending}
+            className="px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </button>
         </div>
       </div>
     </div>
@@ -2210,6 +2534,12 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
   const handleApply = async () => {
     if (!selectedCourse || !reason || !phone) {
       alert("Please fill in all fields");
+      return;
+    }
+
+    // Validate phone number
+    if (!validatePhoneNumber(phone)) {
+      alert("Please enter a valid phone number with country code");
       return;
     }
 
@@ -2259,7 +2589,7 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
         </div>
         <button
           onClick={() => setShowApply(true)}
-          className="px-4 py-2.5 bg-accent text-accent-foreground text-sm font-medium rounded-xl hover:bg-accent/90 transition-colors flex items-center gap-2"
+          className="px-4 py-2.5 bg-accent text-accent-foreground text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors flex items-center gap-2"
         >
           <Plus className="w-4 h-4" /> Apply for Scholarship
         </button>
@@ -2319,7 +2649,7 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
 
       <Modal open={showApply} onClose={() => setShowApply(false)} title="Apply for Scholarship">
         <div className="space-y-4">
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
               📝 Apply for a scholarship to get financial support for your chosen course.
               Your application will be reviewed by the admin.
@@ -2331,7 +2661,7 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
             <select
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
             >
               <option value="">Select a course...</option>
               {courses.map((c) => (
@@ -2340,12 +2670,11 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
             </select>
           </div>
 
-          <Input
+          <PhoneInput
             label="Phone Number"
-            type="tel"
             value={phone}
             onChange={setPhone}
-            placeholder="+234 XXX XXX XXXX"
+            placeholder="812 345 6789"
             required
           />
 
@@ -2361,7 +2690,7 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
           <button
             onClick={handleApply}
             disabled={submitting || !selectedCourse || !reason || !phone}
-            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Submit Application
@@ -2498,7 +2827,7 @@ function AdminScholarship() {
       <Modal open={!!selectedApp} onClose={() => setSelectedApp(null)} title="Review Scholarship Application">
         {selectedApp && (
           <div className="space-y-4">
-            <div className="p-4 bg-muted rounded-xl space-y-2">
+            <div className="p-4 bg-muted rounded-lg space-y-2">
               <div className="flex items-center gap-3">
                 <Avatar name={selectedApp.full_name} size="md" />
                 <div>
@@ -2507,7 +2836,7 @@ function AdminScholarship() {
                 </div>
               </div>
               <p className="text-sm"><span className="font-medium">Course:</span> {selectedApp.course_title}</p>
-              <p className="text-sm"><span className="font-medium">Phone:</span> {selectedApp.phone}</p>
+              <p className="text-sm"><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedApp.phone)}</p>
               <div className="p-3 bg-card rounded-lg border border-border">
                 <p className="text-sm font-medium mb-1">Reason:</p>
                 <p className="text-sm text-muted-foreground">{selectedApp.reason}</p>
@@ -2525,13 +2854,13 @@ function AdminScholarship() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleAction(selectedApp.id, "rejected")}
-                className="py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2"
+                className="py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2"
               >
                 <XCircle className="w-4 h-4" /> Reject
               </button>
               <button
                 onClick={() => handleAction(selectedApp.id, "approved")}
-                className="py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
+                className="py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
               >
                 <CheckCircle className="w-4 h-4" /> Approve
               </button>
@@ -2547,13 +2876,32 @@ function AdminScholarship() {
 
 function AdminChat({ courses, students }: { courses: Course[]; students: Profile[] }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [personalMessages, setPersonalMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [chatType, setChatType] = useState<"course" | "personal">("course");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
-    if (selectedCourseId) {
+    const getProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        setProfile(data);
+      }
+    };
+    getProfile();
+  }, []);
+
+  useEffect(() => {
+    if (selectedCourseId && chatType === "course") {
       fetchMessages();
       
       const subscription = supabase
@@ -2568,7 +2916,26 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         subscription.unsubscribe();
       };
     }
-  }, [selectedCourseId]);
+  }, [selectedCourseId, chatType]);
+
+  useEffect(() => {
+    if (selectedStudentId && chatType === "personal" && profile?.id) {
+      fetchPersonalMessages();
+      
+      const subscription = supabase
+        .channel(`personal-chat-${selectedStudentId}`)
+        .on("postgres_changes", 
+          { event: "INSERT", schema: "public", table: "personal_messages", 
+            filter: `sender_id=eq.${selectedStudentId},receiver_id=eq.${profile.id}` },
+          () => fetchPersonalMessages()
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [selectedStudentId, chatType, profile?.id]);
 
   const fetchMessages = async () => {
     if (!selectedCourseId) return;
@@ -2582,128 +2949,289 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     setLoading(false);
   };
 
+  const fetchPersonalMessages = async () => {
+    if (!selectedStudentId || !profile?.id) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("personal_messages")
+      .select("*")
+      .or(`and(sender_id.eq.${selectedStudentId},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${selectedStudentId})`)
+      .order("created_at", { ascending: true });
+    if (data) {
+      setPersonalMessages(data);
+      // Mark messages as read
+      await supabase
+        .from("personal_messages")
+        .update({ read: true })
+        .eq('receiver_id', profile.id)
+        .eq('sender_id', selectedStudentId);
+    }
+    setLoading(false);
+  };
+
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedCourseId || sending) return;
+    if (!newMessage.trim() || sending) return;
     setSending(true);
     
-    const adminName = "Admin";
-    
-    const { error } = await supabase.from("chat_messages").insert({
-      course_id: selectedCourseId,
-      user_id: "admin",
-      user_name: adminName,
-      user_avatar: null,
-      message: newMessage.trim(),
-    });
-    
-    if (!error) {
-      setNewMessage("");
-      fetchMessages();
+    if (chatType === "course" && selectedCourseId) {
+      const adminName = "Admin";
+      const { error } = await supabase.from("chat_messages").insert({
+        course_id: selectedCourseId,
+        user_id: "admin",
+        user_name: adminName,
+        user_avatar: null,
+        message: newMessage.trim(),
+      });
+      if (!error) {
+        setNewMessage("");
+        fetchMessages();
+      }
+    } else if (chatType === "personal" && selectedStudentId && profile?.id) {
+      const { error } = await supabase.from("personal_messages").insert({
+        sender_id: profile.id,
+        receiver_id: selectedStudentId,
+        message: newMessage.trim(),
+      });
+      if (!error) {
+        setNewMessage("");
+        fetchPersonalMessages();
+      }
     }
     setSending(false);
   };
+
+  const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto h-[calc(100vh-100px)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Course Chat Management
+          Chat Management
         </h1>
-        <p className="text-muted-foreground mt-1 text-sm md:text-base">Monitor and participate in course discussions.</p>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Monitor course discussions and message students personally.</p>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-6 h-[calc(100%-80px)]">
-        <div className="md:col-span-1 bg-card rounded-2xl border border-border p-4 overflow-y-auto">
-          <h3 className="font-semibold text-foreground text-sm mb-3">Courses</h3>
-          <div className="space-y-2">
-            {courses.length === 0 && (
-              <p className="text-xs text-muted-foreground">No courses available.</p>
-            )}
-            {courses.map((course) => (
-              <button
-                key={course.id}
-                onClick={() => setSelectedCourseId(course.id)}
-                className={cn(
-                  "w-full text-left p-3 rounded-xl text-sm transition-all",
-                  selectedCourseId === course.id
-                    ? "bg-accent/20 text-accent border border-accent/30"
-                    : "hover:bg-muted text-foreground/70"
-                )}
-              >
-                <p className="font-medium truncate">{course.title}</p>
-                <p className="text-xs text-muted-foreground">Click to view chat</p>
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => { setChatType("course"); setSelectedStudentId(null); }}
+          className={cn(
+            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            chatType === "course" ? "bg-accent text-accent-foreground" : "bg-muted hover:bg-muted/80"
+          )}
+        >
+          Course Chat
+        </button>
+        <button
+          onClick={() => { setChatType("personal"); setSelectedCourseId(null); }}
+          className={cn(
+            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            chatType === "personal" ? "bg-accent text-accent-foreground" : "bg-muted hover:bg-muted/80"
+          )}
+        >
+          Personal Messages
+        </button>
+      </div>
 
-        <div className="md:col-span-3 bg-card rounded-2xl border border-border flex flex-col">
-          {!selectedCourseId ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                <p>Select a course to view messages</p>
-              </div>
-            </div>
-          ) : (
+      <div className="grid md:grid-cols-4 gap-6 h-[calc(100%-120px)]">
+        {/* Left Panel - Course/Student List */}
+        <div className="md:col-span-1 bg-card rounded-xl border border-border p-4 overflow-y-auto">
+          {chatType === "course" ? (
             <>
-              <div className="p-4 border-b border-border">
-                <p className="font-semibold text-foreground">
-                  {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
-                </p>
-              </div>
-
-              <div className="flex-1 p-4 overflow-y-auto space-y-3">
-                {loading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    <p>No messages yet.</p>
-                  </div>
-                ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        "flex items-start gap-3 max-w-[80%]",
-                        msg.user_id === "admin" ? "ml-auto flex-row-reverse" : ""
-                      )}
-                    >
-                      <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
-                      <div className={cn(
-                        "p-3 rounded-xl text-sm",
-                        msg.user_id === "admin"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-foreground"
-                      )}>
-                        <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
-                        <p className="mt-0.5">{msg.message}</p>
-                        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                      </div>
-                    </div>
-                  ))
+              <h3 className="font-semibold text-foreground text-sm mb-3">Courses</h3>
+              <div className="space-y-2">
+                {courses.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No courses available.</p>
                 )}
-              </div>
-
-              <div className="p-4 border-t border-border flex gap-3">
-                <input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                  placeholder="Reply as Admin..."
-                  className="flex-1 px-4 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!newMessage.trim() || sending}
-                  className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
-                >
-                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </button>
+                {courses.map((course) => (
+                  <button
+                    key={course.id}
+                    onClick={() => setSelectedCourseId(course.id)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-lg text-sm transition-all",
+                      selectedCourseId === course.id
+                        ? "bg-accent/20 text-accent border border-accent/30"
+                        : "hover:bg-muted text-foreground/70"
+                    )}
+                  >
+                    <p className="font-medium truncate">{course.title}</p>
+                    <p className="text-xs text-muted-foreground">Click to view chat</p>
+                  </button>
+                ))}
               </div>
             </>
+          ) : (
+            <>
+              <h3 className="font-semibold text-foreground text-sm mb-3">Students</h3>
+              <div className="space-y-2">
+                {students.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No students available.</p>
+                )}
+                {students.map((student) => (
+                  <button
+                    key={student.id}
+                    onClick={() => setSelectedStudentId(student.id)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-lg text-sm transition-all flex items-center gap-2",
+                      selectedStudentId === student.id
+                        ? "bg-accent/20 text-accent border border-accent/30"
+                        : "hover:bg-muted text-foreground/70"
+                    )}
+                  >
+                    <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
+                    <span className="font-medium truncate flex-1">{student.full_name}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Chat Area */}
+        <div className="md:col-span-3 bg-card rounded-xl border border-border flex flex-col">
+          {chatType === "course" ? (
+            !selectedCourseId ? (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                  <p>Select a course to view messages</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="p-4 border-b border-border">
+                  <p className="font-semibold text-foreground">
+                    {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
+                  </p>
+                </div>
+
+                <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      <p>No messages yet.</p>
+                    </div>
+                  ) : (
+                    messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "flex items-start gap-3 max-w-[80%]",
+                          msg.user_id === "admin" ? "ml-auto flex-row-reverse" : ""
+                        )}
+                      >
+                        <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
+                        <div className={cn(
+                          "p-3 rounded-lg text-sm",
+                          msg.user_id === "admin"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-foreground"
+                        )}>
+                          <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
+                          <p className="mt-0.5">{msg.message}</p>
+                          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="p-4 border-t border-border flex gap-3">
+                  <input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                    placeholder="Reply as Admin..."
+                    className="flex-1 px-4 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim() || sending}
+                    className="px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              </>
+            )
+          ) : (
+            !selectedStudentId ? (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                  <p>Select a student to message personally</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="p-4 border-b border-border flex items-center gap-3">
+                  <Avatar name={selectedStudent?.full_name || "Student"} size="sm" src={selectedStudent?.avatar_url} />
+                  <div>
+                    <p className="font-semibold text-foreground">{selectedStudent?.full_name || "Student"}</p>
+                    <p className="text-xs text-muted-foreground">{selectedStudent?.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                    </div>
+                  ) : personalMessages.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      <p>No messages yet.</p>
+                      <p className="text-xs mt-1">Send a message to this student</p>
+                    </div>
+                  ) : (
+                    personalMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "flex items-start gap-3 max-w-[80%]",
+                          msg.sender_id === profile?.id ? "ml-auto flex-row-reverse" : ""
+                        )}
+                      >
+                        <Avatar 
+                          name={msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"} 
+                          size="sm" 
+                        />
+                        <div className={cn(
+                          "p-3 rounded-lg text-sm",
+                          msg.sender_id === profile?.id
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-foreground"
+                        )}>
+                          <p className="text-xs font-medium opacity-70">
+                            {msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"}
+                          </p>
+                          <p className="mt-0.5">{msg.message}</p>
+                          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="p-4 border-t border-border flex gap-3">
+                  <input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                    placeholder={`Message ${selectedStudent?.full_name || "student"}...`}
+                    className="flex-1 px-4 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim() || sending}
+                    className="px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              </>
+            )
           )}
         </div>
       </div>
@@ -3222,7 +3750,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           )}
         </div>
 
-        <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit mb-6 flex-wrap">
+        <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit mb-6 flex-wrap">
           <button
             onClick={() => setActiveTab("content")}
             className={cn(
@@ -3304,7 +3832,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                   onClick={handleManualComplete}
                   disabled={!canCompleteModule || manualCompleteLoading}
                   className={cn(
-                    "flex items-center gap-2 px-6 py-3 font-medium rounded-xl transition-colors text-sm",
+                    "flex items-center gap-2 px-6 py-3 font-medium rounded-lg transition-colors text-sm",
                     canCompleteModule 
                       ? "bg-green-600 text-white hover:bg-green-700" 
                       : "bg-muted text-muted-foreground cursor-not-allowed"
@@ -3349,7 +3877,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                   This module doesn't have a quiz. Complete the assignment to pass.
                 </p>
                 {hasGradedAssignment && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm text-green-800">✅ Your assignment has been graded and passed!</p>
                     <button
                       onClick={handleManualComplete}
@@ -3360,7 +3888,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                   </div>
                 )}
                 {!hasGradedAssignment && (
-                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-sm text-amber-800">⏳ Complete the assignment to pass this module.</p>
                   </div>
                 )}
@@ -3393,7 +3921,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                             onClick={() => !quizSubmitted && !quizAttempted && setQuizAnswers((p) => ({ ...p, [qi]: oi }))}
                             disabled={quizSubmitted || quizAttempted || submittingQuiz}
                             className={cn(
-                              "w-full text-left px-4 py-3 rounded-xl border text-sm transition-all",
+                              "w-full text-left px-4 py-3 rounded-lg border text-sm transition-all",
                               quizSubmitted || quizAttempted
                                 ? showCorrect ? "border-green-400 bg-green-50 text-green-800"
                                   : showWrong ? "border-red-400 bg-red-50 text-red-800"
@@ -3417,7 +3945,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                 
                 {quizAttempted || quizSubmitted ? (
                   <div className={cn(
-                    "mt-6 p-5 rounded-xl flex flex-col md:flex-row items-center gap-4",
+                    "mt-6 p-5 rounded-lg flex flex-col md:flex-row items-center gap-4",
                     quizScore >= (quizData.pass_score || 70) ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
                   )}>
                     {quizScore >= (quizData.pass_score || 70)
@@ -3482,7 +4010,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                   <button
                     onClick={handleSubmitQuiz}
                     disabled={Object.keys(quizAnswers).length < quizQuestions.length || submittingQuiz}
-                    className="mt-6 w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+                    className="mt-6 w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
                   >
                     {submittingQuiz ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Quiz"}
                   </button>
@@ -3535,7 +4063,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                     </div>
                     
                     {moduleProgress?.status === "passed" ? (
-                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl w-full">
+                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg w-full">
                         <p className="text-sm text-green-800 text-center">
                           🎉 You have successfully completed this module!
                           {selectedModuleIndex + 1 < modules.length && " Ready to move to the next module?"}
@@ -3550,7 +4078,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                         )}
                       </div>
                     ) : canCompleteModule ? (
-                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl w-full">
+                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg w-full">
                         <p className="text-sm text-green-800 text-center">
                           🎉 You've passed the quiz or assignment!
                         </p>
@@ -3563,7 +4091,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                         </button>
                       </div>
                     ) : (
-                      <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl w-full">
+                      <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg w-full">
                         <p className="text-sm text-yellow-800 text-center">
                           ⏳ Complete the module quiz or assignment to unlock the exam.
                         </p>
@@ -3649,7 +4177,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
         {assignments.map((sa) => (
           <Card key={sa.id} className="p-4 md:p-6">
             <div className="flex flex-col sm:flex-row items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
                 <FileText className="w-5 h-5 text-accent" />
               </div>
               <div className="flex-1 min-w-0">
@@ -3664,7 +4192,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
                   <span>Max score: {sa.assignment?.max_score}</span>
                 </div>
                 {sa.status === "graded" && (
-                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm font-semibold text-green-800">Score: {sa.score}/{sa.assignment?.max_score}</p>
                     <p className="text-sm text-green-700 mt-0.5">{sa.feedback}</p>
                   </div>
@@ -3672,7 +4200,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
                 {sa.status === "pending" && (
                   <div className="mt-4">
                     <div 
-                      className="border-2 border-dashed border-border rounded-xl p-4 text-center cursor-pointer hover:border-accent transition-colors"
+                      className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-accent transition-colors"
                       onClick={() => document.getElementById(`assignment-${sa.id}`)?.click()}
                     >
                       <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-1.5" />
@@ -3693,7 +4221,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
                   </div>
                 )}
                 {sa.status === "submitted" && (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <p className="text-sm text-yellow-800">⏳ Assignment submitted, awaiting grading...</p>
                   </div>
                 )}
@@ -3843,7 +4371,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
       </div>
 
       {pendingEnrollments.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
           <div className="flex items-start gap-3">
             <Clock className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
@@ -3885,7 +4413,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
             <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
             <p className="text-sm text-red-700">{error}</p>
             <button
@@ -3907,7 +4435,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
               </p>
               <button
                 onClick={() => window.location.href = "/student-courses"}
-                className="mt-4 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
+                className="mt-4 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
               >
                 Browse Courses
               </button>
@@ -3917,7 +4445,7 @@ function StudentPayments({ profile }: { profile: Profile }) {
           payments.map((p) => (
             <Card key={p.id} className="p-4 md:p-5">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
                   <FileText className="w-5 h-5 text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -3986,7 +4514,7 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
 
       {stats.pendingPayments > 0 && (
         <div
-          className="flex items-center gap-4 p-5 bg-amber-50 border border-amber-200 rounded-2xl cursor-pointer hover:bg-amber-100 transition-colors"
+          className="flex items-center gap-4 p-5 bg-amber-50 border border-amber-200 rounded-xl cursor-pointer hover:bg-amber-100 transition-colors"
           onClick={() => onNavigate("admin-payments")}
         >
           <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
@@ -4013,7 +4541,7 @@ function AdminDashboard({ onNavigate, stats }: { onNavigate: (v: View) => void; 
               <button
                 key={label}
                 onClick={() => onNavigate(view)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border hover:border-accent hover:bg-accent/5 transition-all text-left text-sm font-medium"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border hover:border-accent hover:bg-accent/5 transition-all text-left text-sm font-medium"
               >
                 <Icon className="w-4 h-4 text-accent" />
                 {label}
@@ -4233,7 +4761,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         </div>
         <button
           onClick={openCreateCourse}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" /> New Course
         </button>
@@ -4245,7 +4773,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
           return (
             <Card key={course.id} className="p-4 md:p-6">
               <div className="flex flex-col md:flex-row gap-4 md:gap-5">
-                <div className="w-full md:w-20 h-40 md:h-16 rounded-xl overflow-hidden bg-muted shrink-0">
+                <div className="w-full md:w-20 h-40 md:h-16 rounded-lg overflow-hidden bg-muted shrink-0">
                   <img 
                     src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
                     alt="" 
@@ -4340,7 +4868,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         })}
       </div>
 
-      {/* Modals - kept from original */}
+      {/* Modals - kept from original with reduced border-radius */}
       <Modal open={showCourseModal} onClose={() => setShowCourseModal(false)} title={editingCourse ? "Edit Course" : "Create New Course"}>
         <div className="space-y-4">
           <Input label="Course Title" value={courseForm.title} onChange={(v) => setCourseForm((p) => ({ ...p, title: v }))} placeholder="e.g. Advanced Data Science" required />
@@ -4348,7 +4876,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-foreground">Course Thumbnail</label>
             <div 
-              className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-accent transition-colors cursor-pointer"
+              className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-accent transition-colors cursor-pointer"
               onClick={() => document.getElementById("thumbnail-upload")?.click()}
             >
               {thumbnailFile ? (
@@ -4387,7 +4915,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
           <button
             onClick={handleSaveCourse}
             disabled={loading || !courseForm.title || !courseForm.price}
-            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (editingCourse ? "Update Course" : "Create Course")}
           </button>
@@ -4415,7 +4943,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
               setLoading(false);
             }}
             disabled={loading || !moduleForm.title}
-            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Add Module"}
           </button>
@@ -4430,7 +4958,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
             <select
               value={contentForm.content_type}
               onChange={(e) => setContentForm((p) => ({ ...p, content_type: e.target.value }))}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
             >
               <option value="video">Video (DRM Protected - Up to 500MB)</option>
               <option value="text">Text Lesson</option>
@@ -4440,7 +4968,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-foreground">Upload Video (Max 500MB)</label>
               <div 
-                className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-accent transition-colors cursor-pointer"
+                className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-accent transition-colors cursor-pointer"
                 onClick={() => document.getElementById("video-upload")?.click()}
               >
                 {videoFile ? (
@@ -4548,7 +5076,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
               setLoading(false);
             }}
             disabled={loading || !contentForm.title || (contentForm.content_type === "video" && !videoFile) || (contentForm.content_type === "text" && !contentForm.content_text)}
-            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Add Content"}
           </button>
@@ -4564,13 +5092,13 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
           <div className="flex gap-3">
             <button
               onClick={() => setDeleteConfirm(null)}
-              className="flex-1 py-2 bg-secondary text-secondary-foreground font-medium rounded-xl hover:bg-secondary/80 transition-colors"
+              className="flex-1 py-2 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleDeleteCourse}
-              className="flex-1 py-2 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+              className="flex-1 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
             >
               Delete
             </button>
@@ -4684,7 +5212,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search students..."
-          className="w-full pl-10 pr-4 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+          className="w-full pl-10 pr-4 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
         />
       </div>
 
@@ -4745,7 +5273,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
 
       <Modal open={showAssignmentModal} onClose={() => setShowAssignmentModal(false)} title={`Send Assignment to ${selectedStudent?.full_name}`}>
         <div className="space-y-4">
-          <div className="p-3 bg-muted rounded-xl flex items-center gap-3">
+          <div className="p-3 bg-muted rounded-lg flex items-center gap-3">
             <Avatar name={selectedStudent?.full_name || ""} size="sm" />
             <div>
               <p className="text-sm font-semibold text-foreground">{selectedStudent?.full_name}</p>
@@ -4757,7 +5285,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
             <select
               value={assignmentData.module_id}
               onChange={(e) => setAssignmentData(p => ({ ...p, module_id: e.target.value }))}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm"
             >
               <option value="">Select module...</option>
               {courses.map(course => (
@@ -4778,7 +5306,7 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
           <button
             onClick={handleSendAssignment}
             disabled={loading || !assignmentData.title || !assignmentData.module_id}
-            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Send Assignment</>}
           </button>
@@ -4871,7 +5399,7 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
             {studentProfile.phone && (
               <div>
                 <p className="text-xs text-muted-foreground">Phone</p>
-                <p className="text-sm text-foreground">{studentProfile.phone}</p>
+                <p className="text-sm text-foreground">{formatPhoneNumber(studentProfile.phone)}</p>
               </div>
             )}
             {studentProfile.address && (
@@ -4891,7 +5419,7 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
               const passed = getPassedModules(e.id);
               
               return (
-                <div key={e.id} className="p-4 bg-muted rounded-xl">
+                <div key={e.id} className="p-4 bg-muted rounded-lg">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 gap-2">
                     <span className="font-semibold text-foreground">{e.course?.title}</span>
                     <StatusBadge status={e.status} />
@@ -5059,7 +5587,7 @@ function AdminPayments() {
           payments.map((p) => (
             <Card key={p.id} className="p-4 md:p-5">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
                   <FileText className="w-5 h-5 text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -5103,25 +5631,25 @@ function AdminPayments() {
         {viewReceipt && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="bg-muted rounded-xl p-3">
+              <div className="bg-muted rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Student</p>
                 <p className="font-semibold mt-0.5">{viewReceipt.student_name}</p>
               </div>
-              <div className="bg-muted rounded-xl p-3">
+              <div className="bg-muted rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Course</p>
                 <p className="font-semibold mt-0.5">{viewReceipt.course_title}</p>
               </div>
-              <div className="bg-muted rounded-xl p-3">
+              <div className="bg-muted rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Amount</p>
                 <p className="font-semibold mt-0.5 text-primary">{formatNaira(viewReceipt.amount)}</p>
               </div>
-              <div className="bg-muted rounded-xl p-3">
+              <div className="bg-muted rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Submitted</p>
                 <p className="font-semibold mt-0.5">{formatDate(viewReceipt.submitted_at)}</p>
               </div>
             </div>
             
-            <div className="bg-muted rounded-xl p-6 text-center">
+            <div className="bg-muted rounded-lg p-6 text-center">
               <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
               <a 
                 href={viewReceipt.receipt_url} 
@@ -5145,14 +5673,14 @@ function AdminPayments() {
               <button
                 onClick={() => handleAction(viewReceipt.id, "rejected")}
                 disabled={loading}
-                className="py-2.5 bg-destructive/10 text-destructive border border-destructive/20 font-semibold rounded-xl hover:bg-destructive/20 transition-colors text-sm flex items-center justify-center gap-2"
+                className="py-2.5 bg-destructive/10 text-destructive border border-destructive/20 font-semibold rounded-lg hover:bg-destructive/20 transition-colors text-sm flex items-center justify-center gap-2"
               >
                 <XCircle className="w-4 h-4" /> Reject
               </button>
               <button
                 onClick={() => handleAction(viewReceipt.id, "approved")}
                 disabled={loading}
-                className="py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
+                className="py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Approve & Activate Course</>}
               </button>
@@ -5239,7 +5767,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" /> Create Assignment
         </button>
@@ -5292,7 +5820,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
             <select
               value={newAssignment.assign_to_all ? "all" : "specific"}
               onChange={(e) => setNewAssignment(p => ({ ...p, assign_to_all: e.target.value === "all" }))}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm"
             >
               <option value="all">All Students in Course</option>
               <option value="specific">Specific Student</option>
@@ -5305,7 +5833,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
               <select
                 value={newAssignment.student_id}
                 onChange={(e) => setNewAssignment(p => ({ ...p, student_id: e.target.value }))}
-                className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+                className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm"
               >
                 <option value="">Select student...</option>
                 {students.map(s => (
@@ -5320,7 +5848,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
             <select
               value={newAssignment.course_id}
               onChange={(e) => setNewAssignment(p => ({ ...p, course_id: e.target.value, module_id: "" }))}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm"
             >
               <option value="">Select course...</option>
               {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
@@ -5332,7 +5860,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
             <select
               value={newAssignment.module_id}
               onChange={(e) => setNewAssignment(p => ({ ...p, module_id: e.target.value }))}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm"
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm"
             >
               <option value="">Select module...</option>
               {availableModules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
@@ -5378,7 +5906,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
           <button
             onClick={handleCreateAssignment}
             disabled={loading || !newAssignment.course_id || !newAssignment.module_id || !newAssignment.title}
-            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Create Assignment"}
           </button>
@@ -5388,7 +5916,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       <Modal open={!!gradeModal} onClose={() => setGradeModal(null)} title={`Grade — ${gradeModal?.assignment?.title}`}>
         {gradeModal && (
           <div className="space-y-4">
-            <div className="p-3 bg-muted rounded-xl">
+            <div className="p-3 bg-muted rounded-lg">
               <p className="text-sm font-semibold text-foreground">{gradeModal.profiles?.full_name}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Submitted: {gradeModal.submitted_at ? formatDate(gradeModal.submitted_at) : "—"}</p>
             </div>
@@ -5411,7 +5939,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
             <button
               onClick={handleGrade}
               disabled={!gradeForm.score || !gradeForm.feedback || loading}
-              className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+              className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Submit Grade"}
             </button>
@@ -5546,14 +6074,14 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" /> Create Quiz
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
           <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
           <p className="text-sm text-red-700">{error}</p>
           <button
@@ -5612,7 +6140,7 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
             <select
               value={selectedModule}
               onChange={(e) => setSelectedModule(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
             >
               <option value="">Select module...</option>
               {availableModules.map((m) => {
@@ -5636,7 +6164,7 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
           <div className="border-t border-border pt-4">
             <h4 className="font-semibold text-foreground mb-3">Questions ({questions.length})</h4>
             
-            <div className="space-y-3 bg-muted/30 p-3 rounded-xl">
+            <div className="space-y-3 bg-muted/30 p-3 rounded-lg">
               <Input label="Question" value={currentQuestion.question} onChange={(v) => setCurrentQuestion({ ...currentQuestion, question: v })} placeholder="Enter your question..." />
               <div className="space-y-2">
                 {currentQuestion.options.map((opt, i) => (
@@ -5659,7 +6187,7 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
               <button
                 onClick={addQuestion}
                 disabled={!currentQuestion.question || currentQuestion.options.some(o => !o.trim())}
-                className="w-full py-2 bg-secondary text-secondary-foreground font-medium rounded-xl hover:bg-secondary/80 transition-colors text-sm disabled:opacity-50"
+                className="w-full py-2 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 transition-colors text-sm disabled:opacity-50"
               >
                 Add Question
               </button>
@@ -5684,7 +6212,7 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
           <button
             onClick={handleCreateQuiz}
             disabled={loading || !selectedModule || !quizTitle || questions.length === 0}
-            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
+            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `Create Quiz (${questions.length} questions)`}
           </button>
@@ -6276,6 +6804,8 @@ export default function App() {
           return <StudentPayments profile={profile} />;
         case "student-chat":
           return <StudentChat profile={profile} courses={courses || []} enrollments={enrollments || []} />;
+        case "student-personal-messages":
+          return <StudentPersonalMessages profile={profile} />;
         case "student-scholarship":
           return <StudentScholarship profile={profile} courses={courses || []} />;
         case "student-profile":
