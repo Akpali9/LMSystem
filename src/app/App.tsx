@@ -61,6 +61,235 @@ import {
   Gift,
 } from "lucide-react";
 
+// ─── Toast System ──────────────────────────────────────────────────────────────
+
+interface Toast {
+  id: string;
+  type: "success" | "error" | "warning" | "info";
+  title: string;
+  message: string;
+  duration?: number;
+}
+
+let toastIdCounter = 0;
+let toastListeners: ((toasts: Toast[]) => void)[] = [];
+let toasts: Toast[] = [];
+
+function notifyListeners() {
+  toastListeners.forEach(listener => listener([...toasts]));
+}
+
+export function toast({
+  type = "info",
+  title,
+  message,
+  duration = 5000,
+}: {
+  type?: "success" | "error" | "warning" | "info";
+  title: string;
+  message: string;
+  duration?: number;
+}) {
+  const id = `toast-${++toastIdCounter}`;
+  const newToast: Toast = { id, type, title, message, duration };
+  toasts.push(newToast);
+  notifyListeners();
+
+  if (duration > 0) {
+    setTimeout(() => {
+      toasts = toasts.filter(t => t.id !== id);
+      notifyListeners();
+    }, duration);
+  }
+
+  return id;
+}
+
+function ToastContainer() {
+  const [toastList, setToastList] = useState<Toast[]>([]);
+
+  useEffect(() => {
+    const listener = (newToasts: Toast[]) => {
+      setToastList(newToasts);
+    };
+    toastListeners.push(listener);
+    return () => {
+      toastListeners = toastListeners.filter(l => l !== listener);
+    };
+  }, []);
+
+  const removeToast = (id: string) => {
+    toasts = toasts.filter(t => t.id !== id);
+    notifyListeners();
+  };
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case "success": return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case "error": return <AlertCircle className="w-5 h-5 text-red-500" />;
+      case "warning": return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+      default: return <Info className="w-5 h-5 text-blue-500" />;
+    }
+  };
+
+  const getBgColor = (type: string) => {
+    switch (type) {
+      case "success": return "bg-green-50 border-green-200";
+      case "error": return "bg-red-50 border-red-200";
+      case "warning": return "bg-yellow-50 border-yellow-200";
+      default: return "bg-blue-50 border-blue-200";
+    }
+  };
+
+  const getTextColor = (type: string) => {
+    switch (type) {
+      case "success": return "text-green-800";
+      case "error": return "text-red-800";
+      case "warning": return "text-yellow-800";
+      default: return "text-blue-800";
+    }
+  };
+
+  if (toastList.length === 0) return null;
+
+  return (
+    <div className="fixed top-4 right-4 z-[100] space-y-2 max-w-md w-full pointer-events-none">
+      {toastList.map((t) => (
+        <div
+          key={t.id}
+          className={cn(
+            "pointer-events-auto rounded-lg border shadow-lg p-4 flex items-start gap-3 animate-in slide-in-from-right duration-300",
+            getBgColor(t.type)
+          )}
+        >
+          <div className="shrink-0 mt-0.5">{getIcon(t.type)}</div>
+          <div className="flex-1 min-w-0">
+            <p className={cn("font-semibold text-sm", getTextColor(t.type))}>{t.title}</p>
+            <p className={cn("text-sm mt-0.5", getTextColor(t.type).replace("800", "700"))}>{t.message}</p>
+          </div>
+          <button
+            onClick={() => removeToast(t.id)}
+            className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Confirmation Dialog ─────────────────────────────────────────────────────
+
+interface ConfirmDialogState {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  type?: "danger" | "warning" | "info";
+  onConfirm: () => void;
+}
+
+let confirmListeners: ((dialog: ConfirmDialogState | null) => void)[] = [];
+
+export function showConfirm({
+  title,
+  message,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  type = "warning",
+  onConfirm,
+}: Omit<ConfirmDialogState, "open">) {
+  const dialog: ConfirmDialogState = {
+    open: true,
+    title,
+    message,
+    confirmLabel,
+    cancelLabel,
+    type,
+    onConfirm,
+  };
+  confirmListeners.forEach(listener => listener(dialog));
+}
+
+export function closeConfirm() {
+  confirmListeners.forEach(listener => listener(null));
+}
+
+function ConfirmDialog() {
+  const [dialog, setDialog] = useState<ConfirmDialogState | null>(null);
+
+  useEffect(() => {
+    const listener = (d: ConfirmDialogState | null) => {
+      setDialog(d);
+    };
+    confirmListeners.push(listener);
+    return () => {
+      confirmListeners = confirmListeners.filter(l => l !== listener);
+    };
+  }, []);
+
+  if (!dialog) return null;
+
+  const getTypeStyles = () => {
+    switch (dialog.type) {
+      case "danger":
+        return {
+          bg: "bg-red-50 border-red-200",
+          icon: <AlertCircle className="w-6 h-6 text-red-600" />,
+          button: "bg-red-600 hover:bg-red-700 text-white",
+        };
+      case "warning":
+        return {
+          bg: "bg-yellow-50 border-yellow-200",
+          icon: <AlertCircle className="w-6 h-6 text-yellow-600" />,
+          button: "bg-yellow-600 hover:bg-yellow-700 text-white",
+        };
+      default:
+        return {
+          bg: "bg-blue-50 border-blue-200",
+          icon: <Info className="w-6 h-6 text-blue-600" />,
+          button: "bg-blue-600 hover:bg-blue-700 text-white",
+        };
+    }
+  };
+
+  const styles = getTypeStyles();
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeConfirm} />
+      <div className={cn("relative rounded-xl border shadow-2xl w-full max-w-md p-6", styles.bg)}>
+        <div className="flex items-start gap-4">
+          <div className="shrink-0">{styles.icon}</div>
+          <div className="flex-1">
+            <h3 className="font-bold text-foreground text-lg">{dialog.title}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{dialog.message}</p>
+          </div>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={closeConfirm}
+            className="flex-1 py-2.5 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 transition-colors"
+          >
+            {dialog.cancelLabel}
+          </button>
+          <button
+            onClick={() => {
+              dialog.onConfirm();
+              closeConfirm();
+            }}
+            className={cn("flex-1 py-2.5 font-medium rounded-lg transition-colors", styles.button)}
+          >
+            {dialog.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type View =
@@ -153,7 +382,6 @@ function formatNaira(amount: number) {
 
 // ─── Phone Number Validation ──────────────────────────────────────────────────
 
-// Country codes mapping
 const COUNTRY_CODES = [
   { code: "+234", country: "Nigeria", flag: "🇳🇬" },
   { code: "+1", country: "USA/Canada", flag: "🇺🇸" },
@@ -170,39 +398,25 @@ const COUNTRY_CODES = [
   { code: "+27", country: "South Africa", flag: "🇿🇦" },
   { code: "+254", country: "Kenya", flag: "🇰🇪" },
   { code: "+233", country: "Ghana", flag: "🇬🇭" },
-  { code: "+234", country: "Nigeria", flag: "🇳🇬" },
-  { code: "+1", country: "USA/Canada", flag: "🇺🇸" },
-  { code: "+44", country: "UK", flag: "🇬🇧" },
 ];
 
-// Validate phone number with country code
 function validatePhoneNumber(phone: string): boolean {
-  // Remove spaces and special characters
   const clean = phone.replace(/[\s\-\(\)]/g, '');
-  // Check if it starts with a valid country code
   const validCodes = COUNTRY_CODES.map(c => c.code);
   const hasValidCode = validCodes.some(code => clean.startsWith(code));
   if (!hasValidCode) return false;
-  
-  // Check if the number part has at least 7 digits after the country code
   const codeMatch = validCodes.find(code => clean.startsWith(code));
   if (!codeMatch) return false;
-  
   const numberPart = clean.slice(codeMatch.length);
   return numberPart.length >= 7 && /^\d+$/.test(numberPart);
 }
 
-// Format phone number with country code
 function formatPhoneNumber(phone: string): string {
-  // Remove spaces and special characters
   const clean = phone.replace(/[\s\-\(\)]/g, '');
-  // Find matching country code
   const validCodes = COUNTRY_CODES.map(c => c.code);
   const codeMatch = validCodes.find(code => clean.startsWith(code));
   if (!codeMatch) return phone;
-  
   const numberPart = clean.slice(codeMatch.length);
-  // Format as: +234 812 345 6789
   const formatted = numberPart.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
   return `${codeMatch} ${formatted}`;
 }
@@ -610,6 +824,100 @@ function PhoneInput({ label, value, onChange, placeholder, required, disabled, c
   );
 }
 
+// ─── Profile Completion Progress ────────────────────────────────────────────
+
+interface ProfileCompletion {
+  total: number;
+  completed: number;
+  percentage: number;
+  items: {
+    label: string;
+    completed: boolean;
+    field: string;
+  }[];
+}
+
+function calculateProfileCompletion(profile: Profile, studentProfile?: any): ProfileCompletion {
+  const items = [
+    { label: "Full Name", completed: !!profile.full_name?.trim(), field: "full_name" },
+    { label: "Email", completed: !!profile.email?.trim(), field: "email" },
+    { label: "Phone Number", completed: !!studentProfile?.phone?.trim(), field: "phone" },
+    { label: "Address", completed: !!studentProfile?.address?.trim(), field: "address" },
+    { label: "Bio", completed: !!studentProfile?.bio?.trim(), field: "bio" },
+    { label: "Date of Birth", completed: !!studentProfile?.date_of_birth, field: "date_of_birth" },
+    { label: "Profile Picture", completed: !!profile.avatar_url, field: "avatar" },
+  ];
+
+  const completed = items.filter(i => i.completed).length;
+  const total = items.length;
+
+  return {
+    total,
+    completed,
+    percentage: Math.round((completed / total) * 100),
+    items,
+  };
+}
+
+function ProfileCompletionBadge({ profile, studentProfile, onClick }: { 
+  profile: Profile; 
+  studentProfile?: any;
+  onClick?: () => void;
+}) {
+  const completion = calculateProfileCompletion(profile, studentProfile);
+
+  const getColor = () => {
+    if (completion.percentage >= 80) return "text-green-600";
+    if (completion.percentage >= 50) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getBgColor = () => {
+    if (completion.percentage >= 80) return "bg-green-100";
+    if (completion.percentage >= 50) return "bg-yellow-100";
+    return "bg-red-100";
+  };
+
+  return (
+    <div 
+      className={cn(
+        "flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all",
+        completion.percentage === 100 ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50/50"
+      )}
+      onClick={onClick}
+    >
+      <div className={cn("w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm", getBgColor(), getColor())}>
+        {completion.percentage}%
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground">
+          Profile {completion.percentage === 100 ? "Complete ✓" : "In Progress"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {completion.completed}/{completion.total} fields filled
+        </p>
+      </div>
+      <ProgressBar 
+        value={completion.completed} 
+        max={completion.total} 
+        className="w-20 h-1.5"
+      />
+    </div>
+  );
+}
+
+// ─── Toast and Confirm Provider ─────────────────────────────────────────────
+
+function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      {children}
+      <ToastContainer />
+      <ConfirmDialog />
+    </>
+  );
+}
+
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
@@ -618,7 +926,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <nav className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border rounded-b-lg">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain" />
+            <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain" />
             <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -637,6 +945,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </nav>
 
+      {/* Rest of LandingPage - keeping the same content */}
       <section className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 grid lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-8">
           <div className="inline-flex items-center gap-2 bg-accent/15 border border-accent/30 rounded-full px-4 py-1.5">
@@ -820,7 +1129,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <footer className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
+            <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
             <span className="font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>Pruta Academy</span>
           </div>
           <p className="text-sm text-muted-foreground"></p>
@@ -889,6 +1198,11 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
           );
           
           if (profile) {
+            toast({
+              type: "success",
+              title: "Welcome back!",
+              message: `Hello ${profile.full_name}! You've been signed in successfully.`,
+            });
             onLogin(profile as Profile);
           } else {
             throw new Error("Could not create or find profile");
@@ -906,6 +1220,12 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         if (signUpError) throw signUpError;
         
         if (data.user) {
+          toast({
+            type: "info",
+            title: "Account Created!",
+            message: "Please check your email to confirm your account.",
+          });
+          
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           const profile = await ensureProfile(
@@ -915,6 +1235,11 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
           );
           
           if (profile) {
+            toast({
+              type: "success",
+              title: "Welcome to Pruta Academy!",
+              message: "Your account has been set up successfully.",
+            });
             onLogin(profile as Profile);
           } else {
             throw new Error("Could not create profile");
@@ -923,6 +1248,11 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
       }
     } catch (err: any) {
       setError(err.message || "Authentication failed");
+      toast({
+        type: "error",
+        title: "Authentication Error",
+        message: err.message || "Failed to authenticate. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -941,8 +1271,19 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
       });
       
       if (error) throw error;
+      
+      toast({
+        type: "info",
+        title: "Redirecting...",
+        message: "You'll be redirected to Google to complete authentication.",
+      });
     } catch (err: any) {
       setError(err.message || "Google authentication failed");
+      toast({
+        type: "error",
+        title: "Google Auth Failed",
+        message: err.message || "Failed to sign in with Google. Please try again.",
+      });
       setLoading(false);
     }
   };
@@ -958,7 +1299,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-transparent" />
         <div className="absolute bottom-0 left-0 p-10 text-white">
           <div className="flex items-center gap-2.5 mb-8">
-            <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain bg-white/10 p-1" />
+            <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain bg-white/10 p-1" />
             <span className="text-xl font-bold" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -974,7 +1315,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="w-full max-w-md">
           <div className="mb-8">
             <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-              <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain" />
+              <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain" />
               <span className="text-xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
                 Pruta Academy
               </span>
@@ -1085,7 +1426,6 @@ function Sidebar({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Fetch unread message count for admin
   useEffect(() => {
     if (profile?.role === 'admin') {
       fetchUnreadCount();
@@ -1171,7 +1511,7 @@ function Sidebar({
           )}
         >
           <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-            <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
+            <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
             <span className="font-bold text-sidebar-foreground text-lg flex-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
               Pruta Academy
             </span>
@@ -1215,7 +1555,15 @@ function Sidebar({
               </div>
             </div>
             <button
-              onClick={onLogout}
+              onClick={() => {
+                showConfirm({
+                  title: "Sign Out",
+                  message: "Are you sure you want to sign out?",
+                  confirmLabel: "Sign Out",
+                  type: "warning",
+                  onConfirm: onLogout,
+                });
+              }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all mt-1"
             >
               <LogOut className="w-4 h-4 shrink-0" />
@@ -1243,7 +1591,7 @@ function Sidebar({
       )}
     >
       <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-        <img src="https://raw.githubusercontent.com/yourusername/yourrepo/main/images/logo.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
+        <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
         {!collapsed && (
           <span className="font-bold text-sidebar-foreground text-lg" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Pruta Academy
@@ -1285,7 +1633,15 @@ function Sidebar({
           )}
         </div>
         <button
-          onClick={onLogout}
+          onClick={() => {
+            showConfirm({
+              title: "Sign Out",
+              message: "Are you sure you want to sign out?",
+              confirmLabel: "Sign Out",
+              type: "warning",
+              onConfirm: onLogout,
+            });
+          }}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all",
             collapsed && "justify-center"
@@ -1296,7 +1652,6 @@ function Sidebar({
         </button>
       </div>
 
-      {/* Toggle button - outside the sidebar */}
       <button
         onClick={toggleSidebar}
         className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-sidebar border border-sidebar-border shadow-md hover:bg-sidebar-accent flex items-center justify-center transition-colors hidden md:flex z-10"
@@ -1325,6 +1680,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [studentProfile, setStudentProfile] = useState<any>(null);
 
   useEffect(() => {
     fetchStudentProfile();
@@ -1337,6 +1693,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
       .eq("user_id", profile.id)
       .single();
     if (data) {
+      setStudentProfile(data);
       setBio(data.bio || "");
       setPhone(data.phone || "");
       setAddress(data.address || "");
@@ -1356,26 +1713,44 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   const handleSave = async () => {
     setLoading(true);
     
-    await onUpdate({ full_name: fullName }, avatarFile || undefined);
-    
-    await supabase
-      .from("student_profiles")
-      .upsert({
-        user_id: profile.id,
-        bio,
-        phone,
-        address,
-        date_of_birth: dateOfBirth || null,
-        updated_at: new Date().toISOString(),
+    try {
+      await onUpdate({ full_name: fullName }, avatarFile || undefined);
+      
+      await supabase
+        .from("student_profiles")
+        .upsert({
+          user_id: profile.id,
+          bio,
+          phone,
+          address,
+          date_of_birth: dateOfBirth || null,
+          updated_at: new Date().toISOString(),
+        });
+      
+      await fetchStudentProfile();
+      
+      toast({
+        type: "success",
+        title: "Profile Updated",
+        message: "Your profile has been updated successfully.",
       });
-    
-    setIsEditing(false);
-    setLoading(false);
+      
+      setIsEditing(false);
+    } catch (error) {
+      toast({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update profile. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const activeEnrollments = enrollments?.filter(e => e.status === "active") || [];
   const passedCount = progress?.filter(p => p.status === "passed").length || 0;
   const totalModules = modules?.length || 0;
+  const completion = calculateProfileCompletion(profile, studentProfile);
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -1494,6 +1869,17 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
           </div>
         </div>
       </Card>
+
+      {/* Profile Completion */}
+      <div className="mt-6">
+        <ProfileCompletionBadge 
+          profile={profile} 
+          studentProfile={studentProfile}
+          onClick={() => {
+            if (!isEditing) setIsEditing(true);
+          }}
+        />
+      </div>
 
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-foreground mb-4">Your Learning Progress</h2>
@@ -1804,7 +2190,6 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submissionStatus, setSubmissionStatus] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: "", type: 'success' });
 
   const enrolledCourseIds = enrollments?.map(e => e.course_id) || [];
   const availableCourses = courses?.filter(c => !enrolledCourseIds.includes(c.id)) || [];
@@ -1815,7 +2200,15 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   const otherCourses = courses?.filter(c => !enrolledCourseIds.includes(c.id)) || [];
 
   const handleEnrollSubmit = async () => {
-    if (!selectedCourse || !receiptFile) return;
+    if (!selectedCourse || !receiptFile) {
+      toast({
+        type: "warning",
+        title: "Missing Information",
+        message: "Please select a course and upload a payment receipt.",
+      });
+      return;
+    }
+    
     setUploading(true);
     setSubmitting(true);
     
@@ -1827,7 +2220,11 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         .upload(fileName, receiptFile);
       
       if (uploadError) {
-        setSubmissionStatus({ show: true, message: "Failed to upload receipt. Please try again.", type: 'error' });
+        toast({
+          type: "error",
+          title: "Upload Failed",
+          message: "Failed to upload receipt. Please try again.",
+        });
         setUploading(false);
         setSubmitting(false);
         return;
@@ -1849,7 +2246,11 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         .single();
 
       if (enrollmentError) {
-        setSubmissionStatus({ show: true, message: "Failed to create enrollment. Please try again.", type: 'error' });
+        toast({
+          type: "error",
+          title: "Enrollment Failed",
+          message: "Failed to create enrollment. Please try again.",
+        });
         setUploading(false);
         setSubmitting(false);
         return;
@@ -1865,27 +2266,31 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
         });
         
         if (paymentError) {
-          setSubmissionStatus({ show: true, message: "Payment recorded but please contact admin.", type: 'error' });
+          toast({
+            type: "warning",
+            title: "Payment Recorded",
+            message: "Payment recorded but please contact admin.",
+          });
         } else {
-          setSubmissionStatus({ 
-            show: true, 
-            message: `✅ Enrollment request submitted for ${selectedCourse.title}! Your payment receipt is pending admin approval. You will be notified once approved.`, 
-            type: 'success' 
+          toast({
+            type: "success",
+            title: "Enrollment Submitted!",
+            message: `Your enrollment for ${selectedCourse.title} is pending admin approval.`,
           });
         }
       }
 
       await onEnroll(selectedCourse.id);
       
-      setTimeout(() => {
-        setSubmissionStatus({ show: false, message: "", type: 'success' });
-      }, 5000);
-      
       setShowEnroll(false);
       setSelectedCourse(null);
       setReceiptFile(null);
     } catch (error) {
-      setSubmissionStatus({ show: true, message: "An error occurred. Please try again.", type: 'error' });
+      toast({
+        type: "error",
+        title: "Error",
+        message: "An error occurred. Please try again.",
+      });
     } finally {
       setUploading(false);
       setSubmitting(false);
@@ -1928,33 +2333,6 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
 
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      {submissionStatus.show && (
-        <div className={cn(
-          "fixed top-20 right-4 z-50 p-4 rounded-lg shadow-lg animate-in slide-in-from-top-2 max-w-[90vw] md:max-w-md",
-          submissionStatus.type === 'success' ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
-        )}>
-          <div className="flex items-center gap-3">
-            {submissionStatus.type === 'success' ? (
-              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            )}
-            <p className={cn(
-              "text-sm",
-              submissionStatus.type === 'success' ? "text-green-800" : "text-red-800"
-            )}>
-              {submissionStatus.message}
-            </p>
-            <button 
-              onClick={() => setSubmissionStatus({ show: false, message: "", type: 'success' })}
-              className="ml-2 text-gray-400 hover:text-gray-600 flex-shrink-0"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-primary" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -2415,7 +2793,11 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
       .single();
 
     if (!admin) {
-      alert('No admin found to send message to.');
+      toast({
+        type: "error",
+        title: "No Admin Found",
+        message: "Unable to send message. No admin available.",
+      });
       setSending(false);
       return;
     }
@@ -2429,6 +2811,17 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
     if (!error) {
       setNewMessage("");
       fetchMessages();
+      toast({
+        type: "success",
+        title: "Message Sent",
+        message: "Your message has been sent to the admin.",
+      });
+    } else {
+      toast({
+        type: "error",
+        title: "Failed to Send",
+        message: "Could not send message. Please try again.",
+      });
     }
     setSending(false);
   };
@@ -2533,13 +2926,20 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
 
   const handleApply = async () => {
     if (!selectedCourse || !reason || !phone) {
-      alert("Please fill in all fields");
+      toast({
+        type: "warning",
+        title: "Missing Information",
+        message: "Please fill in all fields.",
+      });
       return;
     }
 
-    // Validate phone number
     if (!validatePhoneNumber(phone)) {
-      alert("Please enter a valid phone number with country code");
+      toast({
+        type: "error",
+        title: "Invalid Phone",
+        message: "Please enter a valid phone number with country code.",
+      });
       return;
     }
 
@@ -2558,14 +2958,22 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
     });
 
     if (!error) {
-      alert("Scholarship application submitted successfully!");
+      toast({
+        type: "success",
+        title: "Application Submitted",
+        message: "Your scholarship application has been submitted successfully!",
+      });
       setShowApply(false);
       setSelectedCourse("");
       setReason("");
       setPhone("");
       fetchApplications();
     } else {
-      alert("Failed to submit application. Please try again.");
+      toast({
+        type: "error",
+        title: "Submission Failed",
+        message: "Failed to submit application. Please try again.",
+      });
     }
     setSubmitting(false);
   };
@@ -2741,11 +3149,20 @@ function AdminScholarship() {
       .eq("id", id);
 
     if (!error) {
+      toast({
+        type: "success",
+        title: `Application ${action}`,
+        message: `Scholarship application has been ${action}.`,
+      });
       setSelectedApp(null);
       setAdminNotes("");
       fetchApplications();
     } else {
-      alert("Failed to update application");
+      toast({
+        type: "error",
+        title: "Action Failed",
+        message: "Failed to update application. Please try again.",
+      });
     }
   };
 
@@ -2853,13 +3270,29 @@ function AdminScholarship() {
 
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => handleAction(selectedApp.id, "rejected")}
+                onClick={() => {
+                  showConfirm({
+                    title: "Reject Application",
+                    message: `Are you sure you want to reject ${selectedApp.full_name}'s scholarship application?`,
+                    confirmLabel: "Reject",
+                    type: "danger",
+                    onConfirm: () => handleAction(selectedApp.id, "rejected"),
+                  });
+                }}
                 className="py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2"
               >
                 <XCircle className="w-4 h-4" /> Reject
               </button>
               <button
-                onClick={() => handleAction(selectedApp.id, "approved")}
+                onClick={() => {
+                  showConfirm({
+                    title: "Approve Application",
+                    message: `Are you sure you want to approve ${selectedApp.full_name}'s scholarship application?`,
+                    confirmLabel: "Approve",
+                    type: "info",
+                    onConfirm: () => handleAction(selectedApp.id, "approved"),
+                  });
+                }}
                 className="py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
               >
                 <CheckCircle className="w-4 h-4" /> Approve
@@ -2995,6 +3428,11 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       if (!error) {
         setNewMessage("");
         fetchPersonalMessages();
+        toast({
+          type: "success",
+          title: "Message Sent",
+          message: "Your message has been sent to the student.",
+        });
       }
     }
     setSending(false);
@@ -3468,7 +3906,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         if (prevModule) {
           const prevProgress = progressData.find(p => p.module_id === prevModule.id);
           if (prevProgress?.status !== "passed") {
-            alert("Complete the previous module first!");
+            toast({
+              type: "warning",
+              title: "Module Locked",
+              message: "Complete the previous module first!",
+            });
             return;
           }
         }
@@ -3537,11 +3979,21 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       
       if (attemptError) {
         console.error("Error saving quiz attempt:", attemptError);
+        toast({
+          type: "error",
+          title: "Submission Failed",
+          message: "Failed to save your quiz attempt. Please try again.",
+        });
         setSubmittingQuiz(false);
         return;
       }
       
       if (score >= (quizData.pass_score || 70)) {
+        toast({
+          type: "success",
+          title: "🎉 Quiz Passed!",
+          message: `You scored ${score}%! Module unlocked.`,
+        });
         await onProgressUpdate(currentModule.id, "passed", score);
         await new Promise(resolve => setTimeout(resolve, 1500));
         await fetchEnrollmentData();
@@ -3556,6 +4008,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         if (updatedEnrollment) {
           const newIndex = updatedEnrollment.current_module_index;
           if (newIndex > selectedModuleIndex && newIndex < modules.length) {
+            toast({
+              type: "info",
+              title: "Next Module Unlocked!",
+              message: `Moving to "${modules[newIndex]?.title}"...`,
+            });
             setTimeout(() => {
               setIsAdvancing(true);
               setSelectedModuleIndex(newIndex);
@@ -3571,13 +4028,22 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         }
         setQuizAttempted(true);
       } else {
+        toast({
+          type: "error",
+          title: "Quiz Failed",
+          message: `You scored ${score}%. Need ${quizData.pass_score}% to pass. Try again!`,
+        });
         await onProgressUpdate(currentModule.id, "failed", score);
         await fetchProgress();
         setQuizAttempted(true);
       }
     } catch (error) {
       console.error("Error submitting quiz:", error);
-      alert("Failed to submit quiz. Please try again.");
+      toast({
+        type: "error",
+        title: "Submission Failed",
+        message: "An error occurred. Please try again.",
+      });
     }
     setSubmittingQuiz(false);
   };
@@ -3590,6 +4056,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       const result = await canPassModule(currentModule.id);
       
       if (result.canPass) {
+        toast({
+          type: "success",
+          title: "Module Complete!",
+          message: `You scored ${result.score}% on this module.`,
+        });
         await onProgressUpdate(currentModule.id, "passed", result.score);
         await fetchEnrollmentData();
         await fetchProgress();
@@ -3601,6 +4072,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           .single();
         
         if (updatedEnrollment && updatedEnrollment.current_module_index > selectedModuleIndex) {
+          toast({
+            type: "info",
+            title: "Next Module Unlocked!",
+            message: `Moving to "${modules[updatedEnrollment.current_module_index]?.title}"...`,
+          });
           setTimeout(() => {
             setIsAdvancing(true);
             setSelectedModuleIndex(updatedEnrollment.current_module_index);
@@ -3609,11 +4085,19 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
           }, 500);
         }
       } else {
-        alert(result.reason || "Complete the quiz or assignment to pass this module.");
+        toast({
+          type: "warning",
+          title: "Cannot Complete Module",
+          message: result.reason || "Complete the quiz or assignment to pass this module.",
+        });
       }
     } catch (error) {
       console.error("Error in manual complete:", error);
-      alert("Failed to complete module. Please try again.");
+      toast({
+        type: "error",
+        title: "Action Failed",
+        message: "Failed to complete module. Please try again.",
+      });
     }
     setManualCompleteLoading(false);
   };
@@ -3780,11 +4264,17 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
             )}
             disabled={isModuleLocked(selectedModuleIndex)}
           >
-            <Award className="w-4 h-4" /> Exam          </button>
+            <Award className="w-4 h-4" /> Exam
+          </button>
           <button
             onClick={() => {
               setQuizRefreshKey(prev => prev + 1);
               setActiveTab("quiz");
+              toast({
+                type: "info",
+                title: "Refreshing Quiz",
+                message: "Loading latest quiz data...",
+              });
             }}
             className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-card/50 flex items-center gap-1"
             title="Refresh quiz data"
@@ -3984,6 +4474,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                           await fetchProgress();
                           await fetchEnrollmentData();
                           setQuizRefreshKey(prev => prev + 1);
+                          toast({
+                            type: "info",
+                            title: "Quiz Reset",
+                            message: "You can retry the quiz now.",
+                          });
                         }}
                         className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
                       >
@@ -3997,6 +4492,11 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                           if (nextIndex < modules.length) {
                             handleModuleSelect(nextIndex);
                           } else {
+                            toast({
+                              type: "success",
+                              title: "🎉 Course Complete!",
+                              message: "You've completed all modules!",
+                            });
                             onNavigate("student-courses");
                           }
                         }}
@@ -4149,7 +4649,11 @@ function StudentAssignments({ profile }: { profile: Profile }) {
       .upload(fileName, file);
     
     if (uploadError) {
-      alert("Failed to upload assignment");
+      toast({
+        type: "error",
+        title: "Upload Failed",
+        message: "Failed to upload assignment. Please try again.",
+      });
       return;
     }
 
@@ -4157,10 +4661,25 @@ function StudentAssignments({ profile }: { profile: Profile }) {
       .from("assignments")
       .getPublicUrl(fileName);
 
-    await supabase
+    const { error } = await supabase
       .from("student_assignments")
       .update({ status: "submitted", submission_url: publicUrl, submitted_at: new Date().toISOString() })
       .eq("id", assignmentId);
+    
+    if (error) {
+      toast({
+        type: "error",
+        title: "Submission Failed",
+        message: "Failed to submit assignment. Please try again.",
+      });
+      return;
+    }
+    
+    toast({
+      type: "success",
+      title: "Assignment Submitted!",
+      message: "Your assignment has been submitted successfully.",
+    });
     
     fetchAssignments();
   };
@@ -4606,45 +5125,100 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
 
   const handleSaveCourse = async () => {
     setLoading(true);
-    if (editingCourse) {
-      await onCourseUpdate(editingCourse.id, {
-        title: courseForm.title,
-        description: courseForm.description,
-        price: parseFloat(courseForm.price),
-        duration_months: parseInt(courseForm.duration_months),
-      }, thumbnailFile || undefined);
-    } else {
-      await onCourseAdd({
-        title: courseForm.title,
-        description: courseForm.description,
-        price: parseFloat(courseForm.price),
-        duration_months: parseInt(courseForm.duration_months),
-        currency: "NGN",
-        is_active: true,
-      }, thumbnailFile || undefined);
+    try {
+      if (editingCourse) {
+        await onCourseUpdate(editingCourse.id, {
+          title: courseForm.title,
+          description: courseForm.description,
+          price: parseFloat(courseForm.price),
+          duration_months: parseInt(courseForm.duration_months),
+        }, thumbnailFile || undefined);
+        toast({
+          type: "success",
+          title: "Course Updated",
+          message: `"${courseForm.title}" has been updated.`,
+        });
+      } else {
+        await onCourseAdd({
+          title: courseForm.title,
+          description: courseForm.description,
+          price: parseFloat(courseForm.price),
+          duration_months: parseInt(courseForm.duration_months),
+          currency: "NGN",
+          is_active: true,
+        }, thumbnailFile || undefined);
+        toast({
+          type: "success",
+          title: "Course Created",
+          message: `"${courseForm.title}" has been created.`,
+        });
+      }
+      setShowCourseModal(false);
+    } catch (error) {
+      toast({
+        type: "error",
+        title: "Operation Failed",
+        message: "Failed to save course. Please try again.",
+      });
+    } finally {
+      setLoading(false);
     }
-    setShowCourseModal(false);
-    setLoading(false);
   };
 
   const handleDeleteCourse = async () => {
     if (!deleteConfirm) return;
     setLoading(true);
-    await onCourseDelete(deleteConfirm.id);
-    setDeleteConfirm(null);
-    setLoading(false);
+    try {
+      await onCourseDelete(deleteConfirm.id);
+      toast({
+        type: "success",
+        title: "Course Deleted",
+        message: `"${deleteConfirm.title}" has been deleted.`,
+      });
+      setDeleteConfirm(null);
+    } catch (error) {
+      toast({
+        type: "error",
+        title: "Delete Failed",
+        message: "Failed to delete course. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteModule = async (moduleId: string, courseId: string) => {
-    if (confirm("Are you sure you want to delete this module? All content will be lost.")) {
-      await onModuleDelete(moduleId, courseId);
-    }
+    showConfirm({
+      title: "Delete Module",
+      message: "Are you sure you want to delete this module? All content will be lost.",
+      confirmLabel: "Delete",
+      type: "danger",
+      onConfirm: async () => {
+        await onModuleDelete(moduleId, courseId);
+        toast({
+          type: "success",
+          title: "Module Deleted",
+          message: "Module has been deleted.",
+        });
+      },
+    });
   };
 
   const handleDeleteContent = async (contentId: string) => {
-    if (confirm("Are you sure you want to delete this content?")) {
-      await onModuleContentDelete(contentId);
-    }
+    showConfirm({
+      title: "Delete Content",
+      message: "Are you sure you want to delete this content?",
+      confirmLabel: "Delete",
+      type: "danger",
+      onConfirm: async () => {
+        await onModuleContentDelete(contentId);
+        toast({
+          type: "success",
+          title: "Content Deleted",
+          message: "Content has been removed.",
+        });
+      },
+    });
   };
 
   const uploadVideoInChunks = async (file: File, moduleId: string, onProgress: (progress: number) => void) => {
@@ -4868,7 +5442,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
         })}
       </div>
 
-      {/* Modals - kept from original with reduced border-radius */}
+      {/* Modals */}
       <Modal open={showCourseModal} onClose={() => setShowCourseModal(false)} title={editingCourse ? "Edit Course" : "Create New Course"}>
         <div className="space-y-4">
           <Input label="Course Title" value={courseForm.title} onChange={(v) => setCourseForm((p) => ({ ...p, title: v }))} placeholder="e.g. Advanced Data Science" required />
@@ -4931,16 +5505,30 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
             onClick={async () => {
               if (!activeCourse) return;
               setLoading(true);
-              await onModuleAdd({
-                course_id: activeCourse.id,
-                title: moduleForm.title,
-                description: moduleForm.description,
-                order_index: (modules?.[activeCourse.id]?.length || 0),
-                pass_score: parseInt(moduleForm.pass_score),
-              });
-              setShowModuleModal(false);
-              setModuleForm({ title: "", description: "", pass_score: "75" });
-              setLoading(false);
+              try {
+                await onModuleAdd({
+                  course_id: activeCourse.id,
+                  title: moduleForm.title,
+                  description: moduleForm.description,
+                  order_index: (modules?.[activeCourse.id]?.length || 0),
+                  pass_score: parseInt(moduleForm.pass_score),
+                });
+                toast({
+                  type: "success",
+                  title: "Module Added",
+                  message: `"${moduleForm.title}" has been added.`,
+                });
+                setShowModuleModal(false);
+                setModuleForm({ title: "", description: "", pass_score: "75" });
+              } catch (error) {
+                toast({
+                  type: "error",
+                  title: "Failed",
+                  message: "Failed to add module. Please try again.",
+                });
+              } finally {
+                setLoading(false);
+              }
             }}
             disabled={loading || !moduleForm.title}
             className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
@@ -5004,7 +5592,11 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                       setVideoFile(file);
                       setUploadProgress(0);
                     } else if (file) {
-                      alert("File size exceeds 500MB limit. Please select a smaller file.");
+                      toast({
+                        type: "error",
+                        title: "File Too Large",
+                        message: "File size exceeds 500MB limit. Please select a smaller file.",
+                      });
                     }
                   }}
                 />
@@ -5054,26 +5646,45 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                 try {
                   videoUrl = await handleVideoUpload(videoFile, activeModule.id);
                 } catch (error) {
-                  alert("Failed to upload video. Please try again.");
+                  toast({
+                    type: "error",
+                    title: "Upload Failed",
+                    message: "Failed to upload video. Please try again.",
+                  });
                   setLoading(false);
                   return;
                 }
               }
               
-              await onModuleContentAdd({
-                module_id: activeModule.id,
-                title: contentForm.title,
-                content_type: contentForm.content_type as "video" | "text",
-                content_text: contentForm.content_type === "text" ? contentForm.content_text : undefined,
-                content_url: videoUrl,
-                order_index: 0,
-              }, videoFile || undefined);
-              
-              setShowContentModal(false);
-              setContentForm({ title: "", content_type: "video", content_text: "" });
-              setVideoFile(null);
-              setUploadProgress(0);
-              setLoading(false);
+              try {
+                await onModuleContentAdd({
+                  module_id: activeModule.id,
+                  title: contentForm.title,
+                  content_type: contentForm.content_type as "video" | "text",
+                  content_text: contentForm.content_type === "text" ? contentForm.content_text : undefined,
+                  content_url: videoUrl,
+                  order_index: 0,
+                }, videoFile || undefined);
+                
+                toast({
+                  type: "success",
+                  title: "Content Added",
+                  message: `"${contentForm.title}" has been added.`,
+                });
+                
+                setShowContentModal(false);
+                setContentForm({ title: "", content_type: "video", content_text: "" });
+                setVideoFile(null);
+                setUploadProgress(0);
+              } catch (error) {
+                toast({
+                  type: "error",
+                  title: "Failed",
+                  message: "Failed to add content. Please try again.",
+                });
+              } finally {
+                setLoading(false);
+              }
             }}
             disabled={loading || !contentForm.title || (contentForm.content_type === "video" && !videoFile) || (contentForm.content_type === "text" && !contentForm.content_text)}
             className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors text-sm disabled:opacity-50"
@@ -5190,6 +5801,11 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
     if (!selectedStudent) return;
     setLoading(true);
     await onSendAssignment(selectedStudent.id, selectedStudent.full_name, assignmentData);
+    toast({
+      type: "success",
+      title: "Assignment Sent",
+      message: `Assignment sent to ${selectedStudent.full_name}`,
+    });
     setShowAssignmentModal(false);
     setAssignmentData({ title: "", description: "", module_id: "", due_days: "7", max_score: "100" });
     setLoading(false);
@@ -5534,8 +6150,11 @@ function AdminPayments() {
       .eq("id", id);
     
     if (updateError) {
-      console.error("Error updating payment:", updateError);
-      alert("Failed to update payment status");
+      toast({
+        type: "error",
+        title: "Action Failed",
+        message: "Failed to update payment status. Please try again.",
+      });
       setLoading(false);
       return;
     }
@@ -5551,7 +6170,19 @@ function AdminPayments() {
             expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() 
           })
           .eq("id", payment.enrollment_id);
+        
+        toast({
+          type: "success",
+          title: "Payment Approved",
+          message: "Course access has been granted to the student.",
+        });
       }
+    } else {
+      toast({
+        type: "info",
+        title: "Payment Rejected",
+        message: "The payment has been rejected. Please add a note for the student.",
+      });
     }
     
     setViewReceipt(null);
@@ -5671,14 +6302,30 @@ function AdminPayments() {
             
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => handleAction(viewReceipt.id, "rejected")}
+                onClick={() => {
+                  showConfirm({
+                    title: "Reject Payment",
+                    message: "Are you sure you want to reject this payment?",
+                    confirmLabel: "Reject",
+                    type: "danger",
+                    onConfirm: () => handleAction(viewReceipt.id, "rejected"),
+                  });
+                }}
                 disabled={loading}
                 className="py-2.5 bg-destructive/10 text-destructive border border-destructive/20 font-semibold rounded-lg hover:bg-destructive/20 transition-colors text-sm flex items-center justify-center gap-2"
               >
                 <XCircle className="w-4 h-4" /> Reject
               </button>
               <button
-                onClick={() => handleAction(viewReceipt.id, "approved")}
+                onClick={() => {
+                  showConfirm({
+                    title: "Approve Payment",
+                    message: "Are you sure you want to approve this payment? This will activate the course for the student.",
+                    confirmLabel: "Approve",
+                    type: "info",
+                    onConfirm: () => handleAction(viewReceipt.id, "approved"),
+                  });
+                }}
                 disabled={loading}
                 className="py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
               >
@@ -5738,20 +6385,48 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
 
   const handleCreateAssignment = async () => {
     setLoading(true);
-    await onCreateAssignment(newAssignment);
-    setShowCreate(false);
-    setNewAssignment({ course_id: "", module_id: "", title: "", description: "", max_score: "100", due_days: "7", assign_to_all: true, student_id: "" });
-    setLoading(false);
+    try {
+      await onCreateAssignment(newAssignment);
+      toast({
+        type: "success",
+        title: "Assignment Created",
+        message: `"${newAssignment.title}" has been assigned.`,
+      });
+      setShowCreate(false);
+      setNewAssignment({ course_id: "", module_id: "", title: "", description: "", max_score: "100", due_days: "7", assign_to_all: true, student_id: "" });
+    } catch (error) {
+      toast({
+        type: "error",
+        title: "Failed",
+        message: "Failed to create assignment. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGrade = async () => {
     if (!gradeModal) return;
     setLoading(true);
-    await onGradeAssignment(gradeModal.id, parseInt(gradeForm.score), gradeForm.feedback);
-    setGradeModal(null);
-    setGradeForm({ score: "", feedback: "" });
-    setLoading(false);
-    fetchSubmissions();
+    try {
+      await onGradeAssignment(gradeModal.id, parseInt(gradeForm.score), gradeForm.feedback);
+      toast({
+        type: "success",
+        title: "Graded",
+        message: `Assignment graded with score ${gradeForm.score}.`,
+      });
+      setGradeModal(null);
+      setGradeForm({ score: "", feedback: "" });
+      fetchSubmissions();
+    } catch (error) {
+      toast({
+        type: "error",
+        title: "Failed",
+        message: "Failed to grade assignment. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const availableModules = modules.filter(m => m.course_id === newAssignment.course_id);
@@ -6031,7 +6706,11 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
 
   const handleCreateQuiz = async () => {
     if (!selectedModule || !quizTitle || questions.length === 0) {
-      alert("Please fill in all required fields and add at least one question.");
+      toast({
+        type: "warning",
+        title: "Missing Information",
+        message: "Please fill in all required fields and add at least one question.",
+      });
       return;
     }
     
@@ -6046,6 +6725,12 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
         questions: questions,
       });
       
+      toast({
+        type: "success",
+        title: "Quiz Created",
+        message: `"${quizTitle}" has been created with ${questions.length} questions.`,
+      });
+      
       setShowCreateModal(false);
       setQuizTitle("");
       setQuizDescription("");
@@ -6056,9 +6741,31 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
       fetchQuizzes();
     } catch (error) {
       console.error("Error creating quiz:", error);
-      alert("Failed to create quiz. Please try again.");
+      toast({
+        type: "error",
+        title: "Failed",
+        message: "Failed to create quiz. Please try again.",
+      });
       setLoading(false);
     }
+  };
+
+  const handleQuizDelete = async (quizId: string) => {
+    showConfirm({
+      title: "Delete Quiz",
+      message: "Are you sure you want to delete this quiz? All questions and attempts will be lost.",
+      confirmLabel: "Delete",
+      type: "danger",
+      onConfirm: async () => {
+        await onQuizDelete(quizId);
+        toast({
+          type: "success",
+          title: "Quiz Deleted",
+          message: "Quiz has been deleted.",
+        });
+        fetchQuizzes();
+      },
+    });
   };
 
   const availableModules = modules.filter(m => !quizzes.some(q => q.module_id === m.id));
@@ -6112,11 +6819,7 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    if (confirm("Are you sure you want to delete this quiz? All questions and attempts will be lost.")) {
-                      onQuizDelete(quiz.id);
-                    }
-                  }}
+                  onClick={() => handleQuizDelete(quiz.id)}
                   className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200 transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -6298,6 +7001,11 @@ export default function App() {
           const userProfile = profile as Profile;
           setProfile(userProfile);
           setView(userProfile.role === "admin" ? "admin-dashboard" : "student-dashboard");
+          toast({
+            type: "success",
+            title: "Welcome!",
+            message: `Signed in as ${userProfile.full_name}`,
+          });
         }
       } else if (event === 'SIGNED_OUT') {
         setProfile(null);
@@ -6409,6 +7117,11 @@ export default function App() {
     await supabase.auth.signOut();
     setProfile(null);
     setView("landing");
+    toast({
+      type: "info",
+      title: "Signed Out",
+      message: "You have been signed out successfully.",
+    });
   };
 
   const handleEnroll = async (courseId: string) => {
@@ -6444,6 +7157,11 @@ export default function App() {
         if (!error) {
           await fetchEnrollments();
           await fetchProgress();
+          toast({
+            type: "success",
+            title: "Module Complete!",
+            message: `🎉 You've passed "${courseModules[currentModuleIndex].title}"!`,
+          });
         }
       }
     }
@@ -6605,7 +7323,6 @@ export default function App() {
         });
       }
     }
-    alert(`Assignment sent to ${studentName}`);
   };
 
   const handleCreateAssignment = async (assignmentData: any) => {
@@ -6830,17 +7547,19 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-background" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <Sidebar profile={profile} currentView={view} onNavigate={setView} onLogout={handleLogout} />
-      <main className="flex-1 overflow-y-auto md:pt-0 pt-16">
-        {renderView()}
-      </main>
-      {viewingStudent && (
-        <AdminStudentProfile 
-          student={viewingStudent} 
-          onClose={() => setViewingStudent(null)} 
-        />
-      )}
-    </div>
+    <ToastAndConfirmProvider>
+      <div className="h-screen flex overflow-hidden bg-background" style={{ fontFamily: "'Poppins', sans-serif" }}>
+        <Sidebar profile={profile} currentView={view} onNavigate={setView} onLogout={handleLogout} />
+        <main className="flex-1 overflow-y-auto md:pt-0 pt-16">
+          {renderView()}
+        </main>
+        {viewingStudent && (
+          <AdminStudentProfile 
+            student={viewingStudent} 
+            onClose={() => setViewingStudent(null)} 
+          />
+        )}
+      </div>
+    </ToastAndConfirmProvider>
   );
 }
