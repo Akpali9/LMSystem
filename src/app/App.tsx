@@ -1435,7 +1435,7 @@ function Sidebar({
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
       if (mobile) {
-        setCollapsed(true);
+        setCollapsed(false);
       } else {
         setCollapsed(false);
       }
@@ -1517,6 +1517,14 @@ function Sidebar({
   if (isMobile) {
     return (
       <>
+        <button
+          onClick={toggleSidebar}
+          className="fixed top-4 left-4 z-50 w-10 h-10 rounded-lg shadow-lg hover:opacity-90 transition-colors flex items-center justify-center md:hidden"
+          style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         {!collapsed && (
           <div 
             className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden"
@@ -1545,7 +1553,7 @@ function Sidebar({
             </button>
           </div>
 
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto h-[calc(100vh-140px)]">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto" style={{ height: 'calc(100vh - 180px)' }}>
             {nav.map(({ view, icon: Icon, label }) => (
               <button
                 key={view}
@@ -1594,14 +1602,6 @@ function Sidebar({
             </button>
           </div>
         </aside>
-
-        <button
-          onClick={toggleSidebar}
-          className="fixed top-4 left-4 z-30 w-10 h-10 rounded-lg shadow-lg hover:opacity-90 transition-colors flex items-center justify-center md:hidden"
-          style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-        >
-          <Menu className="w-5 h-5" />
-        </button>
       </>
     );
   }
@@ -1686,6 +1686,358 @@ function Sidebar({
         {collapsed ? <ChevronRight className="w-4 h-4 text-white" /> : <ChevronLeft className="w-4 h-4 text-white" />}
       </button>
     </aside>
+  );
+}
+
+// ─── Student Assignments ──────────────────────────────────────────────────────
+
+function StudentAssignments({ profile }: { profile: Profile }) {
+  const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    fetchAssignments();
+    
+    const subscription = supabase
+      .channel("student-assignments")
+      .on("postgres_changes", 
+        { event: "*", schema: "public", table: "student_assignments", filter: `student_id=eq.${profile.id}` }, 
+        () => fetchAssignments()
+      )
+      .subscribe();
+
+    return () => { subscription.unsubscribe(); };
+  }, [profile.id]);
+
+  const fetchAssignments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("student_assignments")
+        .select(`
+          *,
+          assignment:assignment_id (
+            id,
+            module_id,
+            title,
+            description,
+            due_days,
+            max_score
+          )
+        `)
+        .eq("student_id", profile.id)
+        .order("assigned_at", { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching assignments:", error);
+        toast({
+          type: "error",
+          title: "Failed to Load",
+          message: "Could not load your assignments. Please refresh.",
+        });
+        return;
+      }
+      
+      if (data) {
+        setAssignments(data as StudentAssignment[]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleSubmitAssignment = async (assignmentId: string, file: File) => {
+    setUploading(prev => ({ ...prev, [assignmentId]: true }));
+    setUploadProgress(prev => ({ ...prev, [assignmentId]: 0 }));
+
+    try {
+      // Validate file
+      if (!file) {
+        toast({
+          type: "error",
+          title: "No File Selected",
+          message: "Please select a file to upload.",
+        });
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          type: "error",
+          title: "File Too Large",
+          message: "File size must be less than 10MB.",
+        });
+        return;
+      }
+
+      // Validate file type
+      const allowedExtensions = ['pdf', 'doc', 'docx', 'zip', 'txt', 'jpg', 'jpeg', 'png'];
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (!fileExt || !allowedExtensions.includes(fileExt)) {
+        toast({
+          type: "error",
+          title: "Invalid File Type",
+          message: "Please upload PDF, DOC, DOCX, ZIP, or image files only.",
+        });
+        return;
+      }
+
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 20 }));
+
+      // Generate unique filename
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileName = `${profile.id}/${assignmentId}/${Date.now()}-${cleanFileName}`;
+
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 40 }));
+
+      // Try to upload to storage
+      let submissionUrl = null;
+      let uploadError = null;
+
+      try {
+        const { data: uploadData, error: error } = await supabase.storage
+          .from("assignments")
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false,
+          });
+
+        if (error) {
+          uploadError = error;
+          console.error("Upload error:", error);
+        } else {
+          setUploadProgress(prev => ({ ...prev, [assignmentId]: 70 }));
+          const { data: { publicUrl } } = supabase.storage
+            .from("assignments")
+            .getPublicUrl(fileName);
+          submissionUrl = publicUrl;
+        }
+      } catch (err) {
+        console.error("Storage error:", err);
+        uploadError = err;
+      }
+
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 80 }));
+
+      // If storage upload failed, try base64
+      if (!submissionUrl && file.size < 500000) { // 500KB max for base64
+        try {
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error("Failed to read file"));
+            reader.readAsDataURL(file);
+          });
+          submissionUrl = base64;
+          console.log("Using base64 upload as fallback");
+        } catch (base64Error) {
+          console.error("Base64 conversion error:", base64Error);
+        }
+      }
+
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 90 }));
+
+      // Update the assignment
+      const updateData: any = {
+        status: "submitted",
+        submitted_at: new Date().toISOString()
+      };
+
+      if (submissionUrl) {
+        updateData.submission_url = submissionUrl;
+      } else {
+        updateData.submission_url = `uploaded-${Date.now()}`;
+        updateData.submission_data = "File uploaded successfully";
+      }
+
+      const { error: updateError } = await supabase
+        .from("student_assignments")
+        .update(updateData)
+        .eq("id", assignmentId);
+      
+      if (updateError) {
+        console.error("Update error:", updateError);
+        toast({
+          type: "error",
+          title: "Submission Failed",
+          message: updateError.message || "Failed to update assignment. Please try again.",
+        });
+        return;
+      }
+      
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 100 }));
+      
+      toast({
+        type: "success",
+        title: "Assignment Submitted!",
+        message: "Your assignment has been submitted successfully.",
+      });
+      
+      await fetchAssignments();
+      
+    } catch (error: any) {
+      console.error("Error:", error);
+      toast({
+        type: "error",
+        title: "Upload Failed",
+        message: error.message || "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setUploading(prev => ({ ...prev, [assignmentId]: false }));
+    }
+  };
+
+  const renderFileInput = (assignment: StudentAssignment) => {
+    const isUploading = uploading[assignment.id];
+    const progress = uploadProgress[assignment.id] || 0;
+
+    if (assignment.status === 'graded') {
+      return (
+        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm font-semibold text-green-800">
+            Score: {assignment.score}/{assignment.assignment?.max_score}
+          </p>
+          {assignment.feedback && (
+            <p className="text-sm text-green-700 mt-1">{assignment.feedback}</p>
+          )}
+        </div>
+      );
+    }
+
+    if (assignment.status === 'submitted') {
+      return (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <p className="text-sm text-yellow-800">⏳ Submitted - Awaiting grading</p>
+            {assignment.submission_url && assignment.submission_url.startsWith('http') && (
+              <a 
+                href={assignment.submission_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                View Submission
+              </a>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4">
+        <div 
+          className={cn(
+            "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+            isUploading ? "cursor-default opacity-60" : "cursor-pointer hover:border-orange-400"
+          )}
+          style={{ 
+            borderColor: isUploading ? '#e0e0e0' : '#d1d5db',
+            backgroundColor: isUploading ? '#f9fafb' : 'transparent'
+          }}
+          onClick={() => {
+            if (!isUploading) {
+              document.getElementById(`assignment-${assignment.id}`)?.click();
+            }
+          }}
+        >
+          {isUploading ? (
+            <div className="space-y-3">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
+              <p className="text-sm font-medium text-gray-700">
+                {progress < 40 ? 'Preparing upload...' :
+                 progress < 70 ? 'Uploading to storage...' :
+                 progress < 90 ? 'Processing...' :
+                 'Finalizing submission...'}
+              </p>
+              <div className="w-full max-w-xs mx-auto">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ backgroundColor: '#f7530b', width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{progress}% complete</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm font-medium text-gray-700">Click to upload your submission</p>
+              <p className="text-xs text-gray-500 mt-1">
+                PDF, DOC, DOCX, ZIP, or images · Max 10MB
+              </p>
+            </>
+          )}
+        </div>
+        <input
+          id={`assignment-${assignment.id}`}
+          type="file"
+          className="hidden"
+          accept=".pdf,.doc,.docx,.zip,.txt,.jpg,.jpeg,.png"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              handleSubmitAssignment(assignment.id, file);
+            }
+            e.target.value = '';
+          }}
+          disabled={isUploading}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+          Assignments
+        </h1>
+        <p className="text-gray-500 mt-1 text-sm md:text-base">Submit your assignments here.</p>
+      </div>
+
+      <div className="space-y-4">
+        {assignments.length === 0 ? (
+          <Card className="p-8 text-center">
+            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <h3 className="font-semibold text-gray-700 mb-2">No Assignments</h3>
+            <p className="text-sm text-gray-500">You don't have any assignments yet.</p>
+          </Card>
+        ) : (
+          assignments.map((sa) => (
+            <Card key={sa.id} className="p-4 md:p-6">
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#fdddce' }}>
+                  <FileText className="w-5 h-5" style={{ color: '#f7530b' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-semibold text-gray-800 text-sm md:text-base">{sa.assignment?.title}</h3>
+                      {sa.assignment?.description && (
+                        <p className="text-xs text-gray-500 mt-0.5">{sa.assignment.description}</p>
+                      )}
+                    </div>
+                    <StatusBadge status={sa.status} />
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-gray-500">
+                    <span>Assigned: {formatDate(sa.assigned_at)}</span>
+                    {sa.submitted_at && <span>Submitted: {formatDate(sa.submitted_at)}</span>}
+                    <span>Max score: {sa.assignment?.max_score || 100}</span>
+                  </div>
+
+                  {renderFileInput(sa)}
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -3154,581 +3506,6 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
   );
 }
 
-// ─── Admin Scholarship ─────────────────────────────────────────────────────
-
-function AdminScholarship() {
-  const [applications, setApplications] = useState<Scholarship[]>([]);
-  const [selectedApp, setSelectedApp] = useState<Scholarship | null>(null);
-  const [adminNotes, setAdminNotes] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetchApplications();
-    
-    const subscription = supabase
-      .channel("admin-scholarships")
-      .on("postgres_changes", { event: "*", schema: "public", table: "scholarships" }, () => fetchApplications())
-      .subscribe();
-
-    return () => { subscription.unsubscribe(); };
-  }, []);
-
-  const fetchApplications = async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from("scholarships")
-      .select("*")
-      .order("submitted_at", { ascending: false });
-    if (data) setApplications(data as Scholarship[]);
-    setLoading(false);
-  };
-
-  const handleAction = async (id: string, action: "approved" | "rejected") => {
-    const { error } = await supabase
-      .from("scholarships")
-      .update({ 
-        status: action, 
-        reviewed_at: new Date().toISOString(),
-        admin_notes: adminNotes || null
-      })
-      .eq("id", id);
-
-    if (!error) {
-      toast({
-        type: "success",
-        title: `Application ${action}`,
-        message: `Scholarship application has been ${action}.`,
-      });
-      setSelectedApp(null);
-      setAdminNotes("");
-      fetchApplications();
-    } else {
-      toast({
-        type: "error",
-        title: "Action Failed",
-        message: "Failed to update application. Please try again.",
-      });
-    }
-  };
-
-  const pendingCount = applications.filter(a => a.status === "pending").length;
-
-  return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-            Scholarship Applications
-          </h1>
-          <p className="text-gray-500 mt-1 text-sm md:text-base">Review and manage student scholarship applications.</p>
-        </div>
-        {pendingCount > 0 && (
-          <Badge variant="warning">{pendingCount} Pending</Badge>
-        )}
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <StatCard icon={Clock} label="Pending" value={pendingCount} />
-        <StatCard icon={CheckCircle} label="Approved" value={applications.filter(a => a.status === "approved").length} />
-        <StatCard icon={XCircle} label="Rejected" value={applications.filter(a => a.status === "rejected").length} />
-      </div>
-
-      <div className="space-y-4">
-        {applications.length === 0 ? (
-          <Card className="p-12 text-center">
-            <Gift className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No scholarship applications yet.</p>
-          </Card>
-        ) : (
-          applications.map((app) => (
-            <Card key={app.id} className="p-4 md:p-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={app.full_name} size="sm" />
-                    <div>
-                      <p className="font-semibold text-gray-800">{app.full_name}</p>
-                      <p className="text-xs text-gray-500">{app.email}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm mt-2"><span className="font-medium">Course:</span> {app.course_title}</p>
-                  <p className="text-sm text-gray-500 mt-1">{app.reason}</p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Submitted: {formatDate(app.submitted_at)}
-                  </p>
-                  {app.admin_notes && (
-                    <div className="mt-2 p-2 bg-gray-100 rounded-lg text-xs text-gray-500">
-                      Admin note: {app.admin_notes}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span className={cn(
-                    "px-3 py-1 rounded-full text-xs font-medium border",
-                    app.status === "approved" ? "text-green-600 bg-green-50 border-green-200" :
-                    app.status === "rejected" ? "text-red-600 bg-red-50 border-red-200" :
-                    "text-amber-600 bg-amber-50 border-amber-200"
-                  )}>
-                    {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                  </span>
-                  {app.status === "pending" && (
-                    <button
-                      onClick={() => setSelectedApp(app)}
-                      className="px-3 py-1.5 text-xs rounded-lg hover:opacity-90 transition-colors"
-                      style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-                    >
-                      Review
-                    </button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
-
-      <Modal open={!!selectedApp} onClose={() => setSelectedApp(null)} title="Review Scholarship Application">
-        {selectedApp && (
-          <div className="space-y-4">
-            <div className="p-4 bg-gray-100 rounded-lg space-y-2">
-              <div className="flex items-center gap-3">
-                <Avatar name={selectedApp.full_name} size="md" />
-                <div>
-                  <p className="font-semibold text-gray-800">{selectedApp.full_name}</p>
-                  <p className="text-xs text-gray-500">{selectedApp.email}</p>
-                </div>
-              </div>
-              <p className="text-sm"><span className="font-medium">Course:</span> {selectedApp.course_title}</p>
-              <p className="text-sm"><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedApp.phone)}</p>
-              <div className="p-3 bg-white rounded-lg border" style={{ borderColor: '#e0e0e0' }}>
-                <p className="text-sm font-medium mb-1">Reason:</p>
-                <p className="text-sm text-gray-500">{selectedApp.reason}</p>
-              </div>
-            </div>
-
-            <Textarea
-              label="Admin Notes"
-              value={adminNotes}
-              onChange={setAdminNotes}
-              placeholder="Add notes about this application..."
-              rows={3}
-            />
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => {
-                  showConfirm({
-                    title: "Reject Application",
-                    message: `Are you sure you want to reject ${selectedApp.full_name}'s scholarship application?`,
-                    confirmLabel: "Reject",
-                    type: "danger",
-                    onConfirm: () => handleAction(selectedApp.id, "rejected"),
-                  });
-                }}
-                className="py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2"
-              >
-                <XCircle className="w-4 h-4" /> Reject
-              </button>
-              <button
-                onClick={() => {
-                  showConfirm({
-                    title: "Approve Application",
-                    message: `Are you sure you want to approve ${selectedApp.full_name}'s scholarship application?`,
-                    confirmLabel: "Approve",
-                    type: "info",
-                    onConfirm: () => handleAction(selectedApp.id, "approved"),
-                  });
-                }}
-                className="py-2.5 text-white font-semibold rounded-lg hover:opacity-90 transition-colors text-sm flex items-center justify-center gap-2"
-                style={{ backgroundColor: '#f7530b' }}
-              >
-                <CheckCircle className="w-4 h-4" /> Approve
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
-}
-
-// ─── Admin Chat ────────────────────────────────────────────────────────────
-
-function AdminChat({ courses, students }: { courses: Course[]; students: Profile[] }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [personalMessages, setPersonalMessages] = useState<any[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [chatType, setChatType] = useState<"course" | "personal">("course");
-  const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-
-  useEffect(() => {
-    const getProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        setProfile(data);
-      }
-    };
-    getProfile();
-  }, []);
-
-  useEffect(() => {
-    if (selectedCourseId && chatType === "course") {
-      fetchMessages();
-      
-      const subscription = supabase
-        .channel(`admin-chat-${selectedCourseId}`)
-        .on("postgres_changes", 
-          { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
-          () => fetchMessages()
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
-  }, [selectedCourseId, chatType]);
-
-  useEffect(() => {
-    if (selectedStudentId && chatType === "personal" && profile?.id) {
-      fetchPersonalMessages();
-      
-      const subscription = supabase
-        .channel(`personal-chat-${selectedStudentId}`)
-        .on("postgres_changes", 
-          { event: "INSERT", schema: "public", table: "personal_messages", 
-            filter: `sender_id=eq.${selectedStudentId},receiver_id=eq.${profile.id}` },
-          () => fetchPersonalMessages()
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
-  }, [selectedStudentId, chatType, profile?.id]);
-
-  const fetchMessages = async () => {
-    if (!selectedCourseId) return;
-    setLoading(true);
-    const { data } = await supabase
-      .from("chat_messages")
-      .select("*")
-      .eq("course_id", selectedCourseId)
-      .order("created_at", { ascending: true });
-    if (data) setMessages(data as ChatMessage[]);
-    setLoading(false);
-  };
-
-  const fetchPersonalMessages = async () => {
-    if (!selectedStudentId || !profile?.id) return;
-    setLoading(true);
-    const { data } = await supabase
-      .from("personal_messages")
-      .select("*")
-      .or(`and(sender_id.eq.${selectedStudentId},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${selectedStudentId})`)
-      .order("created_at", { ascending: true });
-    if (data) {
-      setPersonalMessages(data);
-      await supabase
-        .from("personal_messages")
-        .update({ read: true })
-        .eq('receiver_id', profile.id)
-        .eq('sender_id', selectedStudentId);
-    }
-    setLoading(false);
-  };
-
-  const sendMessage = async () => {
-    if (!newMessage.trim() || sending) return;
-    setSending(true);
-    
-    if (chatType === "course" && selectedCourseId) {
-      const adminName = "Admin";
-      const { error } = await supabase.from("chat_messages").insert({
-        course_id: selectedCourseId,
-        user_id: "admin",
-        user_name: adminName,
-        user_avatar: null,
-        message: newMessage.trim(),
-      });
-      if (!error) {
-        setNewMessage("");
-        fetchMessages();
-      }
-    } else if (chatType === "personal" && selectedStudentId && profile?.id) {
-      const { error } = await supabase.from("personal_messages").insert({
-        sender_id: profile.id,
-        receiver_id: selectedStudentId,
-        message: newMessage.trim(),
-      });
-      if (!error) {
-        setNewMessage("");
-        fetchPersonalMessages();
-        toast({
-          type: "success",
-          title: "Message Sent",
-          message: "Your message has been sent to the student.",
-        });
-      }
-    }
-    setSending(false);
-  };
-
-  const selectedStudent = students.find(s => s.id === selectedStudentId);
-
-  return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto h-[calc(100vh-100px)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-          Chat Management
-        </h1>
-        <p className="text-gray-500 mt-1 text-sm md:text-base">Monitor course discussions and message students personally.</p>
-      </div>
-
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => { setChatType("course"); setSelectedStudentId(null); }}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-            chatType === "course" ? "text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-          )}
-          style={chatType === "course" ? { backgroundColor: '#f7530b' } : {}}
-        >
-          Course Chat
-        </button>
-        <button
-          onClick={() => { setChatType("personal"); setSelectedCourseId(null); }}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-            chatType === "personal" ? "text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-          )}
-          style={chatType === "personal" ? { backgroundColor: '#f7530b' } : {}}
-        >
-          Personal Messages
-        </button>
-      </div>
-
-      <div className="grid md:grid-cols-4 gap-6 h-[calc(100%-120px)]">
-        <div className="md:col-span-1 bg-white rounded-xl border p-4 overflow-y-auto" style={{ borderColor: '#e0e0e0' }}>
-          {chatType === "course" ? (
-            <>
-              <h3 className="font-semibold text-gray-800 text-sm mb-3">Courses</h3>
-              <div className="space-y-2">
-                {courses.length === 0 && (
-                  <p className="text-xs text-gray-500">No courses available.</p>
-                )}
-                {courses.map((course) => (
-                  <button
-                    key={course.id}
-                    onClick={() => setSelectedCourseId(course.id)}
-                    className={cn(
-                      "w-full text-left p-3 rounded-lg text-sm transition-all",
-                      selectedCourseId === course.id
-                        ? "border" : "hover:bg-gray-50 text-gray-600"
-                    )}
-                    style={selectedCourseId === course.id ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
-                  >
-                    <p className="font-medium truncate">{course.title}</p>
-                    <p className="text-xs text-gray-500">Click to view chat</p>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <h3 className="font-semibold text-gray-800 text-sm mb-3">Students</h3>
-              <div className="space-y-2">
-                {students.length === 0 && (
-                  <p className="text-xs text-gray-500">No students available.</p>
-                )}
-                {students.map((student) => (
-                  <button
-                    key={student.id}
-                    onClick={() => setSelectedStudentId(student.id)}
-                    className={cn(
-                      "w-full text-left p-3 rounded-lg text-sm transition-all flex items-center gap-2",
-                      selectedStudentId === student.id
-                        ? "border" : "hover:bg-gray-50 text-gray-600"
-                    )}
-                    style={selectedStudentId === student.id ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
-                  >
-                    <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
-                    <span className="font-medium truncate flex-1">{student.full_name}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="md:col-span-3 bg-white rounded-xl border flex flex-col" style={{ borderColor: '#e0e0e0' }}>
-          {chatType === "course" ? (
-            !selectedCourseId ? (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                  <p>Select a course to view messages</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="p-4 border-b" style={{ borderColor: '#e0e0e0' }}>
-                  <p className="font-semibold text-gray-800">
-                    {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
-                  </p>
-                </div>
-
-                <div className="flex-1 p-4 overflow-y-auto space-y-3">
-                  {loading ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#f7530b' }} />
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      <p>No messages yet.</p>
-                    </div>
-                  ) : (
-                    messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={cn(
-                          "flex items-start gap-3 max-w-[80%]",
-                          msg.user_id === "admin" ? "ml-auto flex-row-reverse" : ""
-                        )}
-                      >
-                        <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
-                        <div className={cn(
-                          "p-3 rounded-lg text-sm",
-                          msg.user_id === "admin"
-                            ? "text-white"
-                            : "bg-gray-100 text-gray-800"
-                        )}
-                        style={msg.user_id === "admin" ? { backgroundColor: '#f7530b' } : {}}
-                        >
-                          <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
-                          <p className="mt-0.5">{msg.message}</p>
-                          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
-                  <input
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                    placeholder="Reply as Admin..."
-                    className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" style={{ borderColor: '#e0e0e0' }}
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim() || sending}
-                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
-                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-                  >
-                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </button>
-                </div>
-              </>
-            )
-          ) : (
-            !selectedStudentId ? (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                  <p>Select a student to message personally</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="p-4 border-b flex items-center gap-3" style={{ borderColor: '#e0e0e0' }}>
-                  <Avatar name={selectedStudent?.full_name || "Student"} size="sm" src={selectedStudent?.avatar_url} />
-                  <div>
-                    <p className="font-semibold text-gray-800">{selectedStudent?.full_name || "Student"}</p>
-                    <p className="text-xs text-gray-500">{selectedStudent?.email}</p>
-                  </div>
-                </div>
-
-                <div className="flex-1 p-4 overflow-y-auto space-y-3">
-                  {loading ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#f7530b' }} />
-                    </div>
-                  ) : personalMessages.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      <p>No messages yet.</p>
-                      <p className="text-xs mt-1">Send a message to this student</p>
-                    </div>
-                  ) : (
-                    personalMessages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={cn(
-                          "flex items-start gap-3 max-w-[80%]",
-                          msg.sender_id === profile?.id ? "ml-auto flex-row-reverse" : ""
-                        )}
-                      >
-                        <Avatar 
-                          name={msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"} 
-                          size="sm" 
-                        />
-                        <div className={cn(
-                          "p-3 rounded-lg text-sm",
-                          msg.sender_id === profile?.id
-                            ? "text-white"
-                            : "bg-gray-100 text-gray-800"
-                        )}
-                        style={msg.sender_id === profile?.id ? { backgroundColor: '#f7530b' } : {}}
-                        >
-                          <p className="text-xs font-medium opacity-70">
-                            {msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"}
-                          </p>
-                          <p className="mt-0.5">{msg.message}</p>
-                          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
-                  <input
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                    placeholder={`Message ${selectedStudent?.full_name || "student"}...`}
-                    className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" style={{ borderColor: '#e0e0e0' }}
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim() || sending}
-                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
-                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-                  >
-                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </button>
-                </div>
-              </>
-            )
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Student Module Viewer ──────────────────────────────────────────────────
 
 function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
@@ -4673,149 +4450,6 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
               </Card>
             )}
           </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Student Assignments ──────────────────────────────────────────────────────
-
-function StudentAssignments({ profile }: { profile: Profile }) {
-  const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
-
-  useEffect(() => {
-    fetchAssignments();
-    
-    const subscription = supabase
-      .channel("student-assignments")
-      .on("postgres_changes", { event: "*", schema: "public", table: "student_assignments", filter: `student_id=eq.${profile.id}` }, 
-        () => fetchAssignments())
-      .subscribe();
-
-    return () => { subscription.unsubscribe(); };
-  }, [profile.id]);
-
-  const fetchAssignments = async () => {
-    const { data } = await supabase
-      .from("student_assignments")
-      .select("*, assignment:assignment_id(*)")
-      .eq("student_id", profile.id);
-    if (data) setAssignments(data as StudentAssignment[]);
-  };
-
-  const handleSubmitAssignment = async (assignmentId: string, file: File) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${profile.id}-${assignmentId}-${Date.now()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage
-      .from("assignments")
-      .upload(fileName, file);
-    
-    if (uploadError) {
-      toast({
-        type: "error",
-        title: "Upload Failed",
-        message: "Failed to upload assignment. Please try again.",
-      });
-      return;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from("assignments")
-      .getPublicUrl(fileName);
-
-    const { error } = await supabase
-      .from("student_assignments")
-      .update({ status: "submitted", submission_url: publicUrl, submitted_at: new Date().toISOString() })
-      .eq("id", assignmentId);
-    
-    if (error) {
-      toast({
-        type: "error",
-        title: "Submission Failed",
-        message: "Failed to submit assignment. Please try again.",
-      });
-      return;
-    }
-    
-    toast({
-      type: "success",
-      title: "Assignment Submitted!",
-      message: "Your assignment has been submitted successfully.",
-    });
-    
-    fetchAssignments();
-  };
-
-  return (
-    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-          Assignments
-        </h1>
-        <p className="text-gray-500 mt-1 text-sm md:text-base">Your assigned work from all enrolled courses.</p>
-      </div>
-      <div className="space-y-4">
-        {assignments.map((sa) => (
-          <Card key={sa.id} className="p-4 md:p-6">
-            <div className="flex flex-col sm:flex-row items-start gap-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#fdddce' }}>
-                <FileText className="w-5 h-5" style={{ color: '#f7530b' }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <h3 className="font-semibold text-gray-800 text-sm md:text-base">{sa.assignment?.title}</h3>
-                  <StatusBadge status={sa.status} />
-                </div>
-                <p className="text-sm text-gray-500 mt-1 leading-relaxed">{sa.assignment?.description}</p>
-                <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500">
-                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Assigned: {formatDate(sa.assigned_at)}</span>
-                  {sa.submitted_at && <span>Submitted: {formatDate(sa.submitted_at)}</span>}
-                  <span>Max score: {sa.assignment?.max_score}</span>
-                </div>
-                {sa.status === "graded" && (
-                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm font-semibold text-green-800">Score: {sa.score}/{sa.assignment?.max_score}</p>
-                    <p className="text-sm text-green-700 mt-0.5">{sa.feedback}</p>
-                  </div>
-                )}
-                {sa.status === "pending" && (
-                  <div className="mt-4">
-                    <div 
-                      className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-orange-400 transition-colors" style={{ borderColor: '#e0e0e0' }}
-                      onClick={() => document.getElementById(`assignment-${sa.id}`)?.click()}
-                    >
-                      <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1.5" />
-                      <p className="text-xs font-medium text-gray-700">Click to upload your submission</p>
-                      <p className="text-xs text-gray-500">PDF, DOCX, ZIP</p>
-                    </div>
-                    <input
-                      id={`assignment-${sa.id}`}
-                      type="file"
-                      className="hidden"
-                      accept=".pdf,.docx,.zip"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) {
-                          handleSubmitAssignment(sa.id, e.target.files[0]);
-                        }
-                      }}
-                    />
-                  </div>
-                )}
-                {sa.status === "submitted" && (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">⏳ Assignment submitted, awaiting grading...</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-        {assignments.length === 0 && (
-          <Card className="p-8 text-center">
-            <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No assignments yet.</p>
-          </Card>
         )}
       </div>
     </div>
@@ -7006,6 +6640,581 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
   );
 }
 
+// ─── Admin Chat ────────────────────────────────────────────────────────────
+
+function AdminChat({ courses, students }: { courses: Course[]; students: Profile[] }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [personalMessages, setPersonalMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [chatType, setChatType] = useState<"course" | "personal">("course");
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    const getProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        setProfile(data);
+      }
+    };
+    getProfile();
+  }, []);
+
+  useEffect(() => {
+    if (selectedCourseId && chatType === "course") {
+      fetchMessages();
+      
+      const subscription = supabase
+        .channel(`admin-chat-${selectedCourseId}`)
+        .on("postgres_changes", 
+          { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
+          () => fetchMessages()
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [selectedCourseId, chatType]);
+
+  useEffect(() => {
+    if (selectedStudentId && chatType === "personal" && profile?.id) {
+      fetchPersonalMessages();
+      
+      const subscription = supabase
+        .channel(`personal-chat-${selectedStudentId}`)
+        .on("postgres_changes", 
+          { event: "INSERT", schema: "public", table: "personal_messages", 
+            filter: `sender_id=eq.${selectedStudentId},receiver_id=eq.${profile.id}` },
+          () => fetchPersonalMessages()
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [selectedStudentId, chatType, profile?.id]);
+
+  const fetchMessages = async () => {
+    if (!selectedCourseId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("course_id", selectedCourseId)
+      .order("created_at", { ascending: true });
+    if (data) setMessages(data as ChatMessage[]);
+    setLoading(false);
+  };
+
+  const fetchPersonalMessages = async () => {
+    if (!selectedStudentId || !profile?.id) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("personal_messages")
+      .select("*")
+      .or(`and(sender_id.eq.${selectedStudentId},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${selectedStudentId})`)
+      .order("created_at", { ascending: true });
+    if (data) {
+      setPersonalMessages(data);
+      await supabase
+        .from("personal_messages")
+        .update({ read: true })
+        .eq('receiver_id', profile.id)
+        .eq('sender_id', selectedStudentId);
+    }
+    setLoading(false);
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || sending) return;
+    setSending(true);
+    
+    if (chatType === "course" && selectedCourseId) {
+      const adminName = "Admin";
+      const { error } = await supabase.from("chat_messages").insert({
+        course_id: selectedCourseId,
+        user_id: "admin",
+        user_name: adminName,
+        user_avatar: null,
+        message: newMessage.trim(),
+      });
+      if (!error) {
+        setNewMessage("");
+        fetchMessages();
+      }
+    } else if (chatType === "personal" && selectedStudentId && profile?.id) {
+      const { error } = await supabase.from("personal_messages").insert({
+        sender_id: profile.id,
+        receiver_id: selectedStudentId,
+        message: newMessage.trim(),
+      });
+      if (!error) {
+        setNewMessage("");
+        fetchPersonalMessages();
+        toast({
+          type: "success",
+          title: "Message Sent",
+          message: "Your message has been sent to the student.",
+        });
+      }
+    }
+    setSending(false);
+  };
+
+  const selectedStudent = students.find(s => s.id === selectedStudentId);
+
+  return (
+    <div className="p-4 md:p-8 max-w-6xl mx-auto h-[calc(100vh-100px)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+          Chat Management
+        </h1>
+        <p className="text-gray-500 mt-1 text-sm md:text-base">Monitor course discussions and message students personally.</p>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => { setChatType("course"); setSelectedStudentId(null); }}
+          className={cn(
+            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            chatType === "course" ? "text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+          )}
+          style={chatType === "course" ? { backgroundColor: '#f7530b' } : {}}
+        >
+          Course Chat
+        </button>
+        <button
+          onClick={() => { setChatType("personal"); setSelectedCourseId(null); }}
+          className={cn(
+            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            chatType === "personal" ? "text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+          )}
+          style={chatType === "personal" ? { backgroundColor: '#f7530b' } : {}}
+        >
+          Personal Messages
+        </button>
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-6 h-[calc(100%-120px)]">
+        <div className="md:col-span-1 bg-white rounded-xl border p-4 overflow-y-auto" style={{ borderColor: '#e0e0e0' }}>
+          {chatType === "course" ? (
+            <>
+              <h3 className="font-semibold text-gray-800 text-sm mb-3">Courses</h3>
+              <div className="space-y-2">
+                {courses.length === 0 && (
+                  <p className="text-xs text-gray-500">No courses available.</p>
+                )}
+                {courses.map((course) => (
+                  <button
+                    key={course.id}
+                    onClick={() => setSelectedCourseId(course.id)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-lg text-sm transition-all",
+                      selectedCourseId === course.id
+                        ? "border" : "hover:bg-gray-50 text-gray-600"
+                    )}
+                    style={selectedCourseId === course.id ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
+                  >
+                    <p className="font-medium truncate">{course.title}</p>
+                    <p className="text-xs text-gray-500">Click to view chat</p>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className="font-semibold text-gray-800 text-sm mb-3">Students</h3>
+              <div className="space-y-2">
+                {students.length === 0 && (
+                  <p className="text-xs text-gray-500">No students available.</p>
+                )}
+                {students.map((student) => (
+                  <button
+                    key={student.id}
+                    onClick={() => setSelectedStudentId(student.id)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-lg text-sm transition-all flex items-center gap-2",
+                      selectedStudentId === student.id
+                        ? "border" : "hover:bg-gray-50 text-gray-600"
+                    )}
+                    style={selectedStudentId === student.id ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
+                  >
+                    <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
+                    <span className="font-medium truncate flex-1">{student.full_name}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="md:col-span-3 bg-white rounded-xl border flex flex-col" style={{ borderColor: '#e0e0e0' }}>
+          {chatType === "course" ? (
+            !selectedCourseId ? (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                  <p>Select a course to view messages</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="p-4 border-b" style={{ borderColor: '#e0e0e0' }}>
+                  <p className="font-semibold text-gray-800">
+                    {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
+                  </p>
+                </div>
+
+                <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#f7530b' }} />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">
+                      <p>No messages yet.</p>
+                    </div>
+                  ) : (
+                    messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "flex items-start gap-3 max-w-[80%]",
+                          msg.user_id === "admin" ? "ml-auto flex-row-reverse" : ""
+                        )}
+                      >
+                        <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
+                        <div className={cn(
+                          "p-3 rounded-lg text-sm",
+                          msg.user_id === "admin"
+                            ? "text-white"
+                            : "bg-gray-100 text-gray-800"
+                        )}
+                        style={msg.user_id === "admin" ? { backgroundColor: '#f7530b' } : {}}
+                        >
+                          <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
+                          <p className="mt-0.5">{msg.message}</p>
+                          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
+                  <input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                    placeholder="Reply as Admin..."
+                    className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" style={{ borderColor: '#e0e0e0' }}
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim() || sending}
+                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                  >
+                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              </>
+            )
+          ) : (
+            !selectedStudentId ? (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                  <p>Select a student to message personally</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="p-4 border-b flex items-center gap-3" style={{ borderColor: '#e0e0e0' }}>
+                  <Avatar name={selectedStudent?.full_name || "Student"} size="sm" src={selectedStudent?.avatar_url} />
+                  <div>
+                    <p className="font-semibold text-gray-800">{selectedStudent?.full_name || "Student"}</p>
+                    <p className="text-xs text-gray-500">{selectedStudent?.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#f7530b' }} />
+                    </div>
+                  ) : personalMessages.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">
+                      <p>No messages yet.</p>
+                      <p className="text-xs mt-1">Send a message to this student</p>
+                    </div>
+                  ) : (
+                    personalMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "flex items-start gap-3 max-w-[80%]",
+                          msg.sender_id === profile?.id ? "ml-auto flex-row-reverse" : ""
+                        )}
+                      >
+                        <Avatar 
+                          name={msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"} 
+                          size="sm" 
+                        />
+                        <div className={cn(
+                          "p-3 rounded-lg text-sm",
+                          msg.sender_id === profile?.id
+                            ? "text-white"
+                            : "bg-gray-100 text-gray-800"
+                        )}
+                        style={msg.sender_id === profile?.id ? { backgroundColor: '#f7530b' } : {}}
+                        >
+                          <p className="text-xs font-medium opacity-70">
+                            {msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"}
+                          </p>
+                          <p className="mt-0.5">{msg.message}</p>
+                          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
+                  <input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                    placeholder={`Message ${selectedStudent?.full_name || "student"}...`}
+                    className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" style={{ borderColor: '#e0e0e0' }}
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim() || sending}
+                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                  >
+                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              </>
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Admin Scholarship ─────────────────────────────────────────────────────
+
+function AdminScholarship() {
+  const [applications, setApplications] = useState<Scholarship[]>([]);
+  const [selectedApp, setSelectedApp] = useState<Scholarship | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchApplications();
+    
+    const subscription = supabase
+      .channel("admin-scholarships")
+      .on("postgres_changes", { event: "*", schema: "public", table: "scholarships" }, () => fetchApplications())
+      .subscribe();
+
+    return () => { subscription.unsubscribe(); };
+  }, []);
+
+  const fetchApplications = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("scholarships")
+      .select("*")
+      .order("submitted_at", { ascending: false });
+    if (data) setApplications(data as Scholarship[]);
+    setLoading(false);
+  };
+
+  const handleAction = async (id: string, action: "approved" | "rejected") => {
+    const { error } = await supabase
+      .from("scholarships")
+      .update({ 
+        status: action, 
+        reviewed_at: new Date().toISOString(),
+        admin_notes: adminNotes || null
+      })
+      .eq("id", id);
+
+    if (!error) {
+      toast({
+        type: "success",
+        title: `Application ${action}`,
+        message: `Scholarship application has been ${action}.`,
+      });
+      setSelectedApp(null);
+      setAdminNotes("");
+      fetchApplications();
+    } else {
+      toast({
+        type: "error",
+        title: "Action Failed",
+        message: "Failed to update application. Please try again.",
+      });
+    }
+  };
+
+  const pendingCount = applications.filter(a => a.status === "pending").length;
+
+  return (
+    <div className="p-4 md:p-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+            Scholarship Applications
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm md:text-base">Review and manage student scholarship applications.</p>
+        </div>
+        {pendingCount > 0 && (
+          <Badge variant="warning">{pendingCount} Pending</Badge>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <StatCard icon={Clock} label="Pending" value={pendingCount} />
+        <StatCard icon={CheckCircle} label="Approved" value={applications.filter(a => a.status === "approved").length} />
+        <StatCard icon={XCircle} label="Rejected" value={applications.filter(a => a.status === "rejected").length} />
+      </div>
+
+      <div className="space-y-4">
+        {applications.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Gift className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No scholarship applications yet.</p>
+          </Card>
+        ) : (
+          applications.map((app) => (
+            <Card key={app.id} className="p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={app.full_name} size="sm" />
+                    <div>
+                      <p className="font-semibold text-gray-800">{app.full_name}</p>
+                      <p className="text-xs text-gray-500">{app.email}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm mt-2"><span className="font-medium">Course:</span> {app.course_title}</p>
+                  <p className="text-sm text-gray-500 mt-1">{app.reason}</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Submitted: {formatDate(app.submitted_at)}
+                  </p>
+                  {app.admin_notes && (
+                    <div className="mt-2 p-2 bg-gray-100 rounded-lg text-xs text-gray-500">
+                      Admin note: {app.admin_notes}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-xs font-medium border",
+                    app.status === "approved" ? "text-green-600 bg-green-50 border-green-200" :
+                    app.status === "rejected" ? "text-red-600 bg-red-50 border-red-200" :
+                    "text-amber-600 bg-amber-50 border-amber-200"
+                  )}>
+                    {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                  </span>
+                  {app.status === "pending" && (
+                    <button
+                      onClick={() => setSelectedApp(app)}
+                      className="px-3 py-1.5 text-xs rounded-lg hover:opacity-90 transition-colors"
+                      style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                    >
+                      Review
+                    </button>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <Modal open={!!selectedApp} onClose={() => setSelectedApp(null)} title="Review Scholarship Application">
+        {selectedApp && (
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-100 rounded-lg space-y-2">
+              <div className="flex items-center gap-3">
+                <Avatar name={selectedApp.full_name} size="md" />
+                <div>
+                  <p className="font-semibold text-gray-800">{selectedApp.full_name}</p>
+                  <p className="text-xs text-gray-500">{selectedApp.email}</p>
+                </div>
+              </div>
+              <p className="text-sm"><span className="font-medium">Course:</span> {selectedApp.course_title}</p>
+              <p className="text-sm"><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedApp.phone)}</p>
+              <div className="p-3 bg-white rounded-lg border" style={{ borderColor: '#e0e0e0' }}>
+                <p className="text-sm font-medium mb-1">Reason:</p>
+                <p className="text-sm text-gray-500">{selectedApp.reason}</p>
+              </div>
+            </div>
+
+            <Textarea
+              label="Admin Notes"
+              value={adminNotes}
+              onChange={setAdminNotes}
+              placeholder="Add notes about this application..."
+              rows={3}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  showConfirm({
+                    title: "Reject Application",
+                    message: `Are you sure you want to reject ${selectedApp.full_name}'s scholarship application?`,
+                    confirmLabel: "Reject",
+                    type: "danger",
+                    onConfirm: () => handleAction(selectedApp.id, "rejected"),
+                  });
+                }}
+                className="py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                <XCircle className="w-4 h-4" /> Reject
+              </button>
+              <button
+                onClick={() => {
+                  showConfirm({
+                    title: "Approve Application",
+                    message: `Are you sure you want to approve ${selectedApp.full_name}'s scholarship application?`,
+                    confirmLabel: "Approve",
+                    type: "info",
+                    onConfirm: () => handleAction(selectedApp.id, "approved"),
+                  });
+                }}
+                className="py-2.5 text-white font-semibold rounded-lg hover:opacity-90 transition-colors text-sm flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#f7530b' }}
+              >
+                <CheckCircle className="w-4 h-4" /> Approve
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -7631,7 +7840,7 @@ export default function App() {
     <ToastAndConfirmProvider>
       <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
         <Sidebar profile={profile} currentView={view} onNavigate={setView} onLogout={handleLogout} />
-        <main className="flex-1 overflow-y-auto md:pt-0 pt-16">
+        <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
           {renderView()}
         </main>
         {viewingStudent && (
