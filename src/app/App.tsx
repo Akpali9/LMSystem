@@ -932,9 +932,9 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             </span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-            <a href="#courses" className="hover:text-foreground transition-colors">Courses</a>
-            <a href="#how" className="hover:text-foreground transition-colors">How It Works</a>
-            <a href="#why" className="hover:text-foreground transition-colors">Why Us</a>
+            <a href="#courses" className="hover:text-foreground transition-colors"></a>
+            <a href="#how" className="hover:text-foreground transition-colors"></a>
+            <a href="#why" className="hover:text-foreground transition-colors"></a>
           </div>
           <button
             onClick={onAuth}
