@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import type {
@@ -1635,25 +1636,6 @@ function Sidebar({
     await fetchNotificationCounts();
   };
 
-  // --- ADMIN: MARK CHAT AS VIEWED ---
-  const markAdminChatAsViewed2 = async () => {
-    if (!profile) return;
-    try {
-      const { error } = await supabase
-        .from('personal_messages')
-        .update({ read: true })
-        .eq('receiver_id', profile.id)
-        .eq('read', false);
-      
-      if (!error) {
-        setAdminViewed(prev => new Set(prev).add('admin-chat'));
-        await fetchNotificationCounts();
-      }
-    } catch (error) {
-      console.error('Error marking admin chat as read:', error);
-    }
-  };
-
   // --- ADMIN: Should show notification? ---
   const shouldShowAdminNotification = (key: string, count: number) => {
     if (count <= 0) return false;
@@ -1715,8 +1697,7 @@ function Sidebar({
         .is('viewed_at', null);
       setStudentNewAssignmentsCount(newAssignmentsCount || 0);
 
-      // 2. PENDING PAYMENTS
-      const { count: paymentsCount } = await supabase
+      // 2. PENDING PAYMENTS      const { count: paymentsCount } = await supabase
         .from('payment_receipts')
         .select('id', { count: 'exact', head: true })
         .eq('student_id', profile.id)
@@ -1762,6 +1743,7 @@ function Sidebar({
       }
     }
   };
+  
   // Handle navigation with notification clearing
   const handleNavigate = async (view: View, viewKey: string) => {
     if (profile?.role === 'student') {
@@ -1802,7 +1784,7 @@ function Sidebar({
           await markAdminCourseChatAsViewed();
           break;
         case 'admin-chat':
-          await markAdminChatAsViewed2();
+          await markAdminChatAsViewed();
           break;
         default:
           break;
@@ -2055,8 +2037,6 @@ function Sidebar({
 
 // ─── ADMIN NAVIGATION ────────────────────────────────────────────────────────
 
-// Replace the adminNavItems section with this:
-
 const adminNavItems = [];
 
 adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "admin-dashboard" });
@@ -2099,11 +2079,20 @@ const showAdminCourseChatBadge = shouldShowAdminNotification('admin-course-chat'
 adminNavItems.push({
   view: "admin-chat" as View,
   icon: MessageCircle,
-  label: "Messages",
+  label: "Course Chat",
   key: "admin-course-chat",
   badge: showAdminCourseChatBadge ? adminCourseChatCount : undefined
 });
 
+// --- ADMIN PERSONAL MESSAGES (Student Messages to Admin) ---
+const showAdminPersonalChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
+adminNavItems.push({
+  view: "admin-personal-chat" as View,
+  icon: Mail,
+  label: "Student Messages",
+  key: "admin-chat",
+  badge: showAdminPersonalChatBadge ? adminUnreadMessagesCount : undefined
+});
 
 // --- ADMIN SCHOLARSHIPS ---
 const showScholarshipBadge = shouldShowAdminNotification('admin-scholarship', adminPendingScholarshipsCount);
@@ -2305,6 +2294,7 @@ adminNavItems.push({
     </aside>
   );
 }
+
 // ─── Student Assignments ──────────────────────────────────────────────────────
 
 function StudentAssignments({ profile }: { profile: Profile }) {
