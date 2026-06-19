@@ -6301,18 +6301,13 @@ function AdminPayments() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
- // In AdminPayments component, add this useEffect:
-
-useEffect(() => {
-
-  const markAsViewed = async () => {
-    // For admin, we just refresh the count
-    // You could also mark specific admin notifications as viewed if you have a table
-  };
-  
-  markAsViewed();
-  fetchPayments();
-}, []);
+  useEffect(() => {
+    const markAsViewed = async () => {
+      // For admin, we just refresh the count
+    };
+    
+    markAsViewed();
+    fetchPayments();
     
     const subscription = supabase
       .channel("admin-payments")
@@ -6427,8 +6422,7 @@ useEffect(() => {
   };
 
   const pendingCount = payments.filter(p => p.status === "pending").length;
-
-  return (
+ return (
     <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div>
         <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
@@ -6602,12 +6596,10 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   const [students, setStudents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
 
-
-useEffect(() => {
-  // Mark admin assignments as viewed when the component loads
-  fetchSubmissions();
-  fetchStudents();
-}, []);
+  useEffect(() => {
+    fetchSubmissions();
+    fetchStudents();
+  }, []);
 
   const fetchSubmissions = async () => {
     const { data } = await supabase
@@ -6623,7 +6615,7 @@ useEffect(() => {
     if (data) setStudents(data as Profile[]);
   };
 
-  const handleCreateAssignment = async () => {
+    const handleCreateAssignment = async () => {
     setLoading(true);
     try {
       await onCreateAssignment(newAssignment);
@@ -7563,12 +7555,8 @@ function AdminScholarship() {
   const [adminNotes, setAdminNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
-
-
-useEffect(() => {
-  // Mark admin scholarships as viewed when the component loads
-  fetchApplications();
-}, []);
+  useEffect(() => {
+    fetchApplications();
     
     const subscription = supabase
       .channel("admin-scholarships")
@@ -7617,7 +7605,6 @@ useEffect(() => {
   };
 
   const pendingCount = applications.filter(a => a.status === "pending").length;
-
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
