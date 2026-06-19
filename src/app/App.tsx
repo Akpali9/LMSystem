@@ -1430,20 +1430,21 @@ function Sidebar({
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   
-  // --- NOTIFICATION COUNTS ---
+  // --- STUDENT NOTIFICATION COUNTS ---
   const [studentNewAssignmentsCount, setStudentNewAssignmentsCount] = useState(0);
   const [studentPendingPaymentsCount, setStudentPendingPaymentsCount] = useState(0);
   const [studentPendingScholarshipsCount, setStudentPendingScholarshipsCount] = useState(0);
   const [studentUnreadMessagesCount, setStudentUnreadMessagesCount] = useState(0);
 
+  // --- ADMIN NOTIFICATION COUNTS ---
   const [adminPendingPaymentsCount, setAdminPendingPaymentsCount] = useState(0);
   const [adminPendingAssignmentsCount, setAdminPendingAssignmentsCount] = useState(0);
   const [adminPendingScholarshipsCount, setAdminPendingScholarshipsCount] = useState(0);
   const [adminPendingEnrollmentsCount, setAdminPendingEnrollmentsCount] = useState(0);
   const [adminUnreadMessagesCount, setAdminUnreadMessagesCount] = useState(0);
 
-  // --- TRACK LAST VIEWED TIMESTAMP FOR EACH PAGE ---
-  const [lastViewed, setLastViewed] = useState<Record<string, string>>({});
+  // --- TRACK VIEWED NOTIFICATIONS FOR ADMIN (in-memory cache) ---
+  const [adminViewed, setAdminViewed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const checkMobile = () => {
@@ -1460,6 +1461,136 @@ function Sidebar({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // --- STUDENT: MARK ASSIGNMENTS AS VIEWED ---
+  const markAssignmentsAsViewed = async () => {
+    if (!profile) return;
+    try {
+      const { error } = await supabase
+        .from('student_assignments')
+        .update({ viewed_at: new Date().toISOString() })
+        .eq('student_id', profile.id)
+        .eq('status', 'pending')
+        .is('viewed_at', null);
+      
+      if (!error) {
+        await fetchNotificationCounts();
+      }
+    } catch (error) {
+      console.error('Error marking assignments as viewed:', error);
+    }
+  };
+
+  // --- STUDENT: MARK PAYMENTS AS VIEWED ---
+  const markPaymentsAsViewed = async () => {
+    if (!profile) return;
+    try {
+      const { error } = await supabase
+        .from('payment_receipts')
+        .update({ viewed_at: new Date().toISOString() })
+        .eq('student_id', profile.id)
+        .eq('status', 'pending')
+        .is('viewed_at', null);
+      
+      if (!error) {
+        await fetchNotificationCounts();
+      }
+    } catch (error) {
+      console.error('Error marking payments as viewed:', error);
+    }
+  };
+
+  // --- STUDENT: MARK SCHOLARSHIPS AS VIEWED ---
+  const markScholarshipsAsViewed = async () => {
+    if (!profile) return;
+    try {
+      const { error } = await supabase
+        .from('scholarships')
+        .update({ viewed_at: new Date().toISOString() })
+        .eq('student_id', profile.id)
+        .eq('status', 'pending')
+        .is('viewed_at', null);
+      
+      if (!error) {
+        await fetchNotificationCounts();
+      }
+    } catch (error) {
+      console.error('Error marking scholarships as viewed:', error);
+    }
+  };
+
+  // --- STUDENT: MARK MESSAGES AS READ ---
+  const markMessagesAsRead = async () => {
+    if (!profile) return;
+    try {
+      const { error } = await supabase
+        .from('personal_messages')
+        .update({ read: true })
+        .eq('receiver_id', profile.id)
+        .eq('read', false);
+      
+      if (!error) {
+        await fetchNotificationCounts();
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
+  // --- ADMIN: MARK PAYMENTS AS VIEWED ---
+  const markAdminPaymentsAsViewed = async () => {
+    if (!profile) return;
+    // For admin, we use in-memory tracking
+    setAdminViewed(prev => new Set(prev).add('admin-payments'));
+    await fetchNotificationCounts();
+  };
+
+  // --- ADMIN: MARK ASSIGNMENTS AS VIEWED ---
+  const markAdminAssignmentsAsViewed = async () => {
+    if (!profile) return;
+    setAdminViewed(prev => new Set(prev).add('admin-assignments'));
+    await fetchNotificationCounts();
+  };
+
+  // --- ADMIN: MARK SCHOLARSHIPS AS VIEWED ---
+  const markAdminScholarshipsAsViewed = async () => {
+    if (!profile) return;
+    setAdminViewed(prev => new Set(prev).add('admin-scholarship'));
+    await fetchNotificationCounts();
+  };
+
+  // --- ADMIN: MARK ENROLLMENTS AS VIEWED ---
+  const markAdminEnrollmentsAsViewed = async () => {
+    if (!profile) return;
+    setAdminViewed(prev => new Set(prev).add('admin-students'));
+    await fetchNotificationCounts();
+  };
+
+  // --- ADMIN: MARK CHAT AS VIEWED ---
+  const markAdminChatAsViewed = async () => {
+    if (!profile) return;
+    // Mark messages as read
+    try {
+      const { error } = await supabase
+        .from('personal_messages')
+        .update({ read: true })
+        .eq('receiver_id', profile.id)
+        .eq('read', false);
+      
+      if (!error) {
+        setAdminViewed(prev => new Set(prev).add('admin-chat'));
+        await fetchNotificationCounts();
+      }
+    } catch (error) {
+      console.error('Error marking admin chat as read:', error);
+    }
+  };
+
+  // --- ADMIN: Should show notification? ---
+  const shouldShowAdminNotification = (key: string, count: number) => {
+    if (count <= 0) return false;
+    return !adminViewed.has(key);
+  };
 
   const fetchNotificationCounts = async () => {
     if (!profile) return;
@@ -1500,34 +1631,34 @@ function Sidebar({
     } else if (profile.role === 'student') {
       // --- STUDENT NOTIFICATIONS ---
       
-      // 1. NEW ASSIGNMENTS - Only count assignments created AFTER last view
-      const lastViewTime = lastViewed['student-assignments'] || new Date(0).toISOString();
-      
+      // 1. NEW ASSIGNMENTS - Only count assignments that haven't been viewed
       const { count: newAssignmentsCount } = await supabase
         .from('student_assignments')
         .select('id', { count: 'exact', head: true })
         .eq('student_id', profile.id)
         .eq('status', 'pending')
-        .gte('assigned_at', lastViewTime);
+        .is('viewed_at', null);
       setStudentNewAssignmentsCount(newAssignmentsCount || 0);
 
-      // 2. Pending Payments
+      // 2. PENDING PAYMENTS - Only count payments that haven't been viewed
       const { count: paymentsCount } = await supabase
         .from('payment_receipts')
         .select('id', { count: 'exact', head: true })
         .eq('student_id', profile.id)
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .is('viewed_at', null);
       setStudentPendingPaymentsCount(paymentsCount || 0);
 
-      // 3. Pending Scholarships
+      // 3. PENDING SCHOLARSHIPS - Only count scholarships that haven't been viewed
       const { count: scholarshipsCount } = await supabase
         .from('scholarships')
         .select('id', { count: 'exact', head: true })
         .eq('student_id', profile.id)
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .is('viewed_at', null);
       setStudentPendingScholarshipsCount(scholarshipsCount || 0);
 
-      // 4. Unread Messages
+      // 4. UNREAD MESSAGES
       const { count: messagesCount } = await supabase
         .from('personal_messages')
         .select('id', { count: 'exact', head: true })
@@ -1537,19 +1668,58 @@ function Sidebar({
     }
   };
 
-  // Update last viewed timestamp when navigating to a page
-  const updateLastViewed = (viewKey: string) => {
-    const now = new Date().toISOString();
-    setLastViewed(prev => ({
-      ...prev,
-      [viewKey]: now
-    }));
+  // Handle navigation with notification clearing
+  const handleNavigate = async (view: View, viewKey: string) => {
+    // Clear notifications based on what was clicked
+    if (profile?.role === 'student') {
+      switch (viewKey) {
+        case 'student-assignments':
+          await markAssignmentsAsViewed();
+          break;
+        case 'student-payment':
+          await markPaymentsAsViewed();
+          break;
+        case 'student-personal-messages':
+          await markMessagesAsRead();
+          break;
+        case 'student-scholarship':
+          await markScholarshipsAsViewed();
+          break;
+        default:
+          break;
+      }
+    } else if (profile?.role === 'admin') {
+      switch (viewKey) {
+        case 'admin-payments':
+          await markAdminPaymentsAsViewed();
+          break;
+        case 'admin-assignments':
+          await markAdminAssignmentsAsViewed();
+          break;
+        case 'admin-scholarship':
+          await markAdminScholarshipsAsViewed();
+          break;
+        case 'admin-students':
+          await markAdminEnrollmentsAsViewed();
+          break;
+        case 'admin-chat':
+          await markAdminChatAsViewed();
+          break;
+        default:
+          break;
+      }
+    }
+    
+    onNavigate(view);
+    if (isMobile) {
+      setCollapsed(true);
+    }
   };
 
   useEffect(() => {
     if (!profile) return;
     fetchNotificationCounts();
-  }, [profile?.id, lastViewed]);
+  }, [profile?.id]);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -1560,12 +1730,21 @@ function Sidebar({
     const subscriptions = [];
     
     if (profile.role === 'admin') {
+      // Admin subscriptions - reset viewed state when new data arrives
       subscriptions.push(
         supabase
           .channel('admin-assignments-count')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'student_assignments' },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              // Reset viewed state for assignments when new data arrives
+              setAdminViewed(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-assignments');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1575,7 +1754,14 @@ function Sidebar({
           .channel('admin-payments-count')
           .on('postgres_changes', 
             { event: '*', schema: 'public', table: 'payment_receipts' },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setAdminViewed(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-payments');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1585,7 +1771,14 @@ function Sidebar({
           .channel('admin-scholarships-count')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'scholarships' },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setAdminViewed(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-scholarship');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1595,7 +1788,14 @@ function Sidebar({
           .channel('admin-enrollments-count')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'enrollments' },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setAdminViewed(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-students');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1605,12 +1805,20 @@ function Sidebar({
           .channel('admin-messages-count')
           .on('postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `receiver_id=eq.${profile.id}` },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setAdminViewed(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-chat');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
       
     } else if (profile.role === 'student') {
+      // Student subscriptions - only listen for INSERT events
       subscriptions.push(
         supabase
           .channel('student-assignments-count')
@@ -1625,7 +1833,7 @@ function Sidebar({
         supabase
           .channel('student-payments-count')
           .on('postgres_changes',
-            { event: '*', schema: 'public', table: 'payment_receipts', filter: `student_id=eq.${profile.id}` },
+            { event: 'INSERT', schema: 'public', table: 'payment_receipts', filter: `student_id=eq.${profile.id}` },
             () => fetchNotificationCounts()
           )
           .subscribe()
@@ -1635,7 +1843,7 @@ function Sidebar({
         supabase
           .channel('student-scholarships-count')
           .on('postgres_changes',
-            { event: '*', schema: 'public', table: 'scholarships', filter: `student_id=eq.${profile.id}` },
+            { event: 'INSERT', schema: 'public', table: 'scholarships', filter: `student_id=eq.${profile.id}` },
             () => fetchNotificationCounts()
           )
           .subscribe()
@@ -1661,15 +1869,6 @@ function Sidebar({
     setCollapsed(!collapsed);
   };
 
-  const handleNavigate = (view: View, viewKey: string) => {
-    // Update last viewed timestamp
-    updateLastViewed(viewKey);
-    onNavigate(view);
-    if (isMobile) {
-      setCollapsed(true);
-    }
-  };
-
   if (!profile) {
     return null;
   }
@@ -1681,7 +1880,7 @@ function Sidebar({
   studentNavItems.push({ view: "student-courses" as View, icon: BookOpen, label: "My Courses", key: "student-courses" });
   studentNavItems.push({ view: "student-module" as View, icon: Video, label: "Learning", key: "student-module" });
   
-  // --- ASSIGNMENTS - Only show NEW assignments ---
+  // --- ASSIGNMENTS ---
   studentNavItems.push({ 
     view: "student-assignments" as View, 
     icon: ClipboardList, 
@@ -1690,7 +1889,7 @@ function Sidebar({
     badge: studentNewAssignmentsCount > 0 ? studentNewAssignmentsCount : undefined
   });
   
-  // Payments
+  // --- PAYMENTS ---
   studentNavItems.push({ 
     view: "student-payment" as View, 
     icon: DollarSign, 
@@ -1701,7 +1900,7 @@ function Sidebar({
   
   studentNavItems.push({ view: "student-chat" as View, icon: MessageCircle, label: "Course Chat", key: "student-chat" });
   
-  // Messages
+  // --- MESSAGES ---
   studentNavItems.push({ 
     view: "student-personal-messages" as View, 
     icon: Mail, 
@@ -1710,7 +1909,7 @@ function Sidebar({
     badge: studentUnreadMessagesCount > 0 ? studentUnreadMessagesCount : undefined
   });
   
-  // Scholarship
+  // --- SCHOLARSHIP ---
   studentNavItems.push({ 
     view: "student-scholarship" as View, 
     icon: Gift, 
@@ -1721,57 +1920,62 @@ function Sidebar({
   
   studentNavItems.push({ view: "student-profile" as View, icon: User, label: "My Profile", key: "student-profile" });
 
-  // ADMIN NAVIGATION
+  // ADMIN NAVIGATION - with proper clearing
   const adminNavItems = [];
   
   adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "admin-dashboard" });
   adminNavItems.push({ view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules", key: "admin-courses" });
   
-  // Students
+  // --- ADMIN STUDENTS ---
+  const showStudentsBadge = shouldShowAdminNotification('admin-students', adminPendingEnrollmentsCount);
   adminNavItems.push({ 
     view: "admin-students" as View, 
     icon: Users, 
     label: "Students",
     key: "admin-students",
-    badge: adminPendingEnrollmentsCount > 0 ? adminPendingEnrollmentsCount : undefined
+    badge: showStudentsBadge ? adminPendingEnrollmentsCount : undefined
   });
   
-  // Payments
+  // --- ADMIN PAYMENTS ---
+  const showPaymentsBadge = shouldShowAdminNotification('admin-payments', adminPendingPaymentsCount);
   adminNavItems.push({ 
     view: "admin-payments" as View, 
     icon: DollarSign, 
     label: "Payments",
     key: "admin-payments",
-    badge: adminPendingPaymentsCount > 0 ? adminPendingPaymentsCount : undefined
+    badge: showPaymentsBadge ? adminPendingPaymentsCount : undefined
   });
   
-  // Assignments Admin - shows submitted assignments waiting for grading
+  // --- ADMIN ASSIGNMENTS ---
+  const showAssignmentsBadge = shouldShowAdminNotification('admin-assignments', adminPendingAssignmentsCount);
   adminNavItems.push({ 
     view: "admin-assignments" as View, 
     icon: ClipboardList, 
     label: "Assignments",
     key: "admin-assignments",
-    badge: adminPendingAssignmentsCount > 0 ? adminPendingAssignmentsCount : undefined
+    badge: showAssignmentsBadge ? adminPendingAssignmentsCount : undefined
   });
   
   adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", key: "admin-quizzes" });
   
-  // Chat
+  // --- ADMIN CHAT ---
+  const showChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
   adminNavItems.push({ 
     view: "admin-chat" as View, 
     icon: MessageCircle, 
     label: "Chat",
     key: "admin-chat",
-    badge: adminUnreadMessagesCount > 0 ? adminUnreadMessagesCount : undefined
+    badge: showChatBadge ? adminUnreadMessagesCount : undefined
   });
   
-  // Scholarships
+  // --- ADMIN SCHOLARSHIPS ---
+  const showScholarshipBadge = shouldShowAdminNotification('admin-scholarship', adminPendingScholarshipsCount);
   adminNavItems.push({ 
     view: "admin-scholarship" as View, 
     icon: Gift, 
     label: "Scholarships",
     key: "admin-scholarship",
-    badge: adminPendingScholarshipsCount > 0 ? adminPendingScholarshipsCount : undefined
+    badge: showScholarshipBadge ? adminPendingScholarshipsCount : undefined
   });
 
   const nav = profile.role === "admin" ? adminNavItems : studentNavItems;
@@ -1972,19 +2176,30 @@ function StudentAssignments({ profile }: { profile: Profile }) {
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    fetchAssignments();
+useEffect(() => {
+  const markAsViewed = async () => {
+    if (!profile) return;
     
-    const subscription = supabase
-      .channel("student-assignments")
-      .on("postgres_changes", 
-        { event: "*", schema: "public", table: "student_assignments", filter: `student_id=eq.${profile.id}` }, 
-        () => fetchAssignments()
-      )
-      .subscribe();
-
-    return () => { subscription.unsubscribe(); };
-  }, [profile.id]);
+    try {
+      const { error } = await supabase
+        .from('student_assignments')
+        .update({ viewed_at: new Date().toISOString() })
+        .eq('student_id', profile.id)
+        .eq('status', 'pending')
+        .is('viewed_at', null);
+      
+      if (error) {
+        console.error('Error marking assignments as viewed:', error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+  
+  markAsViewed();
+  fetchAssignments();
+}, [profile.id]);
+  
 
   const fetchAssignments = async () => {
     try {
@@ -3407,22 +3622,30 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    if (profile) {
-      fetchMessages();
-      
-      const subscription = supabase
-        .channel('student-personal')
-        .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `receiver_id=eq.${profile.id}` },
-          () => fetchMessages()
-        )
-        .subscribe();
-
-      return () => subscription.unsubscribe();
-    }
-  }, [profile?.id]);
-
+useEffect(() => {
+  if (profile) {
+    // Mark messages as read when the component loads
+    const markAsRead = async () => {
+      try {
+        const { error } = await supabase
+          .from('personal_messages')
+          .update({ read: true })
+          .eq('receiver_id', profile.id)
+          .eq('read', false);
+        
+        if (error) {
+          console.error('Error marking messages as read:', error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+    
+    markAsRead();
+    fetchMessages();
+  }
+}, [profile?.id]);
+  
   const fetchMessages = async () => {
     if (!profile) return;
     setLoading(true);
@@ -3572,9 +3795,31 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchApplications();
-  }, [profile.id]);
+
+useEffect(() => {
+  // Mark scholarships as viewed when the component loads
+  const markAsViewed = async () => {
+    if (!profile) return;
+    
+    try {
+      const { error } = await supabase
+        .from('scholarships')
+        .update({ viewed_at: new Date().toISOString() })
+        .eq('student_id', profile.id)
+        .eq('status', 'pending')
+        .is('viewed_at', null);
+      
+      if (error) {
+        console.error('Error marking scholarships as viewed:', error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+  
+  markAsViewed();
+  fetchApplications();
+}, [profile.id]);
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -4733,28 +4978,34 @@ function StudentPayments({ profile }: { profile: Profile }) {
   const [error, setError] = useState<string | null>(null);
   const [pendingEnrollments, setPendingEnrollments] = useState<Enrollment[]>([]);
 
-  useEffect(() => {
-    fetchPayments();
-    fetchPendingEnrollments();
+// In StudentPayments component, add:
+
+useEffect(() => {
+  // Mark payments as viewed when the component loads
+  const markAsViewed = async () => {
+    if (!profile) return;
     
-    const subscription = supabase
-      .channel("student-payments")
-      .on("postgres_changes", 
-        { 
-          event: "*", 
-          schema: "public", 
-          table: "payment_receipts", 
-          filter: `student_id=eq.${profile.id}` 
-        }, 
-        () => fetchPayments()
-      )
-      .subscribe();
-
-    return () => { 
-      subscription.unsubscribe(); 
-    };
-  }, [profile.id]);
-
+    try {
+      const { error } = await supabase
+        .from('payment_receipts')
+        .update({ viewed_at: new Date().toISOString() })
+        .eq('student_id', profile.id)
+        .eq('status', 'pending')
+        .is('viewed_at', null);
+      
+      if (error) {
+        console.error('Error marking payments as viewed:', error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+  
+  markAsViewed();
+  fetchPayments();
+  fetchPendingEnrollments();
+}, [profile.id]);
+  
   const fetchPayments = async () => {
     setLoading(true);
     setError(null);
@@ -6050,8 +6301,18 @@ function AdminPayments() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchPayments();
+ // In AdminPayments component, add this useEffect:
+
+useEffect(() => {
+
+  const markAsViewed = async () => {
+    // For admin, we just refresh the count
+    // You could also mark specific admin notifications as viewed if you have a table
+  };
+  
+  markAsViewed();
+  fetchPayments();
+}, []);
     
     const subscription = supabase
       .channel("admin-payments")
@@ -6341,10 +6602,12 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   const [students, setStudents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchSubmissions();
-    fetchStudents();
-  }, []);
+
+useEffect(() => {
+  // Mark admin assignments as viewed when the component loads
+  fetchSubmissions();
+  fetchStudents();
+}, []);
 
   const fetchSubmissions = async () => {
     const { data } = await supabase
@@ -6921,20 +7184,27 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
   const [sending, setSending] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
 
-  useEffect(() => {
-    const getProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        setProfile(data);
+useEffect(() => {
+  // Mark admin chat as viewed when the component loads
+  const markChatAsViewed = async () => {
+    if (!profile) return;
+    try {
+      const { error } = await supabase
+        .from('personal_messages')
+        .update({ read: true })
+        .eq('receiver_id', profile.id)
+        .eq('read', false);
+      
+      if (error) {
+        console.error('Error marking chat as viewed:', error);
       }
-    };
-    getProfile();
-  }, []);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+  
+  markChatAsViewed();
+}, [profile?.id]);
 
   useEffect(() => {
     if (selectedCourseId && chatType === "course") {
@@ -7293,8 +7563,12 @@ function AdminScholarship() {
   const [adminNotes, setAdminNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchApplications();
+
+
+useEffect(() => {
+  // Mark admin scholarships as viewed when the component loads
+  fetchApplications();
+}, []);
     
     const subscription = supabase
       .channel("admin-scholarships")
