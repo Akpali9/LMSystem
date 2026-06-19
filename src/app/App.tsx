@@ -1559,6 +1559,7 @@ function Sidebar({
     const subscriptions = [];
     
     if (profile.role === 'admin') {
+      // Admin subscriptions
       subscriptions.push(
         supabase
           .channel('admin-assignments-count')
@@ -1646,6 +1647,7 @@ function Sidebar({
       );
       
     } else if (profile.role === 'student') {
+      // Student subscriptions
       subscriptions.push(
         supabase
           .channel('student-assignments-count')
@@ -1740,10 +1742,12 @@ function Sidebar({
   // --- BUILD NAVIGATION ITEMS ---
   const studentNavItems = [];
   
+  // Dashboard - no badge
   studentNavItems.push({ view: "student-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "student-dashboard" });
   studentNavItems.push({ view: "student-courses" as View, icon: BookOpen, label: "My Courses", key: "student-courses" });
   studentNavItems.push({ view: "student-module" as View, icon: Video, label: "Learning", key: "student-module" });
   
+  // --- ASSIGNMENTS - with clear notification ---
   const assignmentsCount = studentPendingAssignmentsCount + studentGradedAssignmentsCount;
   const showAssignmentsBadge = shouldShowNotification('student-assignments', assignmentsCount);
   studentNavItems.push({ 
@@ -1751,9 +1755,12 @@ function Sidebar({
     icon: ClipboardList, 
     label: "Assignments",
     key: "student-assignments",
-    badge: showAssignmentsBadge ? assignmentsCount : undefined
+    badge: showAssignmentsBadge ? assignmentsCount : undefined,
+    // Add a special flag to mark this as clearable
+    clearable: true
   });
   
+  // Payments
   const showPaymentsBadge = shouldShowNotification('student-payment', studentPendingPaymentsCount);
   studentNavItems.push({ 
     view: "student-payment" as View, 
@@ -1765,6 +1772,7 @@ function Sidebar({
   
   studentNavItems.push({ view: "student-chat" as View, icon: MessageCircle, label: "Course Chat", key: "student-chat" });
   
+  // Messages
   const showMessagesBadge = shouldShowNotification('student-personal-messages', studentUnreadMessagesCount);
   studentNavItems.push({ 
     view: "student-personal-messages" as View, 
@@ -1774,6 +1782,7 @@ function Sidebar({
     badge: showMessagesBadge ? studentUnreadMessagesCount : undefined
   });
   
+  // Scholarship
   const showScholarshipBadge = shouldShowNotification('student-scholarship', studentPendingScholarshipsCount);
   studentNavItems.push({ 
     view: "student-scholarship" as View, 
@@ -1785,11 +1794,13 @@ function Sidebar({
   
   studentNavItems.push({ view: "student-profile" as View, icon: User, label: "My Profile", key: "student-profile" });
 
+  // ADMIN NAVIGATION
   const adminNavItems = [];
   
   adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "admin-dashboard" });
   adminNavItems.push({ view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules", key: "admin-courses" });
   
+  // Students
   const showStudentsBadge = shouldShowNotification('admin-students', adminPendingEnrollmentsCount);
   adminNavItems.push({ 
     view: "admin-students" as View, 
@@ -1799,6 +1810,7 @@ function Sidebar({
     badge: showStudentsBadge ? adminPendingEnrollmentsCount : undefined
   });
   
+  // Payments
   const showAdminPaymentsBadge = shouldShowNotification('admin-payments', adminPendingPaymentsCount);
   adminNavItems.push({ 
     view: "admin-payments" as View, 
@@ -1808,17 +1820,20 @@ function Sidebar({
     badge: showAdminPaymentsBadge ? adminPendingPaymentsCount : undefined
   });
   
+  // --- ASSIGNMENTS ADMIN - with clear notification ---
   const showAdminAssignmentsBadge = shouldShowNotification('admin-assignments', adminPendingAssignmentsCount);
   adminNavItems.push({ 
     view: "admin-assignments" as View, 
     icon: ClipboardList, 
     label: "Assignments",
     key: "admin-assignments",
-    badge: showAdminAssignmentsBadge ? adminPendingAssignmentsCount : undefined
+    badge: showAdminAssignmentsBadge ? adminPendingAssignmentsCount : undefined,
+    clearable: true
   });
   
   adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", key: "admin-quizzes" });
   
+  // Chat
   const showAdminChatBadge = shouldShowNotification('admin-chat', adminUnreadMessagesCount);
   adminNavItems.push({ 
     view: "admin-chat" as View, 
@@ -1828,6 +1843,7 @@ function Sidebar({
     badge: showAdminChatBadge ? adminUnreadMessagesCount : undefined
   });
   
+  // Scholarships
   const showAdminScholarshipBadge = shouldShowNotification('admin-scholarship', adminPendingScholarshipsCount);
   adminNavItems.push({ 
     view: "admin-scholarship" as View, 
@@ -1885,7 +1901,13 @@ function Sidebar({
             {nav.map((item) => (
               <button
                 key={item.view}
-                onClick={() => handleNavigate(item.view, item.key)}
+                onClick={() => {
+                  // Clear the notification when clicked
+                  if (item.key) {
+                    clearNotification(item.key);
+                  }
+                  handleNavigate(item.view, item.key);
+                }}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all",
                   currentView === item.view
@@ -1956,7 +1978,13 @@ function Sidebar({
         {nav.map((item) => (
           <button
             key={item.view}
-            onClick={() => handleNavigate(item.view, item.key)}
+            onClick={() => {
+              // Clear the notification when clicked
+              if (item.key) {
+                clearNotification(item.key);
+              }
+              handleNavigate(item.view, item.key);
+            }}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
               currentView === item.view
@@ -2027,7 +2055,6 @@ function Sidebar({
     </aside>
   );
 }
-
 // ─── Student Assignments ──────────────────────────────────────────────────────
 
 function StudentAssignments({ profile }: { profile: Profile }) {
