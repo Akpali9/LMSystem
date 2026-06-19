@@ -2104,15 +2104,6 @@ adminNavItems.push({
   badge: showAdminCourseChatBadge ? adminCourseChatCount : undefined
 });
 
-// --- ADMIN PERSONAL MESSAGES (Student Messages to Admin) ---
-const showAdminPersonalChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
-adminNavItems.push({
-  view: "admin-chat" as View,
-  icon: Mail,
-  label: "Student Messages",
-  key: "admin-chat",
-  badge: showAdminPersonalChatBadge ? adminUnreadMessagesCount : undefined
-});
 
 // --- ADMIN SCHOLARSHIPS ---
 const showScholarshipBadge = shouldShowAdminNotification('admin-scholarship', adminPendingScholarshipsCount);
