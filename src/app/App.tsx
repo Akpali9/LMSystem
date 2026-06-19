@@ -2099,7 +2099,7 @@ const showAdminCourseChatBadge = shouldShowAdminNotification('admin-course-chat'
 adminNavItems.push({
   view: "admin-chat" as View,
   icon: MessageCircle,
-  label: "Course Chat",
+  label: "Messages",
   key: "admin-course-chat",
   badge: showAdminCourseChatBadge ? adminCourseChatCount : undefined
 });
