@@ -1662,7 +1662,7 @@ const markAdminChatAsViewed = async () => {
     return !adminViewed.has(key);
   };
 
- const fetchNotificationCounts = async () => {
+const fetchNotificationCounts = async () => {
   if (!profile) return;
 
   if (profile.role === 'admin') {
