@@ -1444,6 +1444,9 @@ function Sidebar({
   const [adminPendingEnrollmentsCount, setAdminPendingEnrollmentsCount] = useState(0);
   const [adminUnreadMessagesCount, setAdminUnreadMessagesCount] = useState(0);
 
+  // --- TRACK WHICH NOTIFICATIONS HAVE BEEN VIEWED ---
+  const [viewedNotifications, setViewedNotifications] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
@@ -1550,10 +1553,28 @@ function Sidebar({
     }
   };
 
-  // Fetch personal messages unread count
+  // Clear notification for a specific view
+  const clearNotification = (view: string) => {
+    setViewedNotifications(prev => new Set(prev).add(view));
+  };
+
+  // Check if notification should be shown (not viewed AND count > 0)
+  const shouldShowNotification = (view: string, count: number) => {
+    if (count <= 0) return false;
+    return !viewedNotifications.has(view);
+  };
+
+  // Fetch notifications on mount and when profile changes
+  useEffect(() => {
+    if (!profile) return;
+    fetchNotificationCounts();
+  }, [profile?.id]);
+
+  // Real-time subscriptions
   useEffect(() => {
     if (!profile) return;
     
+    // Initial fetch
     fetchNotificationCounts();
     
     // Real-time subscriptions for all relevant tables
@@ -1566,7 +1587,15 @@ function Sidebar({
           .channel('admin-payments-count')
           .on('postgres_changes', 
             { event: '*', schema: 'public', table: 'payment_receipts' },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              // When new payment comes in, reset the viewed state for payments
+              setViewedNotifications(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-payments');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1576,7 +1605,15 @@ function Sidebar({
           .channel('admin-assignments-count')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'student_assignments' },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              // When new assignment comes in, reset the viewed state for assignments
+              setViewedNotifications(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-assignments');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1586,7 +1623,14 @@ function Sidebar({
           .channel('admin-scholarships-count')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'scholarships' },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setViewedNotifications(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-scholarship');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1596,7 +1640,14 @@ function Sidebar({
           .channel('admin-enrollments-count')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'enrollments' },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setViewedNotifications(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-students');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1606,7 +1657,14 @@ function Sidebar({
           .channel('admin-messages-count')
           .on('postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `receiver_id=eq.${profile.id}` },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setViewedNotifications(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-chat');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1618,7 +1676,14 @@ function Sidebar({
           .channel('student-payments-count')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'payment_receipts', filter: `student_id=eq.${profile.id}` },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setViewedNotifications(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('student-payment');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1628,7 +1693,14 @@ function Sidebar({
           .channel('student-assignments-count')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'student_assignments', filter: `student_id=eq.${profile.id}` },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setViewedNotifications(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('student-assignments');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1638,7 +1710,14 @@ function Sidebar({
           .channel('student-scholarships-count')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'scholarships', filter: `student_id=eq.${profile.id}` },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setViewedNotifications(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('student-scholarship');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1648,7 +1727,14 @@ function Sidebar({
           .channel('student-messages-count')
           .on('postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `receiver_id=eq.${profile.id}` },
-            () => fetchNotificationCounts()
+            () => {
+              fetchNotificationCounts();
+              setViewedNotifications(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('student-personal-messages');
+                return newSet;
+              });
+            }
           )
           .subscribe()
       );
@@ -1663,7 +1749,9 @@ function Sidebar({
     setCollapsed(!collapsed);
   };
 
-  const handleNavigate = (view: View) => {
+  const handleNavigate = (view: View, viewKey: string) => {
+    // Clear the notification for this view
+    clearNotification(viewKey);
     onNavigate(view);
     if (isMobile) {
       setCollapsed(true);
@@ -1675,136 +1763,117 @@ function Sidebar({
   }
 
   // --- BUILD NAVIGATION ITEMS CONDITIONALLY ---
-  // Only add badge property when count > 0
+  // Only add badge property when count > 0 AND not viewed
   
   // STUDENT NAVIGATION
   const studentNavItems = [];
   
-  // Dashboard - always show, no badge
-  studentNavItems.push({ view: "student-dashboard" as View, icon: LayoutDashboard, label: "Dashboard" });
-  studentNavItems.push({ view: "student-courses" as View, icon: BookOpen, label: "My Courses" });
-  studentNavItems.push({ view: "student-module" as View, icon: Video, label: "Learning" });
+  studentNavItems.push({ view: "student-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "student-dashboard" });
+  studentNavItems.push({ view: "student-courses" as View, icon: BookOpen, label: "My Courses", key: "student-courses" });
+  studentNavItems.push({ view: "student-module" as View, icon: Video, label: "Learning", key: "student-module" });
   
-  // Assignments - only show badge if > 0
+  // Assignments
   const assignmentsCount = studentPendingAssignmentsCount + studentGradedAssignmentsCount;
-  if (assignmentsCount > 0) {
-    studentNavItems.push({ 
-      view: "student-assignments" as View, 
-      icon: ClipboardList, 
-      label: "Assignments",
-      badge: assignmentsCount 
-    });
-  } else {
-    studentNavItems.push({ view: "student-assignments" as View, icon: ClipboardList, label: "Assignments" });
-  }
+  const showAssignmentsBadge = shouldShowNotification('student-assignments', assignmentsCount);
+  studentNavItems.push({ 
+    view: "student-assignments" as View, 
+    icon: ClipboardList, 
+    label: "Assignments",
+    key: "student-assignments",
+    badge: showAssignmentsBadge ? assignmentsCount : undefined
+  });
   
-  // Payments - only show badge if > 0
-  if (studentPendingPaymentsCount > 0) {
-    studentNavItems.push({ 
-      view: "student-payment" as View, 
-      icon: DollarSign, 
-      label: "Payments",
-      badge: studentPendingPaymentsCount 
-    });
-  } else {
-    studentNavItems.push({ view: "student-payment" as View, icon: DollarSign, label: "Payments" });
-  }
+  // Payments
+  const showPaymentsBadge = shouldShowNotification('student-payment', studentPendingPaymentsCount);
+  studentNavItems.push({ 
+    view: "student-payment" as View, 
+    icon: DollarSign, 
+    label: "Payments",
+    key: "student-payment",
+    badge: showPaymentsBadge ? studentPendingPaymentsCount : undefined
+  });
   
-  studentNavItems.push({ view: "student-chat" as View, icon: MessageCircle, label: "Course Chat" });
+  studentNavItems.push({ view: "student-chat" as View, icon: MessageCircle, label: "Course Chat", key: "student-chat" });
   
-  // Messages - only show badge if > 0
-  if (studentUnreadMessagesCount > 0) {
-    studentNavItems.push({ 
-      view: "student-personal-messages" as View, 
-      icon: Mail, 
-      label: "Messages",
-      badge: studentUnreadMessagesCount 
-    });
-  } else {
-    studentNavItems.push({ view: "student-personal-messages" as View, icon: Mail, label: "Messages" });
-  }
+  // Messages
+  const showMessagesBadge = shouldShowNotification('student-personal-messages', studentUnreadMessagesCount);
+  studentNavItems.push({ 
+    view: "student-personal-messages" as View, 
+    icon: Mail, 
+    label: "Messages",
+    key: "student-personal-messages",
+    badge: showMessagesBadge ? studentUnreadMessagesCount : undefined
+  });
   
-  // Scholarship - only show badge if > 0
-  if (studentPendingScholarshipsCount > 0) {
-    studentNavItems.push({ 
-      view: "student-scholarship" as View, 
-      icon: Gift, 
-      label: "Scholarship",
-      badge: studentPendingScholarshipsCount 
-    });
-  } else {
-    studentNavItems.push({ view: "student-scholarship" as View, icon: Gift, label: "Scholarship" });
-  }
+  // Scholarship
+  const showScholarshipBadge = shouldShowNotification('student-scholarship', studentPendingScholarshipsCount);
+  studentNavItems.push({ 
+    view: "student-scholarship" as View, 
+    icon: Gift, 
+    label: "Scholarship",
+    key: "student-scholarship",
+    badge: showScholarshipBadge ? studentPendingScholarshipsCount : undefined
+  });
   
-  studentNavItems.push({ view: "student-profile" as View, icon: User, label: "My Profile" });
+  studentNavItems.push({ view: "student-profile" as View, icon: User, label: "My Profile", key: "student-profile" });
 
   // ADMIN NAVIGATION
   const adminNavItems = [];
   
-  adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard" });
-  adminNavItems.push({ view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules" });
+  adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "admin-dashboard" });
+  adminNavItems.push({ view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules", key: "admin-courses" });
   
-  // Students - only show badge if > 0
-  if (adminPendingEnrollmentsCount > 0) {
-    adminNavItems.push({ 
-      view: "admin-students" as View, 
-      icon: Users, 
-      label: "Students",
-      badge: adminPendingEnrollmentsCount 
-    });
-  } else {
-    adminNavItems.push({ view: "admin-students" as View, icon: Users, label: "Students" });
-  }
+  // Students
+  const showStudentsBadge = shouldShowNotification('admin-students', adminPendingEnrollmentsCount);
+  adminNavItems.push({ 
+    view: "admin-students" as View, 
+    icon: Users, 
+    label: "Students",
+    key: "admin-students",
+    badge: showStudentsBadge ? adminPendingEnrollmentsCount : undefined
+  });
   
-  // Payments - only show badge if > 0
-  if (adminPendingPaymentsCount > 0) {
-    adminNavItems.push({ 
-      view: "admin-payments" as View, 
-      icon: DollarSign, 
-      label: "Payments",
-      badge: adminPendingPaymentsCount 
-    });
-  } else {
-    adminNavItems.push({ view: "admin-payments" as View, icon: DollarSign, label: "Payments" });
-  }
+  // Payments
+  const showAdminPaymentsBadge = shouldShowNotification('admin-payments', adminPendingPaymentsCount);
+  adminNavItems.push({ 
+    view: "admin-payments" as View, 
+    icon: DollarSign, 
+    label: "Payments",
+    key: "admin-payments",
+    badge: showAdminPaymentsBadge ? adminPendingPaymentsCount : undefined
+  });
   
-  // Assignments - only show badge if > 0
-  if (adminPendingAssignmentsCount > 0) {
-    adminNavItems.push({ 
-      view: "admin-assignments" as View, 
-      icon: ClipboardList, 
-      label: "Assignments",
-      badge: adminPendingAssignmentsCount 
-    });
-  } else {
-    adminNavItems.push({ view: "admin-assignments" as View, icon: ClipboardList, label: "Assignments" });
-  }
+  // Assignments
+  const showAdminAssignmentsBadge = shouldShowNotification('admin-assignments', adminPendingAssignmentsCount);
+  adminNavItems.push({ 
+    view: "admin-assignments" as View, 
+    icon: ClipboardList, 
+    label: "Assignments",
+    key: "admin-assignments",
+    badge: showAdminAssignmentsBadge ? adminPendingAssignmentsCount : undefined
+  });
   
-  adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes" });
+  adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", key: "admin-quizzes" });
   
-  // Chat - only show badge if > 0
-  if (adminUnreadMessagesCount > 0) {
-    adminNavItems.push({ 
-      view: "admin-chat" as View, 
-      icon: MessageCircle, 
-      label: "Chat",
-      badge: adminUnreadMessagesCount 
-    });
-  } else {
-    adminNavItems.push({ view: "admin-chat" as View, icon: MessageCircle, label: "Chat" });
-  }
+  // Chat
+  const showAdminChatBadge = shouldShowNotification('admin-chat', adminUnreadMessagesCount);
+  adminNavItems.push({ 
+    view: "admin-chat" as View, 
+    icon: MessageCircle, 
+    label: "Chat",
+    key: "admin-chat",
+    badge: showAdminChatBadge ? adminUnreadMessagesCount : undefined
+  });
   
-  // Scholarships - only show badge if > 0
-  if (adminPendingScholarshipsCount > 0) {
-    adminNavItems.push({ 
-      view: "admin-scholarship" as View, 
-      icon: Gift, 
-      label: "Scholarships",
-      badge: adminPendingScholarshipsCount 
-    });
-  } else {
-    adminNavItems.push({ view: "admin-scholarship" as View, icon: Gift, label: "Scholarships" });
-  }
+  // Scholarships
+  const showAdminScholarshipBadge = shouldShowNotification('admin-scholarship', adminPendingScholarshipsCount);
+  adminNavItems.push({ 
+    view: "admin-scholarship" as View, 
+    icon: Gift, 
+    label: "Scholarships",
+    key: "admin-scholarship",
+    badge: showAdminScholarshipBadge ? adminPendingScholarshipsCount : undefined
+  });
 
   const nav = profile.role === "admin" ? adminNavItems : studentNavItems;
 
@@ -1854,7 +1923,7 @@ function Sidebar({
             {nav.map((item) => (
               <button
                 key={item.view}
-                onClick={() => handleNavigate(item.view)}
+                onClick={() => handleNavigate(item.view, item.key)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all",
                   currentView === item.view
@@ -1925,7 +1994,7 @@ function Sidebar({
         {nav.map((item) => (
           <button
             key={item.view}
-            onClick={() => handleNavigate(item.view)}
+            onClick={() => handleNavigate(item.view, item.key)}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
               currentView === item.view
@@ -1996,7 +2065,6 @@ function Sidebar({
     </aside>
   );
 }
-
 // ─── Student Assignments ──────────────────────────────────────────────────────
 
 function StudentAssignments({ profile }: { profile: Profile }) {
