@@ -59,6 +59,7 @@ import {
   FileQuestion,
   MessageCircle,
   Gift,
+  Unlock,
 } from "lucide-react";
 
 // ─── Toast System ──────────────────────────────────────────────────────────────
@@ -286,6 +287,369 @@ function ConfirmDialog() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Notification System ──────────────────────────────────────────────────────────
+
+interface Notification {
+  id: string;
+  user_id: string;
+  type: 'enrollment_approved' | 'payment_submitted' | 'payment_approved' | 
+        'payment_rejected' | 'assignment_graded' | 'assignment_submitted' |
+        'quiz_passed' | 'module_unlocked' | 'scholarship_submitted' |
+        'scholarship_approved' | 'scholarship_rejected' | 'new_course' |
+        'new_message' | 'assignment_created' | 'enrollment_request';
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+  link?: string;
+}
+
+// ─── Notification Helper Functions ──────────────────────────────────────────────
+
+async function createNotification(
+  userId: string,
+  type: Notification['type'],
+  title: string,
+  message: string,
+  link?: string
+) {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        type,
+        title,
+        message,
+        read: false,
+        link: link || null,
+      });
+    
+    if (error) {
+      console.error('Error creating notification:', error);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+async function notifyAllStudents(
+  type: Notification['type'],
+  title: string,
+  message: string,
+  link?: string
+) {
+  try {
+    const { data: students } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'student');
+    
+    if (students && students.length > 0) {
+      const notifications = students.map(s => ({
+        user_id: s.id,
+        type,
+        title,
+        message,
+        read: false,
+        link: link || null,
+      }));
+      
+      await supabase.from('notifications').insert(notifications);
+    }
+  } catch (error) {
+    console.error('Error notifying all students:', error);
+  }
+}
+
+async function notifyAdmins(
+  type: Notification['type'],
+  title: string,
+  message: string,
+  link?: string
+) {
+  try {
+    const { data: admins } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin');
+    
+    if (admins && admins.length > 0) {
+      const notifications = admins.map(a => ({
+        user_id: a.id,
+        type,
+        title,
+        message,
+        read: false,
+        link: link || null,
+      }));
+      
+      await supabase.from('notifications').insert(notifications);
+    }
+  } catch (error) {
+    console.error('Error notifying admins:', error);
+  }
+}
+
+// ─── Notification Bell Component ──────────────────────────────────────────────────
+
+function NotificationBell({ profile, onNavigate }: { profile: Profile; onNavigate?: (v: View) => void }) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const fetchNotifications = async () => {
+    if (!profile) return;
+    setLoading(true);
+    
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (error) {
+      console.error('Error fetching notifications:', error);
+    } else if (data) {
+      setNotifications(data as Notification[]);
+      setUnreadCount(data.filter(n => !n.read).length);
+    }
+    setLoading(false);
+  };
+
+  const markAsRead = async (id: string) => {
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', id);
+    
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const markAllAsRead = async () => {
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', profile.id)
+      .eq('read', false);
+    
+    setNotifications(prev => 
+      prev.map(n => ({ ...n, read: true }))
+    );
+    setUnreadCount(0);
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    setIsOpen(false);
+    
+    if (notification.link && onNavigate) {
+      const viewMap: Record<string, View> = {
+        'student-courses': 'student-courses',
+        'student-module': 'student-module',
+        'student-payment': 'student-payment',
+        'student-assignments': 'student-assignments',
+        'student-scholarship': 'student-scholarship',
+        'student-personal-messages': 'student-personal-messages',
+        'student-chat': 'student-chat',
+        'admin-payments': 'admin-payments',
+        'admin-students': 'admin-students',
+        'admin-assignments': 'admin-assignments',
+        'admin-scholarship': 'admin-scholarship',
+        'admin-courses': 'admin-courses',
+        'admin-chat': 'admin-chat',
+      };
+      
+      const view = viewMap[notification.link];
+      if (view) {
+        onNavigate(view);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!profile) return;
+    
+    fetchNotifications();
+    
+    const subscription = supabase
+      .channel('notifications-channel')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'notifications',
+          filter: `user_id=eq.${profile.id}`
+        },
+        (payload) => {
+          const newNotification = payload.new as Notification;
+          setNotifications(prev => [newNotification, ...prev]);
+          setUnreadCount(prev => prev + 1);
+          
+          toast({
+            type: 'info',
+            title: newNotification.title,
+            message: newNotification.message,
+            duration: 6000,
+          });
+        }
+      )
+      .subscribe();
+    
+    const updateSubscription = supabase
+      .channel('notifications-update-channel')
+      .on('postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${profile.id}`
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      updateSubscription.unsubscribe();
+    };
+  }, [profile?.id]);
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'enrollment_approved':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'enrollment_request':
+        return <Users className="w-5 h-5 text-blue-500" />;
+      case 'payment_submitted':
+        return <DollarSign className="w-5 h-5 text-yellow-500" />;
+      case 'payment_approved':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'payment_rejected':
+        return <XCircle className="w-5 h-5 text-red-500" />;
+      case 'assignment_graded':
+        return <CheckCircle className="w-5 h-5 text-blue-500" />;
+      case 'assignment_submitted':
+        return <ClipboardList className="w-5 h-5 text-orange-500" />;
+      case 'assignment_created':
+        return <FileText className="w-5 h-5 text-purple-500" />;
+      case 'quiz_passed':
+        return <Award className="w-5 h-5 text-green-500" />;
+      case 'module_unlocked':
+        return <Unlock className="w-5 h-5 text-purple-500" />;
+      case 'scholarship_submitted':
+        return <Gift className="w-5 h-5 text-pink-500" />;
+      case 'scholarship_approved':
+        return <Gift className="w-5 h-5 text-green-500" />;
+      case 'scholarship_rejected':
+        return <Gift className="w-5 h-5 text-red-500" />;
+      case 'new_course':
+        return <BookOpen className="w-5 h-5 text-indigo-500" />;
+      case 'new_message':
+        return <MessageCircle className="w-5 h-5 text-blue-500" />;
+      default:
+        return <Bell className="w-5 h-5 text-gray-400" />;
+    }
+  };
+
+  const getNotificationBg = (notification: Notification) => {
+    if (!notification.read) {
+      return 'bg-orange-50 border-orange-100';
+    }
+    return 'bg-white border-gray-100';
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
+      >
+        <Bell className="w-5 h-5 text-white" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 text-xs font-bold text-white rounded-full flex items-center justify-center animate-pulse"
+                style={{ backgroundColor: '#f7530b' }}>
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border overflow-hidden z-50 max-h-[500px] flex flex-col"
+             style={{ borderColor: '#e0e0e0' }}>
+          <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: '#e0e0e0' }}>
+            <h3 className="font-semibold text-gray-800">Notifications</h3>
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="text-xs hover:underline"
+                style={{ color: '#f7530b' }}
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#f7530b' }} />
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-center py-8">
+                <Bell className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-500">No notifications yet</p>
+              </div>
+            ) : (
+              notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={cn(
+                    "flex items-start gap-3 p-4 border-b cursor-pointer hover:shadow-sm transition-all last:border-0",
+                    getNotificationBg(notification)
+                  )}
+                  style={{ borderColor: '#e0e0e0' }}
+                >
+                  <div className="shrink-0 mt-0.5">
+                    {getNotificationIcon(notification.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800">{notification.title}</p>
+                    <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{notification.message}</p>
+                    <p className="text-xs text-gray-400 mt-1">{formatTime(notification.created_at)}</p>
+                  </div>
+                  {!notification.read && (
+                    <div className="shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: '#f7530b' }} />
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1542,9 +1906,12 @@ function Sidebar({
         >
           <div className="p-4 border-b flex items-center gap-3" style={{ borderBottomColor: '#444444' }}>
             <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
-            <span className="font-bold text-lg flex-1 text-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
-              Pruta Academy
-            </span>
+            {!collapsed && (
+              <span className="font-bold text-lg flex-1 text-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                Pruta Academy
+              </span>
+            )}
+            <NotificationBell profile={profile} onNavigate={onNavigate} />
             <button
               onClick={toggleSidebar}
               className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
@@ -1618,10 +1985,11 @@ function Sidebar({
       <div className="p-4 border-b flex items-center gap-3" style={{ borderBottomColor: '#444444' }}>
         <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
         {!collapsed && (
-          <span className="font-bold text-lg text-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          <span className="font-bold text-lg flex-1 text-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
             Pruta Academy
           </span>
         )}
+        <NotificationBell profile={profile} onNavigate={onNavigate} />
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -1868,6 +2236,24 @@ function StudentAssignments({ profile }: { profile: Profile }) {
       }
       
       setUploadProgress(prev => ({ ...prev, [assignmentId]: 100 }));
+      
+      // --- NOTIFICATION: Notify admin about submission ---
+      const assignment = assignments.find(a => a.id === assignmentId);
+      await notifyAdmins(
+        'assignment_submitted',
+        '📝 Assignment Submitted',
+        `${profile.full_name} submitted "${assignment?.assignment?.title}"`,
+        'admin-assignments'
+      );
+      
+      // --- NOTIFICATION: Confirm to student ---
+      await createNotification(
+        profile.id,
+        'assignment_submitted',
+        '✅ Assignment Submitted',
+        `Your assignment "${assignment?.assignment?.title}" has been submitted successfully.`,
+        'student-assignments'
+      );
       
       toast({
         type: "success",
@@ -2657,6 +3043,23 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
             message: "Payment recorded but please contact admin.",
           });
         } else {
+          // --- NOTIFICATION: Notify student ---
+          await createNotification(
+            profile.id,
+            'payment_submitted',
+            '💰 Payment Submitted',
+            `Your payment of ${formatNaira(selectedCourse.price)} for "${selectedCourse.title}" has been submitted.`,
+            'student-payment'
+          );
+          
+          // --- NOTIFICATION: Notify admins ---
+          await notifyAdmins(
+            'payment_submitted',
+            '💰 New Payment Receipt',
+            `${profile.full_name} submitted payment for "${selectedCourse.title}"`,
+            'admin-payments'
+          );
+          
           toast({
             type: "success",
             title: "Enrollment Submitted!",
@@ -3202,6 +3605,16 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
     if (!error) {
       setNewMessage("");
       fetchMessages();
+      
+      // --- NOTIFICATION: Notify admin about new message ---
+      await createNotification(
+        admin.id,
+        'new_message',
+        '💬 New Message from Student',
+        `${profile.full_name} sent you a message: "${newMessage.trim().substring(0, 50)}${newMessage.trim().length > 50 ? '...' : ''}"`,
+        'admin-chat'
+      );
+      
       toast({
         type: "success",
         title: "Message Sent",
@@ -3352,6 +3765,23 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
     });
 
     if (!error) {
+      // --- NOTIFICATION: Notify student ---
+      await createNotification(
+        profile.id,
+        'scholarship_submitted',
+        '📝 Scholarship Application Submitted',
+        `Your application for "${course?.title}" has been submitted successfully.`,
+        'student-scholarship'
+      );
+      
+      // --- NOTIFICATION: Notify admins ---
+      await notifyAdmins(
+        'scholarship_submitted',
+        '🎓 New Scholarship Application',
+        `${profile.full_name} applied for scholarship for "${course?.title}"`,
+        'admin-scholarship'
+      );
+      
       toast({
         type: "success",
         title: "Application Submitted",
@@ -3818,6 +4248,23 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
       }
       
       if (score >= (quizData.pass_score || 70)) {
+        // --- NOTIFICATION: Quiz passed ---
+        await createNotification(
+          profile.id,
+          'quiz_passed',
+          '🎉 Quiz Passed!',
+          `You scored ${score}% on "${quizData.title}"!`,
+          'student-module'
+        );
+        
+        // Notify admin
+        await notifyAdmins(
+          'quiz_passed',
+          '📊 Quiz Passed',
+          `${profile.full_name} passed "${quizData.title}" with ${score}%`,
+          'admin-students'
+        );
+        
         toast({
           type: "success",
           title: "🎉 Quiz Passed!",
@@ -3837,6 +4284,15 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
         if (updatedEnrollment) {
           const newIndex = updatedEnrollment.current_module_index;
           if (newIndex > selectedModuleIndex && newIndex < modules.length) {
+            // --- NOTIFICATION: Module unlocked ---
+            await createNotification(
+              profile.id,
+              'module_unlocked',
+              '🔓 Module Unlocked!',
+              `You've unlocked "${modules[newIndex]?.title}"!`,
+              'student-module'
+            );
+            
             toast({
               type: "info",
               title: "Next Module Unlocked!",
@@ -4846,10 +5302,27 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
           currency: "NGN",
           is_active: true,
         }, thumbnailFile || undefined);
+        
+        // --- NOTIFICATION: Notify ALL students about new course ---
+        await notifyAllStudents(
+          'new_course',
+          '📚 New Course Available!',
+          `"${courseForm.title}" - ${courseForm.description?.substring(0, 80)}${courseForm.description?.length > 80 ? '...' : ''}`,
+          'student-courses'
+        );
+        
+        // --- NOTIFICATION: Notify admins too ---
+        await notifyAdmins(
+          'new_course',
+          '📚 New Course Created',
+          `"${courseForm.title}" has been added to the platform.`,
+          'admin-courses'
+        );
+        
         toast({
           type: "success",
           title: "Course Created",
-          message: `"${courseForm.title}" has been created.`,
+          message: `"${courseForm.title}" has been created and students have been notified.`,
         });
       }
       setShowCourseModal(false);
@@ -5505,6 +5978,16 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
     if (!selectedStudent) return;
     setLoading(true);
     await onSendAssignment(selectedStudent.id, selectedStudent.full_name, assignmentData);
+    
+    // --- NOTIFICATION: Notify student about new assignment ---
+    await createNotification(
+      selectedStudent.id,
+      'assignment_created',
+      '📝 New Assignment Available',
+      `"${assignmentData.title}" has been assigned to you. Due in ${assignmentData.due_days} days.`,
+      'student-assignments'
+    );
+    
     toast({
       type: "success",
       title: "Assignment Sent",
@@ -5865,29 +6348,46 @@ function AdminPayments() {
       return;
     }
     
+    const payment = payments.find(p => p.id === id);
+    
     if (action === "approved") {
-      const payment = payments.find(p => p.id === id);
-      if (payment) {
-        await supabase
-          .from("enrollments")
-          .update({ 
-            status: "active", 
-            enrolled_at: new Date().toISOString(), 
-            expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() 
-          })
-          .eq("id", payment.enrollment_id);
-        
-        toast({
-          type: "success",
-          title: "Payment Approved",
-          message: "Course access has been granted to the student.",
-        });
-      }
+      await supabase
+        .from("enrollments")
+        .update({ 
+          status: "active", 
+          enrolled_at: new Date().toISOString(), 
+          expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() 
+        })
+        .eq("id", payment?.enrollment_id);
+      
+      // --- NOTIFICATION: Notify student ---
+      await createNotification(
+        payment?.student_id || '',
+        'payment_approved',
+        '🎉 Payment Approved!',
+        `Your payment for "${payment?.course_title}" has been approved. You now have access to the course!`,
+        'student-courses'
+      );
+      
+      toast({
+        type: "success",
+        title: "Payment Approved",
+        message: "Course access has been granted to the student.",
+      });
     } else {
+      // --- NOTIFICATION: Notify student ---
+      await createNotification(
+        payment?.student_id || '',
+        'payment_rejected',
+        '📝 Payment Update',
+        `Your payment for "${payment?.course_title}" was not approved. Please check your receipt and try again.`,
+        'student-payment'
+      );
+      
       toast({
         type: "info",
         title: "Payment Rejected",
-        message: "The payment has been rejected. Please add a note for the student.",
+        message: "The payment has been rejected.",
       });
     }
     
@@ -6096,6 +6596,28 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
     setLoading(true);
     try {
       await onCreateAssignment(newAssignment);
+      
+      // Notify all students in the course about the new assignment
+      if (newAssignment.assign_to_all) {
+        const { data: enrollments } = await supabase
+          .from("enrollments")
+          .select("student_id")
+          .eq("course_id", newAssignment.course_id)
+          .eq("status", "active");
+        
+        if (enrollments) {
+          for (const enrollment of enrollments) {
+            await createNotification(
+              enrollment.student_id,
+              'assignment_created',
+              '📝 New Assignment Available',
+              `"${newAssignment.title}" has been assigned. Due in ${newAssignment.due_days} days.`,
+              'student-assignments'
+            );
+          }
+        }
+      }
+      
       toast({
         type: "success",
         title: "Assignment Created",
@@ -6119,6 +6641,24 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
     setLoading(true);
     try {
       await onGradeAssignment(gradeModal.id, parseInt(gradeForm.score), gradeForm.feedback);
+      
+      // --- NOTIFICATION: Notify student about grade ---
+      await createNotification(
+        gradeModal.student_id,
+        'assignment_graded',
+        '📋 Assignment Graded',
+        `Your assignment "${gradeModal.assignment?.title}" was graded: ${gradeForm.score}/${gradeModal.assignment?.max_score}`,
+        'student-assignments'
+      );
+      
+      // --- NOTIFICATION: Notify admin (optional) ---
+      await notifyAdmins(
+        'assignment_graded',
+        '📊 Assignment Graded',
+        `Student "${gradeModal.profiles?.full_name}" received ${gradeForm.score}/${gradeModal.assignment?.max_score}`,
+        'admin-assignments'
+      );
+      
       toast({
         type: "success",
         title: "Graded",
@@ -6762,6 +7302,16 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       if (!error) {
         setNewMessage("");
         fetchPersonalMessages();
+        
+        // --- NOTIFICATION: Notify student about admin reply ---
+        await createNotification(
+          selectedStudentId,
+          'new_message',
+          '💬 Reply from Admin',
+          `Admin replied to your message: "${newMessage.trim().substring(0, 50)}${newMessage.trim().length > 50 ? '...' : ''}"`,
+          'student-personal-messages'
+        );
+        
         toast({
           type: "success",
           title: "Message Sent",
@@ -7057,6 +7607,28 @@ function AdminScholarship() {
       .eq("id", id);
 
     if (!error) {
+      const app = applications.find(a => a.id === id);
+      
+      if (action === "approved") {
+        // --- NOTIFICATION: Notify student ---
+        await createNotification(
+          app?.student_id || '',
+          'scholarship_approved',
+          '🎉 Scholarship Approved!',
+          `Your scholarship application for "${app?.course_title}" has been approved!`,
+          'student-scholarship'
+        );
+      } else {
+        // --- NOTIFICATION: Notify student ---
+        await createNotification(
+          app?.student_id || '',
+          'scholarship_rejected',
+          '📝 Scholarship Update',
+          `Your scholarship application for "${app?.course_title}" was not approved.`,
+          'student-scholarship'
+        );
+      }
+      
       toast({
         type: "success",
         title: `Application ${action}`,
@@ -7611,6 +8183,15 @@ export default function App() {
           enrollment_id: enrollment.id,
           status: "pending",
         });
+        
+        // --- NOTIFICATION: Notify student about new assignment ---
+        await createNotification(
+          studentId,
+          'assignment_created',
+          '📝 New Assignment Available',
+          `"${assignmentData.title}" has been assigned to you. Due in ${assignmentData.due_days} days.`,
+          'student-assignments'
+        );
       }
     }
   };
@@ -7649,6 +8230,17 @@ export default function App() {
           status: "pending",
         }));
         await supabase.from("student_assignments").insert(studentAssignments);
+        
+        // Notify all students in the course
+        for (const enrollment of enrollments) {
+          await createNotification(
+            enrollment.student_id,
+            'assignment_created',
+            '📝 New Assignment Available',
+            `"${assignmentData.title}" has been assigned. Due in ${assignmentData.due_days} days.`,
+            'student-assignments'
+          );
+        }
       }
     }
   };
@@ -7701,6 +8293,16 @@ export default function App() {
     await supabase.from("quiz_attempts").delete().eq("quiz_id", quizId);
     await supabase.from("quiz_questions").delete().eq("quiz_id", quizId);
     await supabase.from("quizzes").delete().eq("id", quizId);
+  };
+
+  // ─── Fetch progress ──────────────────────────────────────────────────────
+  const fetchProgress = async () => {
+    if (!profile) return;
+    const { data } = await supabase
+      .from("module_progress")
+      .select("*")
+      .eq("student_id", profile.id);
+    if (data) setProgress(data as ModuleProgress[]);
   };
 
   if (loading) {
