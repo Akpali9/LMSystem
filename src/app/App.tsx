@@ -1444,9 +1444,6 @@ function Sidebar({
   const [adminPendingEnrollmentsCount, setAdminPendingEnrollmentsCount] = useState(0);
   const [adminUnreadMessagesCount, setAdminUnreadMessagesCount] = useState(0);
 
-  // Track which notifications have been viewed/cleared
-  const [clearedNotifications, setClearedNotifications] = useState<Set<string>>(new Set());
-
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
@@ -1551,23 +1548,6 @@ function Sidebar({
         .eq('read', false);
       setStudentUnreadMessagesCount(messagesCount || 0);
     }
-  };
-
-  // Clear notification when clicked
-  const handleNotificationClick = (view: View, type: string) => {
-    // Mark this notification as cleared
-    const key = `${view}-${type}`;
-    setClearedNotifications(prev => new Set(prev).add(key));
-    
-    // Navigate to the view
-    onNavigate(view);
-  };
-
-  // Check if notification should be shown (not cleared)
-  const shouldShowNotification = (view: View, type: string, count: number) => {
-    if (count <= 0) return false;
-    const key = `${view}-${type}`;
-    return !clearedNotifications.has(key);
   };
 
   // Fetch personal messages unread count
@@ -1694,86 +1674,139 @@ function Sidebar({
     return null;
   }
 
-  // --- STUDENT NAVIGATION ---
-  const studentNav = [
-    { view: "student-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", type: "dashboard" },
-    { view: "student-courses" as View, icon: BookOpen, label: "My Courses", type: "courses" },
-    { view: "student-module" as View, icon: Video, label: "Learning", type: "module" },
-    { 
+  // --- BUILD NAVIGATION ITEMS CONDITIONALLY ---
+  // Only add badge property when count > 0
+  
+  // STUDENT NAVIGATION
+  const studentNavItems = [];
+  
+  // Dashboard - always show, no badge
+  studentNavItems.push({ view: "student-dashboard" as View, icon: LayoutDashboard, label: "Dashboard" });
+  studentNavItems.push({ view: "student-courses" as View, icon: BookOpen, label: "My Courses" });
+  studentNavItems.push({ view: "student-module" as View, icon: Video, label: "Learning" });
+  
+  // Assignments - only show badge if > 0
+  const assignmentsCount = studentPendingAssignmentsCount + studentGradedAssignmentsCount;
+  if (assignmentsCount > 0) {
+    studentNavItems.push({ 
       view: "student-assignments" as View, 
       icon: ClipboardList, 
       label: "Assignments",
-      type: "assignments",
-      count: studentPendingAssignmentsCount + studentGradedAssignmentsCount 
-    },
-    { 
+      badge: assignmentsCount 
+    });
+  } else {
+    studentNavItems.push({ view: "student-assignments" as View, icon: ClipboardList, label: "Assignments" });
+  }
+  
+  // Payments - only show badge if > 0
+  if (studentPendingPaymentsCount > 0) {
+    studentNavItems.push({ 
       view: "student-payment" as View, 
       icon: DollarSign, 
       label: "Payments",
-      type: "payments",
-      count: studentPendingPaymentsCount 
-    },
-    { view: "student-chat" as View, icon: MessageCircle, label: "Course Chat", type: "chat" },
-    { 
+      badge: studentPendingPaymentsCount 
+    });
+  } else {
+    studentNavItems.push({ view: "student-payment" as View, icon: DollarSign, label: "Payments" });
+  }
+  
+  studentNavItems.push({ view: "student-chat" as View, icon: MessageCircle, label: "Course Chat" });
+  
+  // Messages - only show badge if > 0
+  if (studentUnreadMessagesCount > 0) {
+    studentNavItems.push({ 
       view: "student-personal-messages" as View, 
       icon: Mail, 
       label: "Messages",
-      type: "messages",
-      count: studentUnreadMessagesCount 
-    },
-    { 
+      badge: studentUnreadMessagesCount 
+    });
+  } else {
+    studentNavItems.push({ view: "student-personal-messages" as View, icon: Mail, label: "Messages" });
+  }
+  
+  // Scholarship - only show badge if > 0
+  if (studentPendingScholarshipsCount > 0) {
+    studentNavItems.push({ 
       view: "student-scholarship" as View, 
       icon: Gift, 
       label: "Scholarship",
-      type: "scholarship",
-      count: studentPendingScholarshipsCount 
-    },
-    { view: "student-profile" as View, icon: User, label: "My Profile", type: "profile" },
-  ];
+      badge: studentPendingScholarshipsCount 
+    });
+  } else {
+    studentNavItems.push({ view: "student-scholarship" as View, icon: Gift, label: "Scholarship" });
+  }
+  
+  studentNavItems.push({ view: "student-profile" as View, icon: User, label: "My Profile" });
 
-  // --- ADMIN NAVIGATION ---
-  const adminNav = [
-    { view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", type: "dashboard" },
-    { view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules", type: "courses" },
-    { 
+  // ADMIN NAVIGATION
+  const adminNavItems = [];
+  
+  adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard" });
+  adminNavItems.push({ view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules" });
+  
+  // Students - only show badge if > 0
+  if (adminPendingEnrollmentsCount > 0) {
+    adminNavItems.push({ 
       view: "admin-students" as View, 
       icon: Users, 
       label: "Students",
-      type: "students",
-      count: adminPendingEnrollmentsCount 
-    },
-    { 
+      badge: adminPendingEnrollmentsCount 
+    });
+  } else {
+    adminNavItems.push({ view: "admin-students" as View, icon: Users, label: "Students" });
+  }
+  
+  // Payments - only show badge if > 0
+  if (adminPendingPaymentsCount > 0) {
+    adminNavItems.push({ 
       view: "admin-payments" as View, 
       icon: DollarSign, 
       label: "Payments",
-      type: "payments",
-      count: adminPendingPaymentsCount 
-    },
-    { 
+      badge: adminPendingPaymentsCount 
+    });
+  } else {
+    adminNavItems.push({ view: "admin-payments" as View, icon: DollarSign, label: "Payments" });
+  }
+  
+  // Assignments - only show badge if > 0
+  if (adminPendingAssignmentsCount > 0) {
+    adminNavItems.push({ 
       view: "admin-assignments" as View, 
       icon: ClipboardList, 
       label: "Assignments",
-      type: "assignments",
-      count: adminPendingAssignmentsCount 
-    },
-    { view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", type: "quizzes" },
-    { 
+      badge: adminPendingAssignmentsCount 
+    });
+  } else {
+    adminNavItems.push({ view: "admin-assignments" as View, icon: ClipboardList, label: "Assignments" });
+  }
+  
+  adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes" });
+  
+  // Chat - only show badge if > 0
+  if (adminUnreadMessagesCount > 0) {
+    adminNavItems.push({ 
       view: "admin-chat" as View, 
       icon: MessageCircle, 
       label: "Chat",
-      type: "chat",
-      count: adminUnreadMessagesCount 
-    },
-    { 
+      badge: adminUnreadMessagesCount 
+    });
+  } else {
+    adminNavItems.push({ view: "admin-chat" as View, icon: MessageCircle, label: "Chat" });
+  }
+  
+  // Scholarships - only show badge if > 0
+  if (adminPendingScholarshipsCount > 0) {
+    adminNavItems.push({ 
       view: "admin-scholarship" as View, 
       icon: Gift, 
       label: "Scholarships",
-      type: "scholarship",
-      count: adminPendingScholarshipsCount 
-    },
-  ];
+      badge: adminPendingScholarshipsCount 
+    });
+  } else {
+    adminNavItems.push({ view: "admin-scholarship" as View, icon: Gift, label: "Scholarships" });
+  }
 
-  const nav = profile.role === "admin" ? adminNav : studentNav;
+  const nav = profile.role === "admin" ? adminNavItems : studentNavItems;
 
   // ─── MOBILE SIDEBAR ──────────────────────────────────────────────────────
   if (isMobile) {
@@ -1818,36 +1851,27 @@ function Sidebar({
           </div>
 
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto" style={{ height: 'calc(100vh - 180px)' }}>
-            {nav.map(({ view, icon: Icon, label, type, count }) => {
-              const showBadge = count && count > 0 && shouldShowNotification(view, type, count);
-              return (
-                <button
-                  key={view}
-                  onClick={() => {
-                    if (showBadge) {
-                      handleNotificationClick(view, type);
-                    } else {
-                      handleNavigate(view);
-                    }
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all",
-                    currentView === view
-                      ? "text-white"
-                      : "text-gray-400 hover:bg-white/10 hover:text-white"
-                  )}
-                  style={currentView === view ? { backgroundColor: '#f7530b' } : {}}
-                >
-                  <Icon className="w-5 h-5 shrink-0" style={currentView === view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
-                  <span className="flex-1 text-left">{label}</span>
-                  {showBadge && (
-                    <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
-                      {count > 99 ? '99+' : count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            {nav.map((item) => (
+              <button
+                key={item.view}
+                onClick={() => handleNavigate(item.view)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all",
+                  currentView === item.view
+                    ? "text-white"
+                    : "text-gray-400 hover:bg-white/10 hover:text-white"
+                )}
+                style={currentView === item.view ? { backgroundColor: '#f7530b' } : {}}
+              >
+                <item.icon className="w-5 h-5 shrink-0" style={currentView === item.view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.badge && item.badge > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
+              </button>
+            ))}
           </nav>
 
           <div className="p-3 border-t absolute bottom-0 left-0 right-0" style={{ borderTopColor: '#444444', backgroundColor: '#333333' }}>
@@ -1898,47 +1922,38 @@ function Sidebar({
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {nav.map(({ view, icon: Icon, label, type, count }) => {
-          const showBadge = count && count > 0 && shouldShowNotification(view, type, count);
-          return (
-            <button
-              key={view}
-              onClick={() => {
-                if (showBadge) {
-                  handleNotificationClick(view, type);
-                } else {
-                  handleNavigate(view);
-                }
-              }}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
-                currentView === view
-                  ? "text-white"
-                  : "text-gray-400 hover:bg-white/10 hover:text-white"
-              )}
-              style={currentView === view ? { backgroundColor: '#f7530b' } : {}}
-            >
-              <Icon className="w-4.5 h-4.5 shrink-0" style={currentView === view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
-              
-              {!collapsed ? (
-                <>
-                  <span className="flex-1 text-left">{label}</span>
-                  {showBadge && (
-                    <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
-                      {count > 99 ? '99+' : count}
-                    </span>
-                  )}
-                </>
-              ) : (
-                showBadge && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    {count > 9 ? '9+' : count}
+        {nav.map((item) => (
+          <button
+            key={item.view}
+            onClick={() => handleNavigate(item.view)}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
+              currentView === item.view
+                ? "text-white"
+                : "text-gray-400 hover:bg-white/10 hover:text-white"
+            )}
+            style={currentView === item.view ? { backgroundColor: '#f7530b' } : {}}
+          >
+            <item.icon className="w-4.5 h-4.5 shrink-0" style={currentView === item.view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
+            
+            {!collapsed ? (
+              <>
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.badge && item.badge > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
+                    {item.badge > 99 ? '99+' : item.badge}
                   </span>
-                )
-              )}
-            </button>
-          );
-        })}
+                )}
+              </>
+            ) : (
+              item.badge && item.badge > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {item.badge > 9 ? '9+' : item.badge}
+                </span>
+              )
+            )}
+          </button>
+        ))}
       </nav>
 
       <div className="p-3 border-t space-y-1" style={{ borderTopColor: '#444444' }}>
