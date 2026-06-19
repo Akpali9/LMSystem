@@ -2107,10 +2107,10 @@ adminNavItems.push({
 // --- ADMIN PERSONAL MESSAGES (Student Messages to Admin) ---
 const showAdminPersonalChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
 adminNavItems.push({
-  view: "admin-personal-chat" as View,
+  view: "admin-chat" as View,
   icon: Mail,
   label: "Student Messages",
-  key: "admin-course-chat",
+  key: "admin-chat",
   badge: showAdminPersonalChatBadge ? adminUnreadMessagesCount : undefined
 });
 
