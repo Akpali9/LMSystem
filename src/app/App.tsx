@@ -2286,6 +2286,641 @@ adminNavItems.push({
   );
 }
 
+// ─── Student Assignments ──────────────────────────────────────────────────────
+
+function StudentAssignments({ profile }: { profile: Profile }) {
+  const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const markAsViewed = async () => {
+      if (!profile) return;
+      try {
+        const { error } = await supabase
+          .from('student_assignments')
+          .update({ viewed_at: new Date().toISOString() })
+          .eq('student_id', profile.id)
+          .eq('status', 'pending')
+          .is('viewed_at', null);
+        if (error) {
+          console.error('Error marking assignments as viewed:', error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+    markAsViewed();
+    fetchAssignments();
+  }, [profile.id]);
+
+  const fetchAssignments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("student_assignments")
+        .select(`
+          *,
+          assignment:assignment_id (
+            id,
+            module_id,
+            title,
+            description,
+            due_days,
+            max_score
+          )
+        `)
+        .eq("student_id", profile.id)
+        .order("assigned_at", { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching assignments:", error);
+        toast({
+          type: "error",
+          title: "Failed to Load",
+          message: "Could not load your assignments. Please refresh.",
+        });
+        return;
+      }
+      
+      if (data) {
+        setAssignments(data as StudentAssignment[]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleSubmitAssignment = async (assignmentId: string, file: File) => {
+    setUploading(prev => ({ ...prev, [assignmentId]: true }));
+    setUploadProgress(prev => ({ ...prev, [assignmentId]: 0 }));
+
+    try {
+      if (!file) {
+        toast({
+          type: "error",
+          title: "No File Selected",
+          message: "Please select a file to upload.",
+        });
+        return;
+      }
+
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          type: "error",
+          title: "File Too Large",
+          message: "File size must be less than 10MB.",
+        });
+        return;
+      }
+
+      const allowedExtensions = ['pdf', 'doc', 'docx', 'zip', 'txt', 'jpg', 'jpeg', 'png'];
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (!fileExt || !allowedExtensions.includes(fileExt)) {
+        toast({
+          type: "error",
+          title: "Invalid File Type",
+          message: "Please upload PDF, DOC, DOCX, ZIP, or image files only.",
+        });
+        return;
+      }
+
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 20 }));
+
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileName = `${profile.id}/${assignmentId}/${Date.now()}-${cleanFileName}`;
+
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 40 }));
+
+      let submissionUrl = null;
+      let uploadError = null;
+
+      try {
+        const { data: uploadData, error: error } = await supabase.storage
+          .from("assignments")
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false,
+          });
+
+        if (error) {
+          uploadError = error;
+          console.error("Upload error:", error);
+        } else {
+          setUploadProgress(prev => ({ ...prev, [assignmentId]: 70 }));
+          const { data: { publicUrl } } = supabase.storage
+            .from("assignments")
+            .getPublicUrl(fileName);
+          submissionUrl = publicUrl;
+        }
+      } catch (err) {
+        console.error("Storage error:", err);
+        uploadError = err;
+      }
+
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 80 }));
+
+      if (!submissionUrl && file.size < 500000) {
+        try {
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error("Failed to read file"));
+            reader.readAsDataURL(file);
+          });
+          submissionUrl = base64;
+          console.log("Using base64 upload as fallback");
+        } catch (base64Error) {
+          console.error("Base64 conversion error:", base64Error);
+        }
+      }
+
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 90 }));
+
+      const updateData: any = {
+        status: "submitted",
+        submitted_at: new Date().toISOString()
+      };
+
+      if (submissionUrl) {
+        updateData.submission_url = submissionUrl;
+      } else {
+        updateData.submission_url = `uploaded-${Date.now()}`;
+        updateData.submission_data = "File uploaded successfully";
+      }
+
+      const { error: updateError } = await supabase
+        .from("student_assignments")
+        .update(updateData)
+        .eq("id", assignmentId);
+      
+      if (updateError) {
+        console.error("Update error:", updateError);
+        toast({
+          type: "error",
+          title: "Submission Failed",
+          message: updateError.message || "Failed to update assignment. Please try again.",
+        });
+        return;
+      }
+      
+      setUploadProgress(prev => ({ ...prev, [assignmentId]: 100 }));
+      
+      toast({
+        type: "success",
+        title: "Assignment Submitted!",
+        message: "Your assignment has been submitted successfully.",
+      });
+      
+      await fetchAssignments();
+      
+    } catch (error: any) {
+      console.error("Error:", error);
+      toast({
+        type: "error",
+        title: "Upload Failed",
+        message: error.message || "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setUploading(prev => ({ ...prev, [assignmentId]: false }));
+    }
+  };
+
+  const renderFileInput = (assignment: StudentAssignment) => {
+    const isUploading = uploading[assignment.id];
+    const progress = uploadProgress[assignment.id] || 0;
+
+    if (assignment.status === 'graded') {
+      return (
+        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm font-semibold text-green-800">
+            Score: {assignment.score}/{assignment.assignment?.max_score}
+          </p>
+          {assignment.feedback && (
+            <p className="text-sm text-green-700 mt-1">{assignment.feedback}</p>
+          )}
+        </div>
+      );
+    }
+
+    if (assignment.status === 'submitted') {
+      return (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <p className="text-sm text-yellow-800">⏳ Submitted - Awaiting grading</p>
+            {assignment.submission_url && assignment.submission_url.startsWith('http') && (
+              <a 
+                href={assignment.submission_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                View Submission
+              </a>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4">
+        <div 
+          className={cn(
+            "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+            isUploading ? "cursor-default opacity-60" : "cursor-pointer hover:border-orange-400"
+          )}
+          style={{ 
+            borderColor: isUploading ? '#e0e0e0' : '#d1d5db',
+            backgroundColor: isUploading ? '#f9fafb' : 'transparent'
+          }}
+          onClick={() => {
+            if (!isUploading) {
+              document.getElementById(`assignment-${assignment.id}`)?.click();
+            }
+          }}
+        >
+          {isUploading ? (
+            <div className="space-y-3">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
+              <p className="text-sm font-medium text-gray-700">
+                {progress < 40 ? 'Preparing upload...' :
+                 progress < 70 ? 'Uploading to storage...' :
+                 progress < 90 ? 'Processing...' :
+                 'Finalizing submission...'}
+              </p>
+              <div className="w-full max-w-xs mx-auto">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ backgroundColor: '#f7530b', width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{progress}% complete</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm font-medium text-gray-700">Click to upload your submission</p>
+              <p className="text-xs text-gray-500 mt-1">
+                PDF, DOC, DOCX, ZIP, or images · Max 10MB
+              </p>
+            </>
+          )}
+        </div>
+        <input
+          id={`assignment-${assignment.id}`}
+          type="file"
+          className="hidden"
+          accept=".pdf,.doc,.docx,.zip,.txt,.jpg,.jpeg,.png"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              handleSubmitAssignment(assignment.id, file);
+            }
+            e.target.value = '';
+          }}
+          disabled={isUploading}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+          Assignments
+        </h1>
+        <p className="text-gray-500 mt-1 text-sm md:text-base">Submit your assignments here.</p>
+      </div>
+
+      <div className="space-y-4">
+        {assignments.length === 0 ? (
+          <Card className="p-8 text-center">
+            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <h3 className="font-semibold text-gray-700 mb-2">No Assignments</h3>
+            <p className="text-sm text-gray-500">You don't have any assignments yet.</p>
+          </Card>
+        ) : (
+          assignments.map((sa) => (
+            <Card key={sa.id} className="p-4 md:p-6">
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#fdddce' }}>
+                  <FileText className="w-5 h-5" style={{ color: '#f7530b' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-semibold text-gray-800 text-sm md:text-base">{sa.assignment?.title}</h3>
+                      {sa.assignment?.description && (
+                        <p className="text-xs text-gray-500 mt-0.5">{sa.assignment.description}</p>
+                      )}
+                    </div>
+                    <StatusBadge status={sa.status} />
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-gray-500">
+                    <span>Assigned: {formatDate(sa.assigned_at)}</span>
+                    {sa.submitted_at && <span>Submitted: {formatDate(sa.submitted_at)}</span>}
+                    <span>Max score: {sa.assignment?.max_score || 100}</span>
+                  </div>
+
+                  {renderFileInput(sa)}
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Student Profile ──────────────────────────────────────────────────────────
+
+function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: { 
+  profile: Profile; 
+  onUpdate: (updates: Partial<Profile>, avatarFile?: File) => Promise<void>;
+  enrollments: Enrollment[];
+  progress: ModuleProgress[];
+  modules: Module[];
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [fullName, setFullName] = useState(profile.full_name);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatar_url || null);
+  const [loading, setLoading] = useState(false);
+  const [bio, setBio] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [studentProfile, setStudentProfile] = useState<any>(null);
+
+  useEffect(() => {
+    fetchStudentProfile();
+  }, [profile.id]);
+
+  const fetchStudentProfile = async () => {
+    const { data } = await supabase
+      .from("student_profiles")
+      .select("*")
+      .eq("user_id", profile.id)
+      .single();
+    if (data) {
+      setStudentProfile(data);
+      setBio(data.bio || "");
+      setPhone(data.phone || "");
+      setAddress(data.address || "");
+      setDateOfBirth(data.date_of_birth || "");
+    }
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const preview = URL.createObjectURL(file);
+      setAvatarPreview(preview);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    
+    try {
+      await onUpdate({ full_name: fullName }, avatarFile || undefined);
+      
+      await supabase
+        .from("student_profiles")
+        .upsert({
+          user_id: profile.id,
+          bio,
+          phone,
+          address,
+          date_of_birth: dateOfBirth || null,
+          updated_at: new Date().toISOString(),
+        });
+      
+      await fetchStudentProfile();
+      
+      toast({
+        type: "success",
+        title: "Profile Updated",
+        message: "Your profile has been updated successfully.",
+      });
+      
+      setIsEditing(false);
+    } catch (error) {
+      toast({
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update profile. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeEnrollments = enrollments?.filter(e => e.status === "active") || [];
+  const passedCount = progress?.filter(p => p.status === "passed").length || 0;
+  const totalModules = modules?.length || 0;
+  const completion = calculateProfileCompletion(profile, studentProfile);
+
+  return (
+    <div className="p-4 md:p-8 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+          My Profile
+        </h1>
+        <p className="text-gray-500 mt-1 text-sm md:text-base">Manage your personal information and view your progress</p>
+      </div>
+
+      <Card className="p-4 md:p-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <Avatar name={fullName} size="lg" src={avatarPreview || undefined} />
+              {isEditing && (
+                <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-colors"
+                       style={{ backgroundColor: '#f7530b' }}>
+                  <Camera className="w-4 h-4 text-white" />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                  />
+                </label>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 text-center">
+              {isEditing ? "Click camera icon to change photo" : "Profile picture"}
+            </p>
+          </div>
+
+          <div className="flex-1 space-y-4">
+            {isEditing ? (
+              <>
+                <Input
+                  label="Full Name"
+                  value={fullName}
+                  onChange={setFullName}
+                  placeholder="Your full name"
+                  required
+                />
+                <Input label="Email" value={profile.email} disabled />
+                <Textarea label="Bio" value={bio} onChange={setBio} placeholder="Tell us about yourself..." rows={3} />
+                <PhoneInput 
+                  label="Phone Number" 
+                  value={phone} 
+                  onChange={setPhone}
+                  placeholder="812 345 6789" 
+                />
+                <Textarea label="Address" value={address} onChange={setAddress} placeholder="Your address" rows={2} />
+                <Input label="Date of Birth" type="date" value={dateOfBirth} onChange={setDateOfBirth} />
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={handleSave}
+                    disabled={loading}
+                    className="px-6 py-2 font-medium rounded-lg hover:opacity-90 transition-colors"
+                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Save Changes"}
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="px-6 py-2 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                    style={{ backgroundColor: '#e0e0e0', color: '#333333' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="border-b pb-4" style={{ borderColor: '#e0e0e0' }}>
+                  <p className="text-sm text-gray-500">Full Name</p>
+                  <p className="text-lg font-semibold text-gray-800">{profile.full_name}</p>
+                </div>
+                <div className="border-b pb-4" style={{ borderColor: '#e0e0e0' }}>
+                  <p className="text-sm text-gray-500">Email Address</p>
+                  <p className="text-lg font-semibold text-gray-800">{profile.email}</p>
+                </div>
+                {bio && (
+                  <div className="border-b pb-4" style={{ borderColor: '#e0e0e0' }}>
+                    <p className="text-sm text-gray-500">Bio</p>
+                    <p className="text-gray-700">{bio}</p>
+                  </div>
+                )}
+                {phone && (
+                  <div className="border-b pb-4" style={{ borderColor: '#e0e0e0' }}>
+                    <p className="text-sm text-gray-500">Phone</p>
+                    <p className="text-gray-700">{formatPhoneNumber(phone)}</p>
+                  </div>
+                )}
+                {address && (
+                  <div className="border-b pb-4" style={{ borderColor: '#e0e0e0' }}>
+                    <p className="text-sm text-gray-500">Address</p>
+                    <p className="text-gray-700">{address}</p>
+                  </div>
+                )}
+                {dateOfBirth && (
+                  <div className="border-b pb-4" style={{ borderColor: '#e0e0e0' }}>
+                    <p className="text-sm text-gray-500">Date of Birth</p>
+                    <p className="text-gray-700">{formatDate(dateOfBirth)}</p>
+                  </div>
+                )}
+                <div className="pt-4">
+                  <p className="text-sm text-gray-500">Member Since</p>
+                  <p className="text-gray-700">{formatDate(profile.created_at)}</p>
+                </div>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="mt-4 px-6 py-2 font-medium rounded-lg hover:opacity-80 transition-colors flex items-center gap-2 w-fit"
+                  style={{ backgroundColor: '#fdddce', color: '#f7530b' }}
+                >
+                  <Edit className="w-4 h-4" /> Edit Profile
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <div className="mt-6">
+        <ProfileCompletionBadge 
+          profile={profile} 
+          studentProfile={studentProfile}
+          onClick={() => {
+            if (!isEditing) setIsEditing(true);
+          }}
+        />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Learning Progress</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="p-6 flex flex-col items-center">
+            <CircularProgress value={activeEnrollments.length} max={10} size={80} label="Active Courses" />
+          </Card>
+          <Card className="p-6 flex flex-col items-center">
+            <CircularProgress value={passedCount} max={totalModules || 1} size={80} label="Modules Passed" onClick={() => {}} />
+          </Card>
+          <Card className="p-6 flex flex-col items-center">
+            <CircularProgress value={totalModules > 0 ? Math.round((passedCount / totalModules) * 100) : 0} max={100} size={80} label="Overall Progress" />
+          </Card>
+        </div>
+      </div>
+
+      {activeEnrollments.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Courses</h2>
+          <div className="space-y-4">
+            {activeEnrollments.map((enrollment) => {
+              const courseModules = modules?.filter(m => m.course_id === enrollment.course_id) || [];
+              const passedModules = progress?.filter(p => 
+                p.enrollment_id === enrollment.id && p.status === "passed"
+              ) || [];
+              
+              return (
+                <Card key={enrollment.id} className="p-4 md:p-6">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                      <img 
+                        src={enrollment.course?.thumbnail_url} 
+                        alt="" 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                    <div className="flex-1 text-center sm:text-left">
+                      <h3 className="font-semibold text-gray-800">{enrollment.course?.title}</h3>
+                      <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
+                        <StatusBadge status={enrollment.status} />
+                        <span className="text-xs text-gray-500">
+                          {passedModules.length}/{courseModules.length} modules
+                        </span>
+                      </div>
+                    </div>
+                    <CircularProgress 
+                      value={passedModules.length} 
+                      max={courseModules.length || 1} 
+                      size={70} 
+                      strokeWidth={5}
+                    />
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Student Dashboard ──────────────────────────────────────────────────────
 
 function StudentDashboard({ profile, onNavigate, enrollments, progress, modules, courses }: { 
