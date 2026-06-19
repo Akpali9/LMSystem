@@ -2083,15 +2083,15 @@ function Sidebar({
     badge: showAdminCourseChatBadge ? adminCourseChatCount : undefined
   });
   
-  // // --- ADMIN PERSONAL CHAT ---
-  // const showAdminChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
-  // adminNavItems.push({ 
-  //   view: "admin-personal-chat" as View, 
-  //   icon: Mail, 
-  //   label: "Messages",
-  //   key: "admin-chat",
-  //   badge: showAdminChatBadge ? adminUnreadMessagesCount : undefined
-  // });
+  // --- ADMIN PERSONAL CHAT ---
+  const showAdminChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
+  adminNavItems.push({ 
+    view: "admin-personal-chat" as View, 
+    icon: Mail, 
+    label: "Student Message",
+    key: "admin-chat",
+    badge: showAdminChatBadge ? adminUnreadMessagesCount : undefined
+  });
   
   // --- ADMIN SCHOLARSHIPS ---
   const showScholarshipBadge = shouldShowAdminNotification('admin-scholarship', adminPendingScholarshipsCount);
