@@ -2110,7 +2110,7 @@ adminNavItems.push({
   view: "admin-personal-chat" as View,
   icon: Mail,
   label: "Student Messages",
-  key: "admin-chat",
+  key: "admin-course-chat",
   badge: showAdminPersonalChatBadge ? adminUnreadMessagesCount : undefined
 });
 
