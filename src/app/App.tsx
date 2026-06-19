@@ -1662,109 +1662,108 @@ const markAdminChatAsViewed = async () => {
     return !adminViewed.has(key);
   };
 
-  const fetchNotificationCounts = async () => {
-    if (!profile) return;
+ const fetchNotificationCounts = async () => {
+  if (!profile) return;
 
-    if (profile.role === 'admin') {
-      // --- ADMIN NOTIFICATIONS ---
-      const { count: paymentsCount } = await supabase
-        .from('payment_receipts')
+  if (profile.role === 'admin') {
+    // --- ADMIN NOTIFICATIONS ---
+    const { count: paymentsCount } = await supabase
+      .from('payment_receipts')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    setAdminPendingPaymentsCount(paymentsCount || 0);
+
+    const { count: assignmentsCount } = await supabase
+      .from('student_assignments')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'submitted');
+    setAdminPendingAssignmentsCount(assignmentsCount || 0);
+
+    const { count: scholarshipsCount } = await supabase
+      .from('scholarships')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    setAdminPendingScholarshipsCount(scholarshipsCount || 0);
+
+    const { count: enrollmentsCount } = await supabase
+      .from('enrollments')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['pending_payment', 'payment_submitted']);
+    setAdminPendingEnrollmentsCount(enrollmentsCount || 0);
+
+    const { count: messagesCount } = await supabase
+      .from('personal_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('receiver_id', profile.id)
+      .eq('read', false);
+    setAdminUnreadMessagesCount(messagesCount || 0);
+
+    // --- ADMIN COURSE CHAT (all course chat messages) ---
+    const { count: courseChatCount } = await supabase
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('read', false);
+    setAdminCourseChatCount(courseChatCount || 0);
+
+  } else if (profile.role === 'student') {
+    // --- STUDENT NOTIFICATIONS ---
+    
+    // 1. NEW ASSIGNMENTS
+    const { count: newAssignmentsCount } = await supabase
+      .from('student_assignments')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', profile.id)
+      .eq('status', 'pending')
+      .is('viewed_at', null);
+    setStudentNewAssignmentsCount(newAssignmentsCount || 0);
+
+    // 2. PENDING PAYMENTS
+    const { count: paymentsCount } = await supabase
+      .from('payment_receipts')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', profile.id)
+      .eq('status', 'pending')
+      .is('viewed_at', null);
+    setStudentPendingPaymentsCount(paymentsCount || 0);
+
+    // 3. PENDING SCHOLARSHIPS
+    const { count: scholarshipsCount } = await supabase
+      .from('scholarships')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', profile.id)
+      .eq('status', 'pending')
+      .is('viewed_at', null);
+    setStudentPendingScholarshipsCount(scholarshipsCount || 0);
+
+    // 4. UNREAD PERSONAL MESSAGES
+    const { count: messagesCount } = await supabase
+      .from('personal_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('receiver_id', profile.id)
+      .eq('read', false);
+    setStudentUnreadMessagesCount(messagesCount || 0);
+
+    // 5. UNREAD COURSE CHAT MESSAGES
+    const { data: enrollments } = await supabase
+      .from('enrollments')
+      .select('course_id')
+      .eq('student_id', profile.id)
+      .eq('status', 'active');
+    
+    if (enrollments && enrollments.length > 0) {
+      const courseIds = enrollments.map(e => e.course_id);
+      const { count: courseChatCount } = await supabase
+        .from('chat_messages')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending');
-      setAdminPendingPaymentsCount(paymentsCount || 0);
-
-      const { count: assignmentsCount } = await supabase
-        .from('student_assignments')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'submitted');
-      setAdminPendingAssignmentsCount(assignmentsCount || 0);
-
-      const { count: scholarshipsCount } = await supabase
-        .from('scholarships')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending');
-      setAdminPendingScholarshipsCount(scholarshipsCount || 0);
-
-      const { count: enrollmentsCount } = await supabase
-        .from('enrollments')
-        .select('id', { count: 'exact', head: true })
-        .in('status', ['pending_payment', 'payment_submitted']);
-      setAdminPendingEnrollmentsCount(enrollmentsCount || 0);
-
-     const { count: messagesCount } = await supabase
-    .from('personal_messages')
-    .select('id', { count: 'exact', head: true })
-    .eq('receiver_id', profile.id)
-    .eq('read', false);
-  setAdminUnreadMessagesCount(messagesCount || 0);
-
-  // --- ADMIN COURSE CHAT (all course chat messages) ---
-  const { count: courseChatCount } = await supabase
-    .from('chat_messages')
-    .select('id', { count: 'exact', head: true })
-    .eq('read', false);
-  setAdminCourseChatCount(courseChatCount || 0);
-}
-    } else if (profile.role === 'student') {
-      // --- STUDENT NOTIFICATIONS ---
-      
-      // 1. NEW ASSIGNMENTS
-      const { count: newAssignmentsCount } = await supabase
-        .from('student_assignments')
-        .select('id', { count: 'exact', head: true })
-        .eq('student_id', profile.id)
-        .eq('status', 'pending')
-        .is('viewed_at', null);
-      setStudentNewAssignmentsCount(newAssignmentsCount || 0);
-
-      // 2. PENDING PAYMENTS
-      const { count: paymentsCount } = await supabase
-        .from('payment_receipts')
-        .select('id', { count: 'exact', head: true })
-        .eq('student_id', profile.id)
-        .eq('status', 'pending')
-        .is('viewed_at', null);
-      setStudentPendingPaymentsCount(paymentsCount || 0);
-
-      // 3. PENDING SCHOLARSHIPS
-      const { count: scholarshipsCount } = await supabase
-        .from('scholarships')
-        .select('id', { count: 'exact', head: true })
-        .eq('student_id', profile.id)
-        .eq('status', 'pending')
-        .is('viewed_at', null);
-      setStudentPendingScholarshipsCount(scholarshipsCount || 0);
-
-      // 4. UNREAD PERSONAL MESSAGES
-      const { count: messagesCount } = await supabase
-        .from('personal_messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('receiver_id', profile.id)
+        .in('course_id', courseIds)
+        .neq('user_id', profile.id)
         .eq('read', false);
-      setStudentUnreadMessagesCount(messagesCount || 0);
-
-      // 5. UNREAD COURSE CHAT MESSAGES
-      const { data: enrollments } = await supabase
-        .from('enrollments')
-        .select('course_id')
-        .eq('student_id', profile.id)
-        .eq('status', 'active');
-      
-      if (enrollments && enrollments.length > 0) {
-        const courseIds = enrollments.map(e => e.course_id);
-        const { count: courseChatCount } = await supabase
-          .from('chat_messages')
-          .select('id', { count: 'exact', head: true })
-          .in('course_id', courseIds)
-          .neq('user_id', profile.id)
-          .eq('read', false);
-        setStudentCourseChatCount(courseChatCount || 0);
-      } else {
-        setStudentCourseChatCount(0);
-      }
+      setStudentCourseChatCount(courseChatCount || 0);
+    } else {
+      setStudentCourseChatCount(0);
     }
-  };
-
+  }
+};
   // Handle navigation with notification clearing
   const handleNavigate = async (view: View, viewKey: string) => {
     if (profile?.role === 'student') {
