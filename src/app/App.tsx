@@ -1435,6 +1435,7 @@ function Sidebar({
   const [studentPendingPaymentsCount, setStudentPendingPaymentsCount] = useState(0);
   const [studentPendingScholarshipsCount, setStudentPendingScholarshipsCount] = useState(0);
   const [studentUnreadMessagesCount, setStudentUnreadMessagesCount] = useState(0);
+  const [studentCourseChatCount, setStudentCourseChatCount] = useState(0); // NEW
 
   // --- ADMIN NOTIFICATION COUNTS ---
   const [adminPendingPaymentsCount, setAdminPendingPaymentsCount] = useState(0);
@@ -1442,6 +1443,7 @@ function Sidebar({
   const [adminPendingScholarshipsCount, setAdminPendingScholarshipsCount] = useState(0);
   const [adminPendingEnrollmentsCount, setAdminPendingEnrollmentsCount] = useState(0);
   const [adminUnreadMessagesCount, setAdminUnreadMessagesCount] = useState(0);
+  const [adminCourseChatCount, setAdminCourseChatCount] = useState(0); // NEW
 
   // --- TRACK VIEWED NOTIFICATIONS FOR ADMIN (in-memory cache) ---
   const [adminViewed, setAdminViewed] = useState<Set<string>>(new Set());
@@ -1461,6 +1463,54 @@ function Sidebar({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // --- STUDENT: MARK COURSE CHAT AS VIEWED ---
+  const markCourseChatAsViewed = async () => {
+    if (!profile) return;
+    try {
+      // Update all unread messages in courses the student is enrolled in
+      const { data: enrollments } = await supabase
+        .from('enrollments')
+        .select('course_id')
+        .eq('student_id', profile.id)
+        .eq('status', 'active');
+      
+      if (enrollments && enrollments.length > 0) {
+        const courseIds = enrollments.map(e => e.course_id);
+        
+        const { error } = await supabase
+          .from('chat_messages')
+          .update({ read: true })
+          .in('course_id', courseIds)
+          .neq('user_id', profile.id)
+          .eq('read', false);
+        
+        if (error) {
+          console.error('Error marking course chat as viewed:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  // --- ADMIN: MARK COURSE CHAT AS VIEWED ---
+  const markAdminCourseChatAsViewed = async () => {
+    if (!profile) return;
+    try {
+      // For admin, mark all chat messages as read
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ read: true })
+        .eq('read', false);
+      
+      if (error) {
+        console.error('Error marking admin course chat as viewed:', error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
   // --- STUDENT: MARK ASSIGNMENTS AS VIEWED ---
   const markAssignmentsAsViewed = async () => {
@@ -1540,7 +1590,6 @@ function Sidebar({
   // --- ADMIN: MARK PAYMENTS AS VIEWED ---
   const markAdminPaymentsAsViewed = async () => {
     if (!profile) return;
-    // For admin, we use in-memory tracking
     setAdminViewed(prev => new Set(prev).add('admin-payments'));
     await fetchNotificationCounts();
   };
@@ -1569,7 +1618,6 @@ function Sidebar({
   // --- ADMIN: MARK CHAT AS VIEWED ---
   const markAdminChatAsViewed = async () => {
     if (!profile) return;
-    // Mark messages as read
     try {
       const { error } = await supabase
         .from('personal_messages')
@@ -1628,10 +1676,17 @@ function Sidebar({
         .eq('read', false);
       setAdminUnreadMessagesCount(messagesCount || 0);
 
+      // --- ADMIN COURSE CHAT ---
+      const { count: courseChatCount } = await supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('read', false);
+      setAdminCourseChatCount(courseChatCount || 0);
+
     } else if (profile.role === 'student') {
       // --- STUDENT NOTIFICATIONS ---
       
-      // 1. NEW ASSIGNMENTS - Only count assignments that haven't been viewed
+      // 1. NEW ASSIGNMENTS
       const { count: newAssignmentsCount } = await supabase
         .from('student_assignments')
         .select('id', { count: 'exact', head: true })
@@ -1640,7 +1695,7 @@ function Sidebar({
         .is('viewed_at', null);
       setStudentNewAssignmentsCount(newAssignmentsCount || 0);
 
-      // 2. PENDING PAYMENTS - Only count payments that haven't been viewed
+      // 2. PENDING PAYMENTS
       const { count: paymentsCount } = await supabase
         .from('payment_receipts')
         .select('id', { count: 'exact', head: true })
@@ -1649,7 +1704,7 @@ function Sidebar({
         .is('viewed_at', null);
       setStudentPendingPaymentsCount(paymentsCount || 0);
 
-      // 3. PENDING SCHOLARSHIPS - Only count scholarships that haven't been viewed
+      // 3. PENDING SCHOLARSHIPS
       const { count: scholarshipsCount } = await supabase
         .from('scholarships')
         .select('id', { count: 'exact', head: true })
@@ -1658,19 +1713,38 @@ function Sidebar({
         .is('viewed_at', null);
       setStudentPendingScholarshipsCount(scholarshipsCount || 0);
 
-      // 4. UNREAD MESSAGES
+      // 4. UNREAD PERSONAL MESSAGES
       const { count: messagesCount } = await supabase
         .from('personal_messages')
         .select('id', { count: 'exact', head: true })
         .eq('receiver_id', profile.id)
         .eq('read', false);
       setStudentUnreadMessagesCount(messagesCount || 0);
+
+      // 5. UNREAD COURSE CHAT MESSAGES
+      const { data: enrollments } = await supabase
+        .from('enrollments')
+        .select('course_id')
+        .eq('student_id', profile.id)
+        .eq('status', 'active');
+      
+      if (enrollments && enrollments.length > 0) {
+        const courseIds = enrollments.map(e => e.course_id);
+        const { count: courseChatCount } = await supabase
+          .from('chat_messages')
+          .select('id', { count: 'exact', head: true })
+          .in('course_id', courseIds)
+          .neq('user_id', profile.id)
+          .eq('read', false);
+        setStudentCourseChatCount(courseChatCount || 0);
+      } else {
+        setStudentCourseChatCount(0);
+      }
     }
   };
 
   // Handle navigation with notification clearing
   const handleNavigate = async (view: View, viewKey: string) => {
-    // Clear notifications based on what was clicked
     if (profile?.role === 'student') {
       switch (viewKey) {
         case 'student-assignments':
@@ -1684,6 +1758,9 @@ function Sidebar({
           break;
         case 'student-scholarship':
           await markScholarshipsAsViewed();
+          break;
+        case 'student-chat':
+          await markCourseChatAsViewed();
           break;
         default:
           break;
@@ -1704,6 +1781,9 @@ function Sidebar({
           break;
         case 'admin-chat':
           await markAdminChatAsViewed();
+          break;
+        case 'admin-course-chat':
+          await markAdminCourseChatAsViewed();
           break;
         default:
           break;
@@ -1730,7 +1810,7 @@ function Sidebar({
     const subscriptions = [];
     
     if (profile.role === 'admin') {
-      // Admin subscriptions - reset viewed state when new data arrives
+      // Admin subscriptions
       subscriptions.push(
         supabase
           .channel('admin-assignments-count')
@@ -1738,7 +1818,6 @@ function Sidebar({
             { event: '*', schema: 'public', table: 'student_assignments' },
             () => {
               fetchNotificationCounts();
-              // Reset viewed state for assignments when new data arrives
               setAdminViewed(prev => {
                 const newSet = new Set(prev);
                 newSet.delete('admin-assignments');
@@ -1817,8 +1896,26 @@ function Sidebar({
           .subscribe()
       );
       
+      // Admin Course Chat subscription
+      subscriptions.push(
+        supabase
+          .channel('admin-course-chat-count')
+          .on('postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+            () => {
+              fetchNotificationCounts();
+              setAdminViewed(prev => {
+                const newSet = new Set(prev);
+                newSet.delete('admin-course-chat');
+                return newSet;
+              });
+            }
+          )
+          .subscribe()
+      );
+      
     } else if (profile.role === 'student') {
-      // Student subscriptions - only listen for INSERT events
+      // Student subscriptions
       subscriptions.push(
         supabase
           .channel('student-assignments-count')
@@ -1854,6 +1951,17 @@ function Sidebar({
           .channel('student-messages-count')
           .on('postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `receiver_id=eq.${profile.id}` },
+            () => fetchNotificationCounts()
+          )
+          .subscribe()
+      );
+      
+      // Student Course Chat subscription
+      subscriptions.push(
+        supabase
+          .channel('student-course-chat-count')
+          .on('postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'chat_messages' },
             () => fetchNotificationCounts()
           )
           .subscribe()
@@ -1898,9 +2006,16 @@ function Sidebar({
     badge: studentPendingPaymentsCount > 0 ? studentPendingPaymentsCount : undefined
   });
   
-  studentNavItems.push({ view: "student-chat" as View, icon: MessageCircle, label: "Course Chat", key: "student-chat" });
+  // --- COURSE CHAT ---
+  studentNavItems.push({ 
+    view: "student-chat" as View, 
+    icon: MessageCircle, 
+    label: "Course Chat",
+    key: "student-chat",
+    badge: studentCourseChatCount > 0 ? studentCourseChatCount : undefined
+  });
   
-  // --- MESSAGES ---
+  // --- PERSONAL MESSAGES ---
   studentNavItems.push({ 
     view: "student-personal-messages" as View, 
     icon: Mail, 
@@ -1920,7 +2035,7 @@ function Sidebar({
   
   studentNavItems.push({ view: "student-profile" as View, icon: User, label: "My Profile", key: "student-profile" });
 
-  // ADMIN NAVIGATION - with proper clearing
+  // ADMIN NAVIGATION
   const adminNavItems = [];
   
   adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "admin-dashboard" });
@@ -1958,14 +2073,24 @@ function Sidebar({
   
   adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", key: "admin-quizzes" });
   
-  // --- ADMIN CHAT ---
-  const showChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
+  // --- ADMIN COURSE CHAT ---
+  const showAdminCourseChatBadge = shouldShowAdminNotification('admin-course-chat', adminCourseChatCount);
   adminNavItems.push({ 
     view: "admin-chat" as View, 
     icon: MessageCircle, 
-    label: "Chat",
+    label: "Course Chat",
+    key: "admin-course-chat",
+    badge: showAdminCourseChatBadge ? adminCourseChatCount : undefined
+  });
+  
+  // --- ADMIN PERSONAL CHAT ---
+  const showAdminChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
+  adminNavItems.push({ 
+    view: "admin-personal-chat" as View, 
+    icon: Mail, 
+    label: "Messages",
     key: "admin-chat",
-    badge: showChatBadge ? adminUnreadMessagesCount : undefined
+    badge: showAdminChatBadge ? adminUnreadMessagesCount : undefined
   });
   
   // --- ADMIN SCHOLARSHIPS ---
@@ -2168,7 +2293,6 @@ function Sidebar({
     </aside>
   );
 }
-
 // ─── Student Assignments ──────────────────────────────────────────────────────
 
 function StudentAssignments({ profile }: { profile: Profile }) {
@@ -3454,24 +3578,44 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
   const activeEnrollments = enrollments.filter(e => e.status === "active");
   const enrolledCourses = courses.filter(c => activeEnrollments.some(e => e.course_id === c.id));
 
-  useEffect(() => {
-    if (selectedCourseId) {
-      fetchMessages();
-      
-      const subscription = supabase
-        .channel(`chat-${selectedCourseId}`)
-        .on("postgres_changes", 
-          { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
-          () => fetchMessages()
-        )
-        .subscribe();
+useEffect(() => {
+  if (selectedCourseId) {
+    fetchMessages();
+    
+    // Mark messages as read when viewing the chat
+    const markAsRead = async () => {
+      try {
+        const { error } = await supabase
+          .from('chat_messages')
+          .update({ read: true })
+          .eq('course_id', selectedCourseId)
+          .neq('user_id', profile.id)
+          .eq('read', false);
+        
+        if (error) {
+          console.error('Error marking messages as read:', error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+    
+    markAsRead();
+    
+    const subscription = supabase
+      .channel(`chat-${selectedCourseId}`)
+      .on("postgres_changes", 
+        { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
+        () => fetchMessages()
+      )
+      .subscribe();
 
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
-  }, [selectedCourseId]);
-
+    return () => {
+      subscription.unsubscribe();
+    };
+  }
+}, [selectedCourseId]);
+  
   const fetchMessages = async () => {
     if (!selectedCourseId) return;
     setLoading(true);
@@ -7198,24 +7342,42 @@ useEffect(() => {
   markChatAsViewed();
 }, [profile?.id]);
 
-  useEffect(() => {
-    if (selectedCourseId && chatType === "course") {
-      fetchMessages();
-      
-      const subscription = supabase
-        .channel(`admin-chat-${selectedCourseId}`)
-        .on("postgres_changes", 
-          { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
-          () => fetchMessages()
-        )
-        .subscribe();
+useEffect(() => {
+  if (selectedCourseId && chatType === "course") {
+    fetchMessages();
+    
+    // Mark messages as read when admin views the chat
+    const markAsRead = async () => {
+      try {
+        const { error } = await supabase
+          .from('chat_messages')
+          .update({ read: true })
+          .eq('course_id', selectedCourseId)
+          .eq('read', false);
+        
+        if (error) {
+          console.error('Error marking messages as read:', error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+    
+    markAsRead();
+    
+    const subscription = supabase
+      .channel(`admin-chat-${selectedCourseId}`)
+      .on("postgres_changes", 
+        { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
+        () => fetchMessages()
+      )
+      .subscribe();
 
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
-  }, [selectedCourseId, chatType]);
-
+    return () => {
+      subscription.unsubscribe();
+    };
+  }
+}, [selectedCourseId, chatType]);
   useEffect(() => {
     if (selectedStudentId && chatType === "personal" && profile?.id) {
       fetchPersonalMessages();
