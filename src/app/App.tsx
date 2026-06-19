@@ -1444,6 +1444,9 @@ function Sidebar({
   const [adminPendingEnrollmentsCount, setAdminPendingEnrollmentsCount] = useState(0);
   const [adminUnreadMessagesCount, setAdminUnreadMessagesCount] = useState(0);
 
+  // Track which notifications have been viewed/cleared
+  const [clearedNotifications, setClearedNotifications] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
@@ -1523,7 +1526,7 @@ function Sidebar({
         .eq('status', 'submitted');
       setStudentPendingAssignmentsCount(assignmentsCount || 0);
 
-      // Graded assignments (student's own, newly graded)
+      // Graded assignments (student's own, newly graded - last 7 days)
       const { count: gradedCount } = await supabase
         .from('student_assignments')
         .select('id', { count: 'exact', head: true })
@@ -1548,6 +1551,23 @@ function Sidebar({
         .eq('read', false);
       setStudentUnreadMessagesCount(messagesCount || 0);
     }
+  };
+
+  // Clear notification when clicked
+  const handleNotificationClick = (view: View, type: string) => {
+    // Mark this notification as cleared
+    const key = `${view}-${type}`;
+    setClearedNotifications(prev => new Set(prev).add(key));
+    
+    // Navigate to the view
+    onNavigate(view);
+  };
+
+  // Check if notification should be shown (not cleared)
+  const shouldShowNotification = (view: View, type: string, count: number) => {
+    if (count <= 0) return false;
+    const key = `${view}-${type}`;
+    return !clearedNotifications.has(key);
   };
 
   // Fetch personal messages unread count
@@ -1674,73 +1694,82 @@ function Sidebar({
     return null;
   }
 
-  // --- STUDENT NAVIGATION WITH BADGES ---
+  // --- STUDENT NAVIGATION ---
   const studentNav = [
-    { view: "student-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", badge: 0 },
-    { view: "student-courses" as View, icon: BookOpen, label: "My Courses", badge: 0 },
-    { view: "student-module" as View, icon: Video, label: "Learning", badge: 0 },
+    { view: "student-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", type: "dashboard" },
+    { view: "student-courses" as View, icon: BookOpen, label: "My Courses", type: "courses" },
+    { view: "student-module" as View, icon: Video, label: "Learning", type: "module" },
     { 
       view: "student-assignments" as View, 
       icon: ClipboardList, 
-      label: "Assignments", 
-      badge: studentPendingAssignmentsCount + studentGradedAssignmentsCount 
+      label: "Assignments",
+      type: "assignments",
+      count: studentPendingAssignmentsCount + studentGradedAssignmentsCount 
     },
     { 
       view: "student-payment" as View, 
       icon: DollarSign, 
-      label: "Payments", 
-      badge: studentPendingPaymentsCount 
+      label: "Payments",
+      type: "payments",
+      count: studentPendingPaymentsCount 
     },
-    { view: "student-chat" as View, icon: MessageCircle, label: "Course Chat", badge: 0 },
+    { view: "student-chat" as View, icon: MessageCircle, label: "Course Chat", type: "chat" },
     { 
       view: "student-personal-messages" as View, 
       icon: Mail, 
-      label: "Messages", 
-      badge: studentUnreadMessagesCount 
+      label: "Messages",
+      type: "messages",
+      count: studentUnreadMessagesCount 
     },
     { 
       view: "student-scholarship" as View, 
       icon: Gift, 
-      label: "Scholarship", 
-      badge: studentPendingScholarshipsCount 
+      label: "Scholarship",
+      type: "scholarship",
+      count: studentPendingScholarshipsCount 
     },
-    { view: "student-profile" as View, icon: User, label: "My Profile", badge: 0 },
+    { view: "student-profile" as View, icon: User, label: "My Profile", type: "profile" },
   ];
 
-  // --- ADMIN NAVIGATION WITH BADGES ---
+  // --- ADMIN NAVIGATION ---
   const adminNav = [
-    { view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", badge: 0 },
-    { view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules", badge: 0 },
+    { view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", type: "dashboard" },
+    { view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules", type: "courses" },
     { 
       view: "admin-students" as View, 
       icon: Users, 
-      label: "Students", 
-      badge: adminPendingEnrollmentsCount 
+      label: "Students",
+      type: "students",
+      count: adminPendingEnrollmentsCount 
     },
     { 
       view: "admin-payments" as View, 
       icon: DollarSign, 
-      label: "Payments", 
-      badge: adminPendingPaymentsCount 
+      label: "Payments",
+      type: "payments",
+      count: adminPendingPaymentsCount 
     },
     { 
       view: "admin-assignments" as View, 
       icon: ClipboardList, 
-      label: "Assignments", 
-      badge: adminPendingAssignmentsCount 
+      label: "Assignments",
+      type: "assignments",
+      count: adminPendingAssignmentsCount 
     },
-    { view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", badge: 0 },
+    { view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", type: "quizzes" },
     { 
       view: "admin-chat" as View, 
       icon: MessageCircle, 
-      label: "Chat", 
-      badge: adminUnreadMessagesCount 
+      label: "Chat",
+      type: "chat",
+      count: adminUnreadMessagesCount 
     },
     { 
       view: "admin-scholarship" as View, 
       icon: Gift, 
-      label: "Scholarships", 
-      badge: adminPendingScholarshipsCount 
+      label: "Scholarships",
+      type: "scholarship",
+      count: adminPendingScholarshipsCount 
     },
   ];
 
@@ -1789,27 +1818,36 @@ function Sidebar({
           </div>
 
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto" style={{ height: 'calc(100vh - 180px)' }}>
-            {nav.map(({ view, icon: Icon, label, badge }) => (
-              <button
-                key={view}
-                onClick={() => handleNavigate(view)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all",
-                  currentView === view
-                    ? "text-white"
-                    : "text-gray-400 hover:bg-white/10 hover:text-white"
-                )}
-                style={currentView === view ? { backgroundColor: '#f7530b' } : {}}
-              >
-                <Icon className="w-5 h-5 shrink-0" style={currentView === view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
-                <span className="flex-1 text-left">{label}</span>
-                {badge && badge > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
-                    {badge > 99 ? '99+' : badge}
-                  </span>
-                )}
-              </button>
-            ))}
+            {nav.map(({ view, icon: Icon, label, type, count }) => {
+              const showBadge = count && count > 0 && shouldShowNotification(view, type, count);
+              return (
+                <button
+                  key={view}
+                  onClick={() => {
+                    if (showBadge) {
+                      handleNotificationClick(view, type);
+                    } else {
+                      handleNavigate(view);
+                    }
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all",
+                    currentView === view
+                      ? "text-white"
+                      : "text-gray-400 hover:bg-white/10 hover:text-white"
+                  )}
+                  style={currentView === view ? { backgroundColor: '#f7530b' } : {}}
+                >
+                  <Icon className="w-5 h-5 shrink-0" style={currentView === view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
+                  <span className="flex-1 text-left">{label}</span>
+                  {showBadge && (
+                    <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
+                      {count > 99 ? '99+' : count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
 
           <div className="p-3 border-t absolute bottom-0 left-0 right-0" style={{ borderTopColor: '#444444', backgroundColor: '#333333' }}>
@@ -1860,39 +1898,47 @@ function Sidebar({
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {nav.map(({ view, icon: Icon, label, badge }) => (
-          <button
-            key={view}
-            onClick={() => onNavigate(view)}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
-              currentView === view
-                ? "text-white"
-                : "text-gray-400 hover:bg-white/10 hover:text-white"
-            )}
-            style={currentView === view ? { backgroundColor: '#f7530b' } : {}}
-          >
-            <Icon className="w-4.5 h-4.5 shrink-0" style={currentView === view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
-            
-            {!collapsed ? (
-              <>
-                <span className="flex-1 text-left">{label}</span>
-                {badge && badge > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
-                    {badge > 99 ? '99+' : badge}
+        {nav.map(({ view, icon: Icon, label, type, count }) => {
+          const showBadge = count && count > 0 && shouldShowNotification(view, type, count);
+          return (
+            <button
+              key={view}
+              onClick={() => {
+                if (showBadge) {
+                  handleNotificationClick(view, type);
+                } else {
+                  handleNavigate(view);
+                }
+              }}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
+                currentView === view
+                  ? "text-white"
+                  : "text-gray-400 hover:bg-white/10 hover:text-white"
+              )}
+              style={currentView === view ? { backgroundColor: '#f7530b' } : {}}
+            >
+              <Icon className="w-4.5 h-4.5 shrink-0" style={currentView === view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
+              
+              {!collapsed ? (
+                <>
+                  <span className="flex-1 text-left">{label}</span>
+                  {showBadge && (
+                    <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
+                      {count > 99 ? '99+' : count}
+                    </span>
+                  )}
+                </>
+              ) : (
+                showBadge && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    {count > 9 ? '9+' : count}
                   </span>
-                )}
-              </>
-            ) : (
-              // When collapsed, show badge as a small dot or number on top-right
-              badge && badge > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                  {badge > 9 ? '9+' : badge}
-                </span>
-              )
-            )}
-          </button>
-        ))}
+                )
+              )}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="p-3 border-t space-y-1" style={{ borderTopColor: '#444444' }}>
