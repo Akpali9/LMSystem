@@ -1494,7 +1494,6 @@ function Sidebar({
     }
   };
 
-  // --- ADMIN: MARK COURSE CHAT AS VIEWED ---
  // --- ADMIN: MARK COURSE CHAT AS VIEWED ---
 const markAdminCourseChatAsViewed = async () => {
   if (!profile) return;
@@ -1534,6 +1533,7 @@ const markAdminChatAsViewed = async () => {
     console.error('Error marking admin chat as read:', error);
   }
 };
+  
   // --- STUDENT: MARK ASSIGNMENTS AS VIEWED ---
   const markAssignmentsAsViewed = async () => {
     if (!profile) return;
@@ -1788,9 +1788,6 @@ const markAdminChatAsViewed = async () => {
           break;
       }
     } else if (profile?.role === 'admin') {
-     // In handleNavigate, for admin:
-
-if (profile?.role === 'admin') {
   switch (viewKey) {
     case 'admin-payments':
       await markAdminPaymentsAsViewed();
@@ -2105,7 +2102,7 @@ const showAdminCourseChatBadge = shouldShowAdminNotification('admin-course-chat'
 adminNavItems.push({
   view: "admin-chat" as View,
   icon: MessageCircle,
-  label: "Messages",
+  label: "Course Chat",
   key: "admin-course-chat",
   badge: showAdminCourseChatBadge ? adminCourseChatCount : undefined
 });
@@ -2115,7 +2112,7 @@ const showAdminPersonalChatBadge = shouldShowAdminNotification('admin-chat', adm
 adminNavItems.push({
   view: "admin-personal-chat" as View,
   icon: Mail,
-  label: "Student Message",
+  label: "Student Messages",
   key: "admin-chat",
   badge: showAdminPersonalChatBadge ? adminUnreadMessagesCount : undefined
 });
@@ -2129,8 +2126,8 @@ adminNavItems.push({
   key: "admin-scholarship",
   badge: showScholarshipBadge ? adminPendingScholarshipsCount : undefined
 });
-  
-  const nav = profile.role === "admin" ? adminNavItems : studentNavItems;
+    
+    const nav = profile.role === "admin" ? adminNavItems : studentNavItems;
 
   // ─── MOBILE SIDEBAR ──────────────────────────────────────────────────────
   if (isMobile) {
