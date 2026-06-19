@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import type {
@@ -314,6 +313,7 @@ type View =
   | "admin-student-profile"
   | "admin-quizzes"
   | "admin-chat"
+  | "admin-personal-chat"
   | "admin-scholarship";
 
 interface Scholarship {
@@ -1697,7 +1697,8 @@ function Sidebar({
         .is('viewed_at', null);
       setStudentNewAssignmentsCount(newAssignmentsCount || 0);
 
-      // 2. PENDING PAYMENTS      const { count: paymentsCount } = await supabase
+      // 2. PENDING PAYMENTS
+      const { count: paymentsCount } = await supabase
         .from('payment_receipts')
         .select('id', { count: 'exact', head: true })
         .eq('student_id', profile.id)
@@ -2302,30 +2303,26 @@ function StudentAssignments({ profile }: { profile: Profile }) {
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
 
-useEffect(() => {
-  const markAsViewed = async () => {
-    if (!profile) return;
-    
-    try {
-      const { error } = await supabase
-        .from('student_assignments')
-        .update({ viewed_at: new Date().toISOString() })
-        .eq('student_id', profile.id)
-        .eq('status', 'pending')
-        .is('viewed_at', null);
-      
-      if (error) {
-        console.error('Error marking assignments as viewed:', error);
+  useEffect(() => {
+    const markAsViewed = async () => {
+      if (!profile) return;
+      try {
+        const { error } = await supabase
+          .from('student_assignments')
+          .update({ viewed_at: new Date().toISOString() })
+          .eq('student_id', profile.id)
+          .eq('status', 'pending')
+          .is('viewed_at', null);
+        if (error) {
+          console.error('Error marking assignments as viewed:', error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
       }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-  
-  markAsViewed();
-  fetchAssignments();
-}, [profile.id]);
-  
+    };
+    markAsViewed();
+    fetchAssignments();
+  }, [profile.id]);
 
   const fetchAssignments = async () => {
     try {
@@ -3579,10 +3576,10 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
   const [isMobile, setIsMobile] = useState(false);
   const [showCourseList, setShowCourseList] = useState(true);
 
-  // Detect mobile
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -3596,7 +3593,6 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
     if (selectedCourseId) {
       fetchMessages();
       
-      // Mark messages as read when viewing the chat
       const markAsRead = async () => {
         try {
           const { error } = await supabase
@@ -3605,7 +3601,6 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
             .eq('course_id', selectedCourseId)
             .neq('user_id', profile.id)
             .eq('read', false);
-          
           if (error) {
             console.error('Error marking messages as read:', error);
           }
@@ -3630,7 +3625,6 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
     }
   }, [selectedCourseId]);
 
-  // Auto-select first course on mobile when chat loads
   useEffect(() => {
     if (isMobile && enrolledCourses.length > 0 && !selectedCourseId) {
       setSelectedCourseId(enrolledCourses[0].id);
@@ -3927,29 +3921,28 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
 
-useEffect(() => {
-  if (profile) {
-    // Mark messages as read when the component loads
-    const markAsRead = async () => {
-      try {
-        const { error } = await supabase
-          .from('personal_messages')
-          .update({ read: true })
-          .eq('receiver_id', profile.id)
-          .eq('read', false);
-        
-        if (error) {
-          console.error('Error marking messages as read:', error);
+  useEffect(() => {
+    if (profile) {
+      const markAsRead = async () => {
+        try {
+          const { error } = await supabase
+            .from('personal_messages')
+            .update({ read: true })
+            .eq('receiver_id', profile.id)
+            .eq('read', false);
+          
+          if (error) {
+            console.error('Error marking messages as read:', error);
+          }
+        } catch (error) {
+          console.error('Error:', error);
         }
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    };
-    
-    markAsRead();
-    fetchMessages();
-  }
-}, [profile?.id]);
+      };
+      
+      markAsRead();
+      fetchMessages();
+    }
+  }, [profile?.id]);
   
   const fetchMessages = async () => {
     if (!profile) return;
@@ -4100,31 +4093,26 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-
-useEffect(() => {
-  // Mark scholarships as viewed when the component loads
-  const markAsViewed = async () => {
-    if (!profile) return;
-    
-    try {
-      const { error } = await supabase
-        .from('scholarships')
-        .update({ viewed_at: new Date().toISOString() })
-        .eq('student_id', profile.id)
-        .eq('status', 'pending')
-        .is('viewed_at', null);
-      
-      if (error) {
-        console.error('Error marking scholarships as viewed:', error);
+  useEffect(() => {
+    const markAsViewed = async () => {
+      if (!profile) return;
+      try {
+        const { error } = await supabase
+          .from('scholarships')
+          .update({ viewed_at: new Date().toISOString() })
+          .eq('student_id', profile.id)
+          .eq('status', 'pending')
+          .is('viewed_at', null);
+        if (error) {
+          console.error('Error marking scholarships as viewed:', error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
       }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-  
-  markAsViewed();
-  fetchApplications();
-}, [profile.id]);
+    };
+    markAsViewed();
+    fetchApplications();
+  }, [profile.id]);
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -5283,38 +5271,31 @@ function StudentPayments({ profile }: { profile: Profile }) {
   const [error, setError] = useState<string | null>(null);
   const [pendingEnrollments, setPendingEnrollments] = useState<Enrollment[]>([]);
 
-// In StudentPayments component, add:
-
-useEffect(() => {
-  // Mark payments as viewed when the component loads
-  const markAsViewed = async () => {
-    if (!profile) return;
-    
-    try {
-      const { error } = await supabase
-        .from('payment_receipts')
-        .update({ viewed_at: new Date().toISOString() })
-        .eq('student_id', profile.id)
-        .eq('status', 'pending')
-        .is('viewed_at', null);
-      
-      if (error) {
-        console.error('Error marking payments as viewed:', error);
+  useEffect(() => {
+    const markAsViewed = async () => {
+      if (!profile) return;
+      try {
+        const { error } = await supabase
+          .from('payment_receipts')
+          .update({ viewed_at: new Date().toISOString() })
+          .eq('student_id', profile.id)
+          .eq('status', 'pending')
+          .is('viewed_at', null);
+        if (error) {
+          console.error('Error marking payments as viewed:', error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
       }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-  
-  markAsViewed();
-  fetchPayments();
-  fetchPendingEnrollments();
-}, [profile.id]);
-  
+    };
+    markAsViewed();
+    fetchPayments();
+    fetchPendingEnrollments();
+  }, [profile.id]);
+
   const fetchPayments = async () => {
     setLoading(true);
     setError(null);
-    
     try {
       const { data, error: fetchError } = await supabase
         .from("payment_receipts")
@@ -5359,7 +5340,6 @@ useEffect(() => {
       .select("*, course:course_id(*)")
       .eq("student_id", profile.id)
       .in("status", ["pending_payment", "payment_submitted"]);
-    
     if (data) {
       setPendingEnrollments(data as Enrollment[]);
     }
