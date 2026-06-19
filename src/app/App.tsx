@@ -2019,7 +2019,7 @@ function Sidebar({
   studentNavItems.push({ 
     view: "student-personal-messages" as View, 
     icon: Mail, 
-    label: "Messages",
+    label: "Admin Messages",
     key: "student-personal-messages",
     badge: studentUnreadMessagesCount > 0 ? studentUnreadMessagesCount : undefined
   });
