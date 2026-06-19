@@ -1495,23 +1495,45 @@ function Sidebar({
   };
 
   // --- ADMIN: MARK COURSE CHAT AS VIEWED ---
-  const markAdminCourseChatAsViewed = async () => {
-    if (!profile) return;
-    try {
-      // For admin, mark all chat messages as read
-      const { error } = await supabase
-        .from('chat_messages')
-        .update({ read: true })
-        .eq('read', false);
-      
-      if (error) {
-        console.error('Error marking admin course chat as viewed:', error);
-      }
-    } catch (error) {
-      console.error('Error:', error);
+ // --- ADMIN: MARK COURSE CHAT AS VIEWED ---
+const markAdminCourseChatAsViewed = async () => {
+  if (!profile) return;
+  try {
+    // Mark all course chat messages as read
+    const { error } = await supabase
+      .from('chat_messages')
+      .update({ read: true })
+      .eq('read', false);
+    
+    if (error) {
+      console.error('Error marking admin course chat as viewed:', error);
+    } else {
+      setAdminViewed(prev => new Set(prev).add('admin-course-chat'));
+      await fetchNotificationCounts();
     }
-  };
+  } catch (error) {
+    console.error('Error:', error);
+  }
+};
 
+// --- ADMIN: MARK PERSONAL MESSAGES AS VIEWED ---
+const markAdminChatAsViewed = async () => {
+  if (!profile) return;
+  try {
+    const { error } = await supabase
+      .from('personal_messages')
+      .update({ read: true })
+      .eq('receiver_id', profile.id)
+      .eq('read', false);
+    
+    if (!error) {
+      setAdminViewed(prev => new Set(prev).add('admin-chat'));
+      await fetchNotificationCounts();
+    }
+  } catch (error) {
+    console.error('Error marking admin chat as read:', error);
+  }
+};
   // --- STUDENT: MARK ASSIGNMENTS AS VIEWED ---
   const markAssignmentsAsViewed = async () => {
     if (!profile) return;
@@ -1669,20 +1691,20 @@ function Sidebar({
         .in('status', ['pending_payment', 'payment_submitted']);
       setAdminPendingEnrollmentsCount(enrollmentsCount || 0);
 
-      const { count: messagesCount } = await supabase
-        .from('personal_messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('receiver_id', profile.id)
-        .eq('read', false);
-      setAdminUnreadMessagesCount(messagesCount || 0);
+     const { count: messagesCount } = await supabase
+    .from('personal_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('receiver_id', profile.id)
+    .eq('read', false);
+  setAdminUnreadMessagesCount(messagesCount || 0);
 
-      // --- ADMIN COURSE CHAT ---
-      const { count: courseChatCount } = await supabase
-        .from('chat_messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('read', false);
-      setAdminCourseChatCount(courseChatCount || 0);
-
+  // --- ADMIN COURSE CHAT (all course chat messages) ---
+  const { count: courseChatCount } = await supabase
+    .from('chat_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('read', false);
+  setAdminCourseChatCount(courseChatCount || 0);
+}
     } else if (profile.role === 'student') {
       // --- STUDENT NOTIFICATIONS ---
       
@@ -1766,30 +1788,32 @@ function Sidebar({
           break;
       }
     } else if (profile?.role === 'admin') {
-      switch (viewKey) {
-        case 'admin-payments':
-          await markAdminPaymentsAsViewed();
-          break;
-        case 'admin-assignments':
-          await markAdminAssignmentsAsViewed();
-          break;
-        case 'admin-scholarship':
-          await markAdminScholarshipsAsViewed();
-          break;
-        case 'admin-students':
-          await markAdminEnrollmentsAsViewed();
-          break;
-        case 'admin-chat':
-          await markAdminChatAsViewed();
-          break;
-        case 'admin-course-chat':
-          await markAdminCourseChatAsViewed();
-          break;
-        default:
-          break;
-      }
-    }
-    
+     // In handleNavigate, for admin:
+
+if (profile?.role === 'admin') {
+  switch (viewKey) {
+    case 'admin-payments':
+      await markAdminPaymentsAsViewed();
+      break;
+    case 'admin-assignments':
+      await markAdminAssignmentsAsViewed();
+      break;
+    case 'admin-scholarship':
+      await markAdminScholarshipsAsViewed();
+      break;
+    case 'admin-students':
+      await markAdminEnrollmentsAsViewed();
+      break;
+    case 'admin-course-chat':  // Course Chat
+      await markAdminCourseChatAsViewed();
+      break;
+    case 'admin-chat':         // Personal Messages
+      await markAdminChatAsViewed();
+      break;
+    default:
+      break;
+  }
+}    
     onNavigate(view);
     if (isMobile) {
       setCollapsed(true);
@@ -2035,74 +2059,77 @@ function Sidebar({
   
   studentNavItems.push({ view: "student-profile" as View, icon: User, label: "My Profile", key: "student-profile" });
 
-  // ADMIN NAVIGATION
-  const adminNavItems = [];
-  
-  adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "admin-dashboard" });
-  adminNavItems.push({ view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules", key: "admin-courses" });
-  
-  // --- ADMIN STUDENTS ---
-  const showStudentsBadge = shouldShowAdminNotification('admin-students', adminPendingEnrollmentsCount);
-  adminNavItems.push({ 
-    view: "admin-students" as View, 
-    icon: Users, 
-    label: "Students",
-    key: "admin-students",
-    badge: showStudentsBadge ? adminPendingEnrollmentsCount : undefined
-  });
-  
-  // --- ADMIN PAYMENTS ---
-  const showPaymentsBadge = shouldShowAdminNotification('admin-payments', adminPendingPaymentsCount);
-  adminNavItems.push({ 
-    view: "admin-payments" as View, 
-    icon: DollarSign, 
-    label: "Payments",
-    key: "admin-payments",
-    badge: showPaymentsBadge ? adminPendingPaymentsCount : undefined
-  });
-  
-  // --- ADMIN ASSIGNMENTS ---
-  const showAssignmentsBadge = shouldShowAdminNotification('admin-assignments', adminPendingAssignmentsCount);
-  adminNavItems.push({ 
-    view: "admin-assignments" as View, 
-    icon: ClipboardList, 
-    label: "Assignments",
-    key: "admin-assignments",
-    badge: showAssignmentsBadge ? adminPendingAssignmentsCount : undefined
-  });
-  
-  adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", key: "admin-quizzes" });
-  
-  // --- ADMIN COURSE CHAT ---
-  const showAdminCourseChatBadge = shouldShowAdminNotification('admin-course-chat', adminCourseChatCount);
-  adminNavItems.push({ 
-    view: "admin-chat" as View, 
-    icon: MessageCircle, 
-    label: "Messages",
-    key: "admin-course-chat",
-    badge: showAdminCourseChatBadge ? adminCourseChatCount : undefined
-  });
-  
-  // --- ADMIN PERSONAL CHAT ---
-  const showAdminChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
-  adminNavItems.push({ 
-    view: "admin-personal-chat" as View, 
-    icon: Mail, 
-    label: "Student Message",
-    key: "admin-chat",
-    badge: showAdminChatBadge ? adminUnreadMessagesCount : undefined
-  });
-  
-  // --- ADMIN SCHOLARSHIPS ---
-  const showScholarshipBadge = shouldShowAdminNotification('admin-scholarship', adminPendingScholarshipsCount);
-  adminNavItems.push({ 
-    view: "admin-scholarship" as View, 
-    icon: Gift, 
-    label: "Scholarships",
-    key: "admin-scholarship",
-    badge: showScholarshipBadge ? adminPendingScholarshipsCount : undefined
-  });
+// ─── ADMIN NAVIGATION ────────────────────────────────────────────────────────
 
+// Replace the adminNavItems section with this:
+
+const adminNavItems = [];
+
+adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "admin-dashboard" });
+adminNavItems.push({ view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules", key: "admin-courses" });
+
+// --- ADMIN STUDENTS ---
+const showStudentsBadge = shouldShowAdminNotification('admin-students', adminPendingEnrollmentsCount);
+adminNavItems.push({
+  view: "admin-students" as View,
+  icon: Users,
+  label: "Students",
+  key: "admin-students",
+  badge: showStudentsBadge ? adminPendingEnrollmentsCount : undefined
+});
+
+// --- ADMIN PAYMENTS ---
+const showPaymentsBadge = shouldShowAdminNotification('admin-payments', adminPendingPaymentsCount);
+adminNavItems.push({
+  view: "admin-payments" as View,
+  icon: DollarSign,
+  label: "Payments",
+  key: "admin-payments",
+  badge: showPaymentsBadge ? adminPendingPaymentsCount : undefined
+});
+
+// --- ADMIN ASSIGNMENTS ---
+const showAssignmentsBadge = shouldShowAdminNotification('admin-assignments', adminPendingAssignmentsCount);
+adminNavItems.push({
+  view: "admin-assignments" as View,
+  icon: ClipboardList,
+  label: "Assignments",
+  key: "admin-assignments",
+  badge: showAssignmentsBadge ? adminPendingAssignmentsCount : undefined
+});
+
+adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", key: "admin-quizzes" });
+
+// --- ADMIN COURSE CHAT (Messages from course discussions) ---
+const showAdminCourseChatBadge = shouldShowAdminNotification('admin-course-chat', adminCourseChatCount);
+adminNavItems.push({
+  view: "admin-chat" as View,
+  icon: MessageCircle,
+  label: "Messages",
+  key: "admin-course-chat",
+  badge: showAdminCourseChatBadge ? adminCourseChatCount : undefined
+});
+
+// --- ADMIN PERSONAL MESSAGES (Student Messages to Admin) ---
+const showAdminPersonalChatBadge = shouldShowAdminNotification('admin-chat', adminUnreadMessagesCount);
+adminNavItems.push({
+  view: "admin-personal-chat" as View,
+  icon: Mail,
+  label: "Student Message",
+  key: "admin-chat",
+  badge: showAdminPersonalChatBadge ? adminUnreadMessagesCount : undefined
+});
+
+// --- ADMIN SCHOLARSHIPS ---
+const showScholarshipBadge = shouldShowAdminNotification('admin-scholarship', adminPendingScholarshipsCount);
+adminNavItems.push({
+  view: "admin-scholarship" as View,
+  icon: Gift,
+  label: "Scholarships",
+  key: "admin-scholarship",
+  badge: showScholarshipBadge ? adminPendingScholarshipsCount : undefined
+});
+  
   const nav = profile.role === "admin" ? adminNavItems : studentNavItems;
 
   // ─── MOBILE SIDEBAR ──────────────────────────────────────────────────────
