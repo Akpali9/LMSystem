@@ -942,10 +942,8 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <nav className="sticky top-0 z-40 backdrop-blur-md border-b rounded-b-lg" style={{ backgroundColor: '#333333', borderBottomColor: '#444444' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-9 w-9 rounded object-contain" />
-            <span className="text-xl font-bold text-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
-              Pruta Academy
-            </span>
+            <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-9 w-21 rounded object-contain" />
+           
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
             <a href="#courses" className="hover:text-white transition-colors"></a>
