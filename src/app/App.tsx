@@ -1331,7 +1331,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="w-full max-w-md">
           <div className="mb-8">
             <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-              <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain" />
+              <img src="https://i.postimg.cc/Qd3jCBQp/PRUTALOGO.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain" />
             
             </div>
             <h1 className="text-3xl font-bold mb-2" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
