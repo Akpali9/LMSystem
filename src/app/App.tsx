@@ -2286,6 +2286,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
   const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [filter, setFilter] = useState<"all" | "pending" | "submitted" | "graded">("all");
 
   useEffect(() => {
     const markAsViewed = async () => {
@@ -2343,6 +2344,11 @@ function StudentAssignments({ profile }: { profile: Profile }) {
       console.error("Error:", error);
     }
   };
+
+  const filteredAssignments = assignments.filter(sa => {
+    if (filter === "all") return true;
+    return sa.status === filter;
+  });
 
   const handleSubmitAssignment = async (assignmentId: string, file: File) => {
     setUploading(prev => ({ ...prev, [assignmentId]: true }));
@@ -2488,10 +2494,23 @@ function StudentAssignments({ profile }: { profile: Profile }) {
       return (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm font-semibold text-green-800">
-            Score: {assignment.score}/{assignment.assignment?.max_score}
+            ✅ Grade: {assignment.score}/{assignment.assignment?.max_score || 100}
           </p>
           {assignment.feedback && (
-            <p className="text-sm text-green-700 mt-1">{assignment.feedback}</p>
+            <div className="mt-2">
+              <p className="text-sm font-medium text-gray-700">Feedback:</p>
+              <p className="text-sm text-gray-600 mt-0.5">{assignment.feedback}</p>
+            </div>
+          )}
+          {assignment.submission_url && assignment.submission_url.startsWith('http') && (
+            <a 
+              href={assignment.submission_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-block mt-2 text-sm text-blue-600 hover:underline flex items-center gap-1"
+            >
+              <Eye className="w-3.5 h-3.5" /> View Your Submission
+            </a>
           )}
         </div>
       );
@@ -2507,9 +2526,9 @@ function StudentAssignments({ profile }: { profile: Profile }) {
                 href={assignment.submission_url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
               >
-                View Submission
+                <Eye className="w-3.5 h-3.5" /> View Submission
               </a>
             )}
           </div>
@@ -2581,24 +2600,64 @@ function StudentAssignments({ profile }: { profile: Profile }) {
     );
   };
 
+  const getStatusCounts = () => {
+    const total = assignments.length;
+    const pending = assignments.filter(sa => sa.status === "pending").length;
+    const submitted = assignments.filter(sa => sa.status === "submitted").length;
+    const graded = assignments.filter(sa => sa.status === "graded").length;
+    return { total, pending, submitted, graded };
+  };
+
+  const counts = getStatusCounts();
+
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div>
         <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
           Assignments
         </h1>
-        <p className="text-gray-500 mt-1 text-sm md:text-base">Submit your assignments here.</p>
+        <p className="text-gray-500 mt-1 text-sm md:text-base">Submit your assignments and view feedback.</p>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { key: "all", label: `All (${counts.total})` },
+          { key: "pending", label: `Pending (${counts.pending})` },
+          { key: "submitted", label: `Submitted (${counts.submitted})` },
+          { key: "graded", label: `Graded (${counts.graded})` },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key as any)}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+              filter === tab.key
+                ? "text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            )}
+            style={filter === tab.key ? { backgroundColor: '#f7530b' } : {}}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       <div className="space-y-4">
-        {assignments.length === 0 ? (
+        {filteredAssignments.length === 0 ? (
           <Card className="p-8 text-center">
             <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <h3 className="font-semibold text-gray-700 mb-2">No Assignments</h3>
-            <p className="text-sm text-gray-500">You don't have any assignments yet.</p>
+            <p className="text-sm text-gray-500">
+              {filter === "all" 
+                ? "You don't have any assignments yet." 
+                : filter === "graded" 
+                  ? "You don't have any graded assignments yet." 
+                  : `No ${filter} assignments.`}
+            </p>
           </Card>
         ) : (
-          assignments.map((sa) => (
+          filteredAssignments.map((sa) => (
             <Card key={sa.id} className="p-4 md:p-6">
               <div className="flex flex-col sm:flex-row items-start gap-4">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#fdddce' }}>
@@ -2618,6 +2677,9 @@ function StudentAssignments({ profile }: { profile: Profile }) {
                   <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-gray-500">
                     <span>Assigned: {formatDate(sa.assigned_at)}</span>
                     {sa.submitted_at && <span>Submitted: {formatDate(sa.submitted_at)}</span>}
+                    {sa.status === "graded" && sa.graded_at && (
+                      <span>Graded: {formatDate(sa.graded_at)}</span>
+                    )}
                     <span>Max score: {sa.assignment?.max_score || 100}</span>
                   </div>
 
@@ -6855,6 +6917,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   });
   const [students, setStudents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<"all" | "submitted" | "graded" | "pending">("submitted");
 
   useEffect(() => {
     fetchSubmissions();
@@ -6865,8 +6928,8 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
     const { data } = await supabase
       .from("student_assignments")
       .select("*, assignment:assignment_id(*), profiles:student_id(full_name, email)")
-      .eq("status", "submitted")
-      .order("submitted_at", { ascending: false });
+      .order("submitted_at", { ascending: false })
+      .order("assigned_at", { ascending: false });
     if (data) setSubmissions(data as StudentAssignment[]);
   };
 
@@ -6875,7 +6938,21 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
     if (data) setStudents(data as Profile[]);
   };
 
-    const handleCreateAssignment = async () => {
+  const filteredSubmissions = submissions.filter(sa => {
+    if (filter === "all") return true;
+    return sa.status === filter;
+  });
+
+  const getStatusCounts = () => {
+    const pending = submissions.filter(sa => sa.status === "pending").length;
+    const submitted = submissions.filter(sa => sa.status === "submitted").length;
+    const graded = submissions.filter(sa => sa.status === "graded").length;
+    return { pending, submitted, graded, total: submissions.length };
+  };
+
+  const counts = getStatusCounts();
+
+  const handleCreateAssignment = async () => {
     setLoading(true);
     try {
       await onCreateAssignment(newAssignment);
@@ -6886,6 +6963,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       });
       setShowCreate(false);
       setNewAssignment({ course_id: "", module_id: "", title: "", description: "", max_score: "100", due_days: "7", assign_to_all: true, student_id: "" });
+      await fetchSubmissions();
     } catch (error) {
       toast({
         type: "error",
@@ -6909,7 +6987,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       });
       setGradeModal(null);
       setGradeForm({ score: "", feedback: "" });
-      fetchSubmissions();
+      await fetchSubmissions();
     } catch (error) {
       toast({
         type: "error",
@@ -6941,47 +7019,104 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
         </button>
       </div>
 
-      <div className="space-y-4">
-        <h2 className="font-semibold text-gray-800">Pending Submissions ({submissions.length})</h2>
-        {submissions.map((sa) => (
-          <Card key={sa.id} className="p-4 md:p-5">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-              <Avatar name={sa.profiles?.full_name || sa.student_id.slice(0, 8)} size="sm" />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 text-sm">{sa.profiles?.full_name || "Unknown"}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{sa.assignment?.title}</p>
-                {sa.submitted_at && (
-                  <p className="text-xs text-gray-500 mt-0.5">Submitted: {formatDate(sa.submitted_at)}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={sa.status} />
-                <button
-                  onClick={() => { setGradeModal(sa); setGradeForm({ score: "", feedback: "" }); }}
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg hover:opacity-80 transition-colors"
-                  style={{ backgroundColor: '#fdddce', color: '#f7530b' }}
-                >
-                  Grade
-                </button>
-              </div>
-            </div>
-            {sa.submission_url && (
-              <div className="mt-3 p-3 bg-gray-100 rounded-lg">
-                <a href={sa.submission_url} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline flex items-center gap-1" style={{ color: '#f7530b' }}>
-                  <Eye className="w-3 h-3" /> View Submission
-                </a>
-              </div>
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { key: "all", label: `All (${counts.total})` },
+          { key: "pending", label: `Pending (${counts.pending})` },
+          { key: "submitted", label: `Submitted (${counts.submitted})` },
+          { key: "graded", label: `Graded (${counts.graded})` },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key as any)}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+              filter === tab.key
+                ? "text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             )}
-          </Card>
+            style={filter === tab.key ? { backgroundColor: '#f7530b' } : {}}
+          >
+            {tab.label}
+          </button>
         ))}
-        {submissions.length === 0 && (
+      </div>
+
+      <div className="space-y-4">
+        {filteredSubmissions.length === 0 ? (
           <Card className="p-8 text-center">
             <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No pending submissions to grade.</p>
+            <p className="text-gray-500">
+              {filter === "all" 
+                ? "No assignments found." 
+                : filter === "graded" 
+                  ? "No graded submissions yet." 
+                  : `No ${filter} submissions.`}
+            </p>
           </Card>
+        ) : (
+          filteredSubmissions.map((sa) => (
+            <Card key={sa.id} className="p-4 md:p-5">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                <Avatar name={sa.profiles?.full_name || sa.student_id.slice(0, 8)} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-800 text-sm">{sa.profiles?.full_name || "Unknown"}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{sa.assignment?.title}</p>
+                  {sa.submitted_at && (
+                    <p className="text-xs text-gray-500 mt-0.5">Submitted: {formatDate(sa.submitted_at)}</p>
+                  )}
+                  {sa.status === "graded" && sa.graded_at && (
+                    <p className="text-xs text-gray-500">Graded: {formatDate(sa.graded_at)}</p>
+                  )}
+                  {sa.status === "graded" && (
+                    <div className="mt-1">
+                      <Badge variant="success">Score: {sa.score}/{sa.assignment?.max_score || 100}</Badge>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={sa.status} />
+                  {sa.status === "submitted" && (
+                    <button
+                      onClick={() => { setGradeModal(sa); setGradeForm({ score: "", feedback: "" }); }}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg hover:opacity-80 transition-colors"
+                      style={{ backgroundColor: '#fdddce', color: '#f7530b' }}
+                    >
+                      Grade
+                    </button>
+                  )}
+                  {sa.status === "graded" && sa.submission_url && sa.submission_url.startsWith('http') && (
+                    <a 
+                      href={sa.submission_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1"
+                    >
+                      <Eye className="w-3 h-3" /> View
+                    </a>
+                  )}
+                </div>
+              </div>
+              {sa.status === "graded" && sa.feedback && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-xs font-medium text-gray-700">Feedback:</p>
+                  <p className="text-sm text-gray-600 mt-0.5">{sa.feedback}</p>
+                </div>
+              )}
+              {sa.submission_url && sa.submission_url.startsWith('http') && sa.status !== "graded" && (
+                <div className="mt-3 p-3 bg-gray-100 rounded-lg">
+                  <a href={sa.submission_url} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline flex items-center gap-1" style={{ color: '#f7530b' }}>
+                    <Eye className="w-3 h-3" /> View Submission
+                  </a>
+                </div>
+              )}
+            </Card>
+          ))
         )}
       </div>
 
+      {/* Create Assignment Modal - unchanged */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Assignment">
         <div className="space-y-4">
           <div className="space-y-1.5">
@@ -7083,6 +7218,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
         </div>
       </Modal>
 
+      {/* Grade Modal - unchanged */}
       <Modal open={!!gradeModal} onClose={() => setGradeModal(null)} title={`Grade — ${gradeModal?.assignment?.title}`}>
         {gradeModal && (
           <div className="space-y-4">
