@@ -3054,7 +3054,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
         <StatCard 
           icon={CheckCircle} 
           label="Modules Passed" 
-          value={passedCount} 
+          value={activeEnrollment.current_module_index + 1} 
           onClick={() => activeEnrollment && onNavigate("student-module")}
         />
         <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
