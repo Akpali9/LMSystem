@@ -2973,6 +2973,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
 
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      {/* Scholarship banner */}
       <div 
         className={cn(
           "p-4 rounded-xl border cursor-pointer hover:shadow-md transition-all flex items-center gap-4",
@@ -3060,7 +3061,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
         <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
       </div>
 
-      {activeEnrollment && activeEnrollment.course && (
+      {activeEnrollment && activeEnrollment.course ? (
         <div className="grid md:grid-cols-4 gap-6">
           <div className="md:col-span-3">
             <Card className="p-4 md:p-6">
@@ -3090,12 +3091,6 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                     Module {activeEnrollment.current_module_index + 1 || 1} · Expires {formatDate(activeEnrollment.expires_at || "")}
                   </p>
                   <StatusBadge status={activeEnrollment.status || "active"} />
-                  <div className="mt-3">
-                    <div className="flex items-center gap-4">
-                      
-                      
-                    </div>
-                  </div>
                 </div>
               </div>
               <button
@@ -3112,15 +3107,14 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
             <Card className="p-6 w-full flex flex-col items-center">
               <h3 className="font-semibold text-gray-800 mb-4 text-sm text-center">Overall Progress</h3>
               <CircularProgress 
-                value={enrollment.current_module_index + 1} 
+                value={activeEnrollment.current_module_index + 1} 
                 max={totalModulesForActiveCourse || 5} 
                 size={120}
                 onClick={() => onNavigate("student-module")}
               />
               <p className="text-xs text-gray-500 mt-3 text-center">
-                {enrollment.current_module_index + 1} modules passed
+                {activeEnrollment.current_module_index + 1} modules passed
               </p>
-                    
                     
               {passedCount === totalModulesForActiveCourse && totalModulesForActiveCourse > 0 && (
                 <div className="mt-3 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
@@ -3130,9 +3124,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
             </Card>
           </div>
         </div>
-      )}
-
-      {!activeEnrollment && safeEnrollments.length === 0 && (
+      ) : safeEnrollments.length === 0 ? (
         <Card className="p-12 text-center">
           <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <h3 className="font-semibold text-gray-800 mb-2">No Active Courses</h3>
@@ -3147,7 +3139,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
             Browse Courses
           </button>
         </Card>
-      )}
+      ) : null}
     </div>
   );
 }
