@@ -6918,24 +6918,64 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   const [students, setStudents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "submitted" | "graded" | "pending">("submitted");
+  const [gradingLoading, setGradingLoading] = useState(false);
 
   useEffect(() => {
     fetchSubmissions();
     fetchStudents();
+    
+    // Real-time subscription for new submissions
+    const subscription = supabase
+      .channel("admin-assignments")
+      .on("postgres_changes", 
+        { event: "UPDATE", schema: "public", table: "student_assignments" },
+        () => fetchSubmissions()
+      )
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "student_assignments" },
+        () => fetchSubmissions()
+      )
+      .subscribe();
+
+    return () => { subscription.unsubscribe(); };
   }, []);
 
   const fetchSubmissions = async () => {
-    const { data } = await supabase
-      .from("student_assignments")
-      .select("*, assignment:assignment_id(*), profiles:student_id(full_name, email)")
-      .order("submitted_at", { ascending: false })
-      .order("assigned_at", { ascending: false });
-    if (data) setSubmissions(data as StudentAssignment[]);
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("student_assignments")
+        .select("*, assignment:assignment_id(*), profiles:student_id(full_name, email)")
+        .order("submitted_at", { ascending: false, nullsLast: true })
+        .order("assigned_at", { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching submissions:", error);
+        toast({
+          type: "error",
+          title: "Failed to Load",
+          message: "Could not load submissions. Please refresh.",
+        });
+        return;
+      }
+      
+      if (data) {
+        setSubmissions(data as StudentAssignment[]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchStudents = async () => {
-    const { data } = await supabase.from("profiles").select("*").eq("role", "student");
-    if (data) setStudents(data as Profile[]);
+    try {
+      const { data } = await supabase.from("profiles").select("*").eq("role", "student");
+      if (data) setStudents(data as Profile[]);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+    }
   };
 
   const filteredSubmissions = submissions.filter(sa => {
@@ -6962,7 +7002,16 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
         message: `"${newAssignment.title}" has been assigned.`,
       });
       setShowCreate(false);
-      setNewAssignment({ course_id: "", module_id: "", title: "", description: "", max_score: "100", due_days: "7", assign_to_all: true, student_id: "" });
+      setNewAssignment({ 
+        course_id: "", 
+        module_id: "", 
+        title: "", 
+        description: "", 
+        max_score: "100", 
+        due_days: "7", 
+        assign_to_all: true, 
+        student_id: "" 
+      });
       await fetchSubmissions();
     } catch (error) {
       toast({
@@ -6977,25 +7026,51 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
 
   const handleGrade = async () => {
     if (!gradeModal) return;
-    setLoading(true);
+    
+    const scoreNum = parseInt(gradeForm.score);
+    if (isNaN(scoreNum) || scoreNum < 0) {
+      toast({
+        type: "warning",
+        title: "Invalid Score",
+        message: "Please enter a valid score.",
+      });
+      return;
+    }
+    
+    const maxScore = gradeModal.assignment?.max_score || 100;
+    if (scoreNum > maxScore) {
+      toast({
+        type: "warning",
+        title: "Score Exceeds Maximum",
+        message: `Score cannot exceed ${maxScore}.`,
+      });
+      return;
+    }
+
+    setGradingLoading(true);
+    
     try {
-      await onGradeAssignment(gradeModal.id, parseInt(gradeForm.score), gradeForm.feedback);
+      await onGradeAssignment(gradeModal.id, scoreNum, gradeForm.feedback);
+      
       toast({
         type: "success",
-        title: "Graded",
-        message: `Assignment graded with score ${gradeForm.score}.`,
+        title: "Assignment Graded!",
+        message: `Score: ${scoreNum}/${maxScore}`,
       });
+      
       setGradeModal(null);
       setGradeForm({ score: "", feedback: "" });
       await fetchSubmissions();
+      
     } catch (error) {
+      console.error("Error grading assignment:", error);
       toast({
         type: "error",
-        title: "Failed",
+        title: "Grading Failed",
         message: "Failed to grade assignment. Please try again.",
       });
     } finally {
-      setLoading(false);
+      setGradingLoading(false);
     }
   };
 
@@ -7044,7 +7119,12 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       </div>
 
       <div className="space-y-4">
-        {filteredSubmissions.length === 0 ? (
+        {loading ? (
+          <Card className="p-8 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
+            <p className="text-gray-500 mt-4">Loading submissions...</p>
+          </Card>
+        ) : filteredSubmissions.length === 0 ? (
           <Card className="p-8 text-center">
             <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">
@@ -7052,7 +7132,9 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
                 ? "No assignments found." 
                 : filter === "graded" 
                   ? "No graded submissions yet." 
-                  : `No ${filter} submissions.`}
+                  : filter === "submitted"
+                    ? "No pending submissions to grade."
+                    : `No ${filter} submissions.`}
             </p>
           </Card>
         ) : (
@@ -7061,54 +7143,68 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
               <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                 <Avatar name={sa.profiles?.full_name || sa.student_id.slice(0, 8)} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 text-sm">{sa.profiles?.full_name || "Unknown"}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{sa.assignment?.title}</p>
-                  {sa.submitted_at && (
-                    <p className="text-xs text-gray-500 mt-0.5">Submitted: {formatDate(sa.submitted_at)}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-gray-800 text-sm">{sa.profiles?.full_name || "Unknown"}</p>
+                    <Badge variant="muted">{sa.student_id}</Badge>
+                  </div>
+                  <p className="text-sm font-medium text-gray-700 mt-0.5">{sa.assignment?.title}</p>
+                  {sa.assignment?.description && (
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{sa.assignment.description}</p>
                   )}
-                  {sa.status === "graded" && sa.graded_at && (
-                    <p className="text-xs text-gray-500">Graded: {formatDate(sa.graded_at)}</p>
-                  )}
-                  {sa.status === "graded" && (
-                    <div className="mt-1">
-                      <Badge variant="success">Score: {sa.score}/{sa.assignment?.max_score || 100}</Badge>
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-500">
+                    <span>Assigned: {formatDate(sa.assigned_at)}</span>
+                    {sa.submitted_at && <span>Submitted: {formatDate(sa.submitted_at)}</span>}
+                    {sa.status === "graded" && sa.graded_at && (
+                      <span>Graded: {formatDate(sa.graded_at)}</span>
+                    )}
+                    {sa.assignment?.max_score && (
+                      <span>Max Score: {sa.assignment.max_score}</span>
+                    )}
+                  </div>
+                  {sa.status === "graded" && sa.score !== undefined && sa.score !== null && (
+                    <div className="mt-2">
+                      <Badge variant="success">
+                        Score: {sa.score}/{sa.assignment?.max_score || 100}
+                      </Badge>
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
                   <StatusBadge status={sa.status} />
+                  
                   {sa.status === "submitted" && (
                     <button
-                      onClick={() => { setGradeModal(sa); setGradeForm({ score: "", feedback: "" }); }}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg hover:opacity-80 transition-colors"
+                      onClick={() => { 
+                        setGradeModal(sa); 
+                        setGradeForm({ 
+                          score: "", 
+                          feedback: "" 
+                        }); 
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg hover:opacity-80 transition-colors flex items-center gap-1"
                       style={{ backgroundColor: '#fdddce', color: '#f7530b' }}
                     >
-                      Grade
+                      <Edit className="w-3.5 h-3.5" /> Grade
                     </button>
                   )}
-                  {sa.status === "graded" && sa.submission_url && sa.submission_url.startsWith('http') && (
+                  
+                  {sa.submission_url && sa.submission_url.startsWith('http') && (
                     <a 
                       href={sa.submission_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1"
                     >
-                      <Eye className="w-3 h-3" /> View
+                      <Eye className="w-3.5 h-3.5" /> View
                     </a>
                   )}
                 </div>
               </div>
+              
               {sa.status === "graded" && sa.feedback && (
                 <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-xs font-medium text-gray-700">Feedback:</p>
+                  <p className="text-xs font-medium text-gray-700">📝 Feedback:</p>
                   <p className="text-sm text-gray-600 mt-0.5">{sa.feedback}</p>
-                </div>
-              )}
-              {sa.submission_url && sa.submission_url.startsWith('http') && sa.status !== "graded" && (
-                <div className="mt-3 p-3 bg-gray-100 rounded-lg">
-                  <a href={sa.submission_url} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline flex items-center gap-1" style={{ color: '#f7530b' }}>
-                    <Eye className="w-3 h-3" /> View Submission
-                  </a>
                 </div>
               )}
             </Card>
@@ -7116,9 +7212,9 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
         )}
       </div>
 
-      {/* Create Assignment Modal - unchanged */}
+      {/* Create Assignment Modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Assignment">
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-gray-700">Assign to</label>
             <select
@@ -7218,45 +7314,85 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
         </div>
       </Modal>
 
-      {/* Grade Modal - unchanged */}
-      <Modal open={!!gradeModal} onClose={() => setGradeModal(null)} title={`Grade — ${gradeModal?.assignment?.title}`}>
+      {/* Grade Modal */}
+      <Modal open={!!gradeModal} onClose={() => setGradeModal(null)} title="Grade Assignment">
         {gradeModal && (
           <div className="space-y-4">
-            <div className="p-3 bg-gray-100 rounded-lg">
-              <p className="text-sm font-semibold text-gray-800">{gradeModal.profiles?.full_name}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Submitted: {gradeModal.submitted_at ? formatDate(gradeModal.submitted_at) : "—"}</p>
+            <div className="p-4 bg-gray-100 rounded-lg space-y-2">
+              <div className="flex items-center gap-3">
+                <Avatar name={gradeModal.profiles?.full_name || "Student"} size="sm" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{gradeModal.profiles?.full_name || "Unknown"}</p>
+                  <p className="text-xs text-gray-500">{gradeModal.profiles?.email || ""}</p>
+                </div>
+              </div>
+              <div className="border-t pt-2" style={{ borderColor: '#e0e0e0' }}>
+                <p className="text-sm font-medium text-gray-700">{gradeModal.assignment?.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Submitted: {gradeModal.submitted_at ? formatDate(gradeModal.submitted_at) : "—"}
+                  {gradeModal.submitted_at && ` at ${formatTime(gradeModal.submitted_at)}`}
+                </p>
+                {gradeModal.assignment?.max_score && (
+                  <p className="text-xs text-gray-500">Max Score: {gradeModal.assignment.max_score}</p>
+                )}
+              </div>
             </div>
+
+            {gradeModal.submission_url && gradeModal.submission_url.startsWith('http') && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <a 
+                  href={gradeModal.submission_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline flex items-center gap-2"
+                >
+                  <Eye className="w-4 h-4" /> View Student's Submission
+                </a>
+              </div>
+            )}
+            
             <Input 
               label={`Score (out of ${gradeModal.assignment?.max_score || 100})`} 
               type="number" 
               value={gradeForm.score} 
               onChange={(v) => setGradeForm((p) => ({ ...p, score: v }))} 
-              placeholder="85" 
+              placeholder={`Enter score out of ${gradeModal.assignment?.max_score || 100}`} 
               required 
             />
+            
             <Textarea 
               label="Feedback" 
               value={gradeForm.feedback} 
               onChange={(v) => setGradeForm((p) => ({ ...p, feedback: v }))} 
-              placeholder="Detailed feedback for the student..." 
-              rows={3} 
+              placeholder="Provide detailed feedback for the student..." 
+              rows={4} 
               required 
             />
-            <button
-              onClick={handleGrade}
-              disabled={!gradeForm.score || !gradeForm.feedback || loading}
-              className="w-full py-3 font-semibold rounded-lg hover:opacity-90 transition-colors text-sm disabled:opacity-50"
-              style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Submit Grade"}
-            </button>
+            
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setGradeModal(null)}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGrade}
+                disabled={!gradeForm.score || !gradeForm.feedback || gradingLoading}
+                className="flex-1 py-2.5 font-medium rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+              >
+                {gradingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Submit Grade
+              </button>
+            </div>
           </div>
         )}
       </Modal>
     </div>
   );
-}
-
+}  
+ 
 // ─── Admin Quizzes ────────────────────────────────────────────────────────────
 
 function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: { 
@@ -8936,13 +9072,17 @@ export default function App() {
     }
   };
 
-  const handleGradeAssignment = async (assignmentId: string, score: number, feedback: string) => {
-    await supabase
-      .from("student_assignments")
-      .update({ status: "graded", score, feedback })
-      .eq("id", assignmentId);
-  };
-
+ const handleGradeAssignment = async (assignmentId: string, score: number, feedback: string) => {
+  await supabase
+    .from("student_assignments")
+    .update({ 
+      status: "graded", 
+      score, 
+      feedback,
+      graded_at: new Date().toISOString()
+    })
+    .eq("id", assignmentId);
+};
   const handleQuizCreate = async (quizData: any) => {
     const { data: quiz, error } = await supabase
       .from("quizzes")
