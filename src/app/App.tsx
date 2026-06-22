@@ -2946,6 +2946,9 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
     ).length;
   }
 
+  // Calculate total passed modules across all enrollments
+  const totalPassedModules = safeProgress.filter(p => p?.status === "passed").length;
+
   useEffect(() => {
     fetchScholarshipStatus();
   }, [profile.id]);
@@ -3054,7 +3057,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
         <StatCard 
           icon={CheckCircle} 
           label="Modules Passed" 
-          value={activeEnrollment.current_module_index + 1} 
+          value={totalPassedModules}  // ← FIXED: Use totalPassedModules instead of activeEnrollment.current_module_index + 1
           onClick={() => activeEnrollment && onNavigate("student-module")}
         />
         <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
@@ -3088,9 +3091,17 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-gray-800 text-base md:text-lg">{activeEnrollment.course.title || "Course"}</p>
                   <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-                    Module {activeEnrollment.current_module_index + 1 || 1} · Expires {formatDate(activeEnrollment.expires_at || "")}
+                    Module {(activeEnrollment.current_module_index || 0) + 1} · Expires {formatDate(activeEnrollment.expires_at || "")}
                   </p>
                   <StatusBadge status={activeEnrollment.status || "active"} />
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600">
+                      Progress: {passedCount} / {totalModulesForActiveCourse} modules passed
+                      {passedCount === totalModulesForActiveCourse && totalModulesForActiveCourse > 0 && 
+                        " 🎉 Complete!"
+                      }
+                    </p>
+                  </div>
                 </div>
               </div>
               <button
@@ -3107,13 +3118,13 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
             <Card className="p-6 w-full flex flex-col items-center">
               <h3 className="font-semibold text-gray-800 mb-4 text-sm text-center">Overall Progress</h3>
               <CircularProgress 
-                value={activeEnrollment.current_module_index + 1} 
+                value={passedCount} 
                 max={totalModulesForActiveCourse || 5} 
                 size={120}
                 onClick={() => onNavigate("student-module")}
               />
               <p className="text-xs text-gray-500 mt-3 text-center">
-                {activeEnrollment.current_module_index + 1} modules passed
+                {passedCount} / {totalModulesForActiveCourse || 5} modules passed
               </p>
                     
               {passedCount === totalModulesForActiveCourse && totalModulesForActiveCourse > 0 && (
