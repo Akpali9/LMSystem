@@ -3092,10 +3092,8 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                   <StatusBadge status={activeEnrollment.status || "active"} />
                   <div className="mt-3">
                     <div className="flex items-center gap-4">
-                      <ProgressBar value={passedCount} max={totalModulesForActiveCourse || 5} className="flex-1" />
-                      <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
-                        {passedCount}/{totalModulesForActiveCourse || 5}
-                      </span>
+                      
+                      
                     </div>
                   </div>
                 </div>
@@ -3114,14 +3112,16 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
             <Card className="p-6 w-full flex flex-col items-center">
               <h3 className="font-semibold text-gray-800 mb-4 text-sm text-center">Overall Progress</h3>
               <CircularProgress 
-                value={passedCount} 
+                value={enrollment.current_module_index + 1} 
                 max={totalModulesForActiveCourse || 5} 
                 size={120}
                 onClick={() => onNavigate("student-module")}
               />
               <p className="text-xs text-gray-500 mt-3 text-center">
-                {passedCount} of {totalModulesForActiveCourse || 5} modules passed
+                {enrollment.current_module_index + 1} modules passed
               </p>
+                    
+                    
               {passedCount === totalModulesForActiveCourse && totalModulesForActiveCourse > 0 && (
                 <div className="mt-3 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
                   🎉 Course Complete!
