@@ -2932,6 +2932,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   const activeEnrollment = safeEnrollments.find(e => e?.status === "active") || null;
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
   const [scholarshipApplications, setScholarshipApplications] = useState<any[]>([]);
+  const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
   
   let passedCount = 0;
   let totalModulesForActiveCourse = 0;
@@ -2940,15 +2941,35 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
     const courseModules = safeModules.filter(m => m?.course_id === activeEnrollment?.course_id);
     totalModulesForActiveCourse = courseModules.length;
     
+    // Count passed modules for this specific enrollment
     passedCount = safeProgress.filter(p => 
       p?.enrollment_id === activeEnrollment?.id && 
       p?.status === "passed"
     ).length;
   }
 
+  // Calculate total passed modules across all enrollments
+  const totalPassedModules = safeProgress.filter(p => p?.status === "passed").length;
+
+  // Get pending assignments count
+  const pendingAssignmentsCount = studentAssignments.filter(
+    sa => sa.status === "pending" || sa.status === "submitted"
+  ).length;
+
+  // Check if any course is completed (all modules passed for any enrollment)
+  const hasCompletedCourse = safeEnrollments.some(enrollment => {
+    const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
+    const passedForEnrollment = safeProgress.filter(p => 
+      p?.enrollment_id === enrollment?.id && 
+      p?.status === "passed"
+    ).length;
+    return courseModules.length > 0 && passedForEnrollment === courseModules.length;
+  });
+
   useEffect(() => {
     fetchScholarshipStatus();
-  }, [profile.id]);
+    fetchStudentAssignments();
+  }, [profile.id, enrollments]);
 
   const fetchScholarshipStatus = async () => {
     const { data } = await supabase
@@ -2957,6 +2978,32 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
       .eq("student_id", profile.id)
       .order("submitted_at", { ascending: false });
     if (data) setScholarshipApplications(data);
+  };
+
+  const fetchStudentAssignments = async () => {
+    try {
+      const { data } = await supabase
+        .from("student_assignments")
+        .select(`
+          *,
+          assignment:assignment_id (
+            id,
+            module_id,
+            title,
+            description,
+            due_days,
+            max_score
+          )
+        `)
+        .eq("student_id", profile.id)
+        .in("status", ["pending", "submitted"]);
+      
+      if (data) {
+        setStudentAssignments(data as StudentAssignment[]);
+      }
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+    }
   };
 
   const hasPendingScholarship = scholarshipApplications.some(s => s.status === "pending");
@@ -3054,11 +3101,20 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
         <StatCard 
           icon={CheckCircle} 
           label="Modules Passed" 
-          value={passedCount} 
+          value={totalPassedModules} 
           onClick={() => activeEnrollment && onNavigate("student-module")}
         />
-        <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
-        <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
+        <StatCard 
+          icon={ClipboardList} 
+          label="Assignments Due" 
+          value={pendingAssignmentsCount} 
+          onClick={() => onNavigate("student-assignments")}
+        />
+        <StatCard 
+          icon={Award} 
+          label="Certificates Earned" 
+          value={hasCompletedCourse ? 1 : 0} 
+        />
       </div>
 
       {activeEnrollment && activeEnrollment.course ? (
@@ -3091,6 +3147,14 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                     Module {activeEnrollment.current_module_index + 1 || 1} · Expires {formatDate(activeEnrollment.expires_at || "")}
                   </p>
                   <StatusBadge status={activeEnrollment.status || "active"} />
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600">
+                      Progress: {passedCount} / {totalModulesForActiveCourse} modules passed
+                      {passedCount === totalModulesForActiveCourse && totalModulesForActiveCourse > 0 && 
+                        " 🎉 Complete!"
+                      }
+                    </p>
+                  </div>
                 </div>
               </div>
               <button
@@ -3107,13 +3171,13 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
             <Card className="p-6 w-full flex flex-col items-center">
               <h3 className="font-semibold text-gray-800 mb-4 text-sm text-center">Overall Progress</h3>
               <CircularProgress 
-                value={activeEnrollment.current_module_index + 1} 
+                value={passedCount} 
                 max={totalModulesForActiveCourse || 5} 
                 size={120}
                 onClick={() => onNavigate("student-module")}
               />
               <p className="text-xs text-gray-500 mt-3 text-center">
-                {activeEnrollment.current_module_index + 1} modules passed
+                {passedCount} / {totalModulesForActiveCourse || 5} modules passed
               </p>
                     
               {passedCount === totalModulesForActiveCourse && totalModulesForActiveCourse > 0 && (
