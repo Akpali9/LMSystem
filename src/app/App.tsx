@@ -6919,21 +6919,25 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   const [loading, setLoading] = useState(false);
   const [gradingLoading, setGradingLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"pending" | "graded" | "all">("pending");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     fetchSubmissions();
     fetchStudents();
     
+    // Real-time subscription for new submissions
     const subscription = supabase
       .channel("admin-assignments")
       .on("postgres_changes", 
         { event: "*", schema: "public", table: "student_assignments" },
-        () => fetchSubmissions()
+        () => {
+          fetchSubmissions();
+        }
       )
       .subscribe();
 
     return () => { subscription.unsubscribe(); };
-  }, []);
+  }, [refreshKey]);
 
   const fetchSubmissions = async () => {
     setLoading(true);
@@ -7000,6 +7004,9 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
 
   const getFilteredSubmissions = () => {
     if (activeTab === "all") return submissions;
+    if (activeTab === "pending") {
+      return submissions.filter(sa => sa.status === "pending" || sa.status === "submitted");
+    }
     return submissions.filter(sa => sa.status === activeTab);
   };
 
@@ -7067,6 +7074,15 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       return;
     }
 
+    if (!gradeForm.feedback.trim()) {
+      toast({
+        type: "warning",
+        title: "Feedback Required",
+        message: "Please provide feedback for the student.",
+      });
+      return;
+    }
+
     setGradingLoading(true);
     
     try {
@@ -7080,6 +7096,8 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       
       setGradeModal(null);
       setGradeForm({ score: "", feedback: "" });
+      
+      // Refresh the list after grading
       await fetchSubmissions();
       
     } catch (error) {
@@ -7439,14 +7457,23 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
             
             {/* Grade Form */}
             <div className="space-y-4 border-t pt-4" style={{ borderColor: '#e0e0e0' }}>
-              <Input 
-                label={`Score (out of ${gradeModal.assignment?.max_score || 100})`} 
-                type="number" 
-                value={gradeForm.score} 
-                onChange={(v) => setGradeForm((p) => ({ ...p, score: v }))} 
-                placeholder={`Enter score (0-${gradeModal.assignment?.max_score || 100})`} 
-                required 
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Score (out of {gradeModal.assignment?.max_score || 100}) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={gradeForm.score}
+                  onChange={(e) => setGradeForm((p) => ({ ...p, score: e.target.value }))}
+                  placeholder={`Enter score (0-${gradeModal.assignment?.max_score || 100})`}
+                  className="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400 transition-all"
+                  style={{ borderColor: '#e0e0e0' }}
+                  min="0"
+                  max={gradeModal.assignment?.max_score || 100}
+                  required
+                />
+                <p className="text-xs text-gray-400 mt-1">Enter a number between 0 and {gradeModal.assignment?.max_score || 100}</p>
+              </div>
               
               <Textarea 
                 label="Feedback" 
@@ -7469,8 +7496,13 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
               <button
                 onClick={handleGrade}
                 disabled={!gradeForm.score || !gradeForm.feedback || gradingLoading}
-                className="flex-1 py-2.5 font-medium rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                className={cn(
+                  "flex-1 py-2.5 font-medium rounded-lg transition-colors flex items-center justify-center gap-2",
+                  !gradeForm.score || !gradeForm.feedback || gradingLoading
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "hover:opacity-90"
+                )}
+                style={!gradeForm.score || !gradeForm.feedback || gradingLoading ? {} : { backgroundColor: '#f7530b', color: '#ffffff' }}
               >
                 {gradingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Submit Grade
@@ -9184,11 +9216,16 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
       title: "Assignment Graded",
       message: "The assignment has been graded successfully.",
     });
+    
+    // Refresh the assignments list
+    await fetchEnrollments();
+    
   } catch (error) {
     console.error("Error:", error);
     throw error;
   }
 };
+  
   const handleQuizCreate = async (quizData: any) => {
     const { data: quiz, error } = await supabase
       .from("quizzes")
@@ -9294,13 +9331,13 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
           />;
         case "admin-payments":
           return <AdminPayments />;
-        case "admin-assignments":
-          return <AdminAssignments 
-            courses={courses || []}
-            modules={modules || []}
-            onCreateAssignment={handleCreateAssignment}
-            onGradeAssignment={handleGradeAssignment}
-          />;
+       case "admin-assignments":
+  return <AdminAssignments 
+    courses={courses || []}
+    modules={modules || []}
+    onCreateAssignment={handleCreateAssignment}
+    onGradeAssignment={handleGradeAssignment}
+  />;
         case "admin-quizzes":
           return <AdminQuizzes 
             courses={courses || []}
