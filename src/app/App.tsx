@@ -2607,7 +2607,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
     );
   };
 
-const getStatusCounts = () => {
+
   let pendingCount = 0;
   let gradedCount = 0;
   
@@ -7037,13 +7037,13 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
     return submissions.filter(sa => sa.status === activeTab);
   };
 
-  const getStatusCounts = () => {
-    const pending = submissions.filter(sa => sa.status === "pending" || sa.status === "submitted").length;
-    const graded = submissions.filter(sa => sa.status === "graded").length;
-    const total = submissions.length;
-    return { pending, graded, total };
-  };
-
+const getStatusCounts = () => {
+  const total = assignments.length;
+  const pending = assignments.filter(sa => sa.status === "pending").length;
+  const submitted = assignments.filter(sa => sa.status === "submitted").length;
+  const graded = assignments.filter(sa => sa.status === "graded").length;
+  return { total, pending, submitted, graded };
+};
   const counts = getStatusCounts();
 
   const handleCreateAssignment = async () => {
