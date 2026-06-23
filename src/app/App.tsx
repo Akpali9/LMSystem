@@ -2607,33 +2607,13 @@ function StudentAssignments({ profile }: { profile: Profile }) {
     );
   };
 
-
-  let pendingCount = 0;
-  let gradedCount = 0;
-  
-  studentData.forEach((student: any) => {
-    student.enrollments.forEach((enrollment: any) => {
-      enrollment.modules.forEach((module: any) => {
-        // Check for pending submissions
-        if (module.assignment?.student_assignment?.status === "submitted") {
-          pendingCount++;
-        }
-        if (module.quiz?.attempt?.passed === false) {
-          pendingCount++;
-        }
-        // Check for graded
-        if (module.progress?.status === "passed") {
-          gradedCount++;
-        }
-        if (module.assignment?.student_assignment?.status === "graded") {
-          gradedCount++;
-        }
-      });
-    });
-  });
-  
-  return { pending: pendingCount, graded: gradedCount, total: studentData.length };
-};
+  const getStatusCounts = () => {
+    const total = assignments.length;
+    const pending = assignments.filter(sa => sa.status === "pending").length;
+    const submitted = assignments.filter(sa => sa.status === "submitted").length;
+    const graded = assignments.filter(sa => sa.status === "graded").length;
+    return { total, pending, submitted, graded };
+  };
 
   const counts = getStatusCounts();
 
