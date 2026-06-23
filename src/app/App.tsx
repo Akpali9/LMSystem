@@ -9939,37 +9939,37 @@ export default function App() {
     }
   };
 
-  const handleGradeAssignment = async (assignmentId: string, score: number, feedback: string) => {
-    try {
-      const { error } = await supabase
-        .from("student_assignments")
-        .update({ 
-          status: "graded", 
-          score, 
-          feedback,
-          graded_at: new Date().toISOString()
-        })
-        .eq("id", assignmentId);
-      
-      if (error) {
-        console.error("Error grading assignment:", error);
-        throw error;
-      }
-      
-      toast({
-        type: "success",
-        title: "Assignment Graded",
-        message: "The assignment has been graded successfully.",
-      });
-      
-      // Refresh the assignments list
-      await fetchEnrollments();
-      
-    } catch (error) {
-      console.error("Error:", error);
+ const handleGradeAssignment = async (assignmentId: string, score: number, feedback: string) => {
+  try {
+    const { error } = await supabase
+      .from("student_assignments")
+      .update({ 
+        status: "graded", 
+        score, 
+        feedback,
+        graded_at: new Date().toISOString()
+      })
+      .eq("id", assignmentId);
+    
+    if (error) {
+      console.error("Error grading assignment:", error);
       throw error;
     }
-  };
+    
+    toast({
+      type: "success",
+      title: "Assignment Graded",
+      message: "The assignment has been graded successfully.",
+    });
+    
+    // Refresh the assignments list
+    await fetchSubmissions();
+    
+  } catch (error) {
+    console.error("Error:", error);
+    throw error;
+  }
+};
   
   const handleQuizCreate = async (quizData: any) => {
     const { data: quiz, error } = await supabase
