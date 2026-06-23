@@ -1197,7 +1197,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           <div className="flex items-center gap-2.5">
             <img src="https://i.postimg.cc/Qd3jCBQp/PRUTALOGO.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain" />
           </div>
-          <p className="text-sm text-gray-500">© {new Date().getFullYear()} Pruta Academy. All rights reserved.</p>
+          <p className="text-sm text-gray-500">© {new Date().getFullYear()} All rights reserved.</p>
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Shield className="w-3.5 h-3.5" />
             <span>Content Protected</span>
