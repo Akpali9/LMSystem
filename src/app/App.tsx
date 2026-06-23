@@ -310,6 +310,7 @@ type View =
   | "admin-students"
   | "admin-payments"
   | "admin-assignments"
+  | "admin-grading" 
   | "admin-student-profile"
   | "admin-quizzes"
   | "admin-chat"
@@ -2064,6 +2065,12 @@ adminNavItems.push({
   label: "Assignments",
   key: "admin-assignments",
   badge: showAssignmentsBadge ? adminPendingAssignmentsCount : undefined
+});
+  adminNavItems.push({ 
+  view: "admin-grading" as View, 
+  icon: Award, 
+  label: "Grading", 
+  key: "admin-grading" 
 });
 
 adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", key: "admin-quizzes" });
@@ -7514,6 +7521,98 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
     </div>
   );
 }
+// Add these functions in the App component
+
+const handleGradeModule = async (studentId: string, moduleId: string, score: number, feedback: string) => {
+  try {
+    // First, find the enrollment for this student and module
+    const { data: enrollments } = await supabase
+      .from("enrollments")
+      .select("id")
+      .eq("student_id", studentId)
+      .eq("status", "active");
+    
+    if (!enrollments || enrollments.length === 0) {
+      throw new Error("No active enrollment found for this student");
+    }
+    
+    // Check if module progress exists
+    const { data: existingProgress } = await supabase
+      .from("module_progress")
+      .select("*")
+      .eq("enrollment_id", enrollments[0].id)
+      .eq("module_id", moduleId)
+      .maybeSingle();
+    
+    const status = score >= 70 ? "passed" : "failed";
+    
+    if (existingProgress) {
+      // Update existing progress
+      const { error } = await supabase
+        .from("module_progress")
+        .update({
+          status,
+          score,
+          completed_at: status === "passed" ? new Date().toISOString() : undefined,
+        })
+        .eq("id", existingProgress.id);
+      
+      if (error) throw error;
+    } else {
+      // Create new progress
+      const { error } = await supabase
+        .from("module_progress")
+        .insert({
+          enrollment_id: enrollments[0].id,
+          module_id: moduleId,
+          status,
+          score,
+          completed_at: status === "passed" ? new Date().toISOString() : undefined,
+        });
+      
+      if (error) throw error;
+    }
+    
+    // If passed, update enrollment current module index
+    if (status === "passed") {
+      const { data: moduleData } = await supabase
+        .from("modules")
+        .select("order_index, course_id")
+        .eq("id", moduleId)
+        .single();
+      
+      if (moduleData) {
+        const { data: allModules } = await supabase
+          .from("modules")
+          .select("id, order_index")
+          .eq("course_id", moduleData.course_id)
+          .order("order_index", { ascending: true });
+        
+        if (allModules) {
+          const currentIndex = allModules.findIndex(m => m.id === moduleId);
+          const nextModule = allModules[currentIndex + 1];
+          
+          if (nextModule) {
+            await supabase
+              .from("enrollments")
+              .update({ current_module_index: currentIndex + 1 })
+              .eq("id", enrollments[0].id);
+          }
+        }
+      }
+    }
+    
+    toast({
+      type: "success",
+      title: "Module Graded",
+      message: `Score of ${score}% recorded for this module.`,
+    });
+    
+  } catch (error) {
+    console.error("Error grading module:", error);
+    throw error;
+  }
+};
 
 // ─── Admin Quizzes ────────────────────────────────────────────────────────────
 
@@ -9323,6 +9422,14 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
             onModuleContentAdd={handleAddModuleContent}
             onModuleContentDelete={handleDeleteModuleContent}
           />;
+          case "admin-grading":
+  return <AdminGrading 
+    courses={courses || []}
+    modules={modules || []}
+    students={students || []}
+    onGradeModule={handleGradeModule}
+    onGradeAssignment={handleGradeAssignment}
+  />;
         case "admin-students":
           return <AdminStudents 
             students={students || []} 
