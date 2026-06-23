@@ -2121,7 +2121,7 @@ adminNavItems.push({
   icon: MessageCircle,
   label: "Messages",
   key: "admin-messages",
-  badge: showAdminMessagesBadge ? totalAdminUnreadMessages : undefined
+  badge: showAdminMessagesBadge && totalAdminUnreadMessages > 0 ? totalAdminUnreadMessages : undefined
 });
 
 // --- ADMIN SCHOLARSHIPS ---
@@ -2136,6 +2136,58 @@ adminNavItems.push({
     
     const nav = profile.role === "admin" ? adminNavItems : studentNavItems;
 
+
+useEffect(() => {
+  // Handle clearing admin chat notification
+  const handleClearAdminChatNotification = () => {
+    setAdminViewed(prev => {
+      const newSet = new Set(prev);
+      newSet.delete('admin-chat');
+      newSet.delete('admin-course-chat');
+      newSet.delete('admin-messages');
+      return newSet;
+    });
+    // Force refresh notification counts
+    setTimeout(() => {
+      fetchNotificationCounts();
+    }, 100);
+  };
+
+  // Handle updating admin message badge
+  const handleUpdateAdminMessageBadge = (event: CustomEvent) => {
+    const { count } = event.detail;
+    // Update the adminViewed state based on count
+    if (count === 0) {
+      setAdminViewed(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('admin-chat');
+        newSet.delete('admin-course-chat');
+        newSet.delete('admin-messages');
+        return newSet;
+      });
+    }
+  };
+
+  // Handle clearing course chat notification
+  const handleClearCourseChatNotification = () => {
+    setAdminViewed(prev => {
+      const newSet = new Set(prev);
+      newSet.delete('admin-course-chat');
+      return newSet;
+    });
+    fetchNotificationCounts();
+  };
+
+  window.addEventListener('clearAdminChatNotification', handleClearAdminChatNotification);
+  window.addEventListener('updateAdminMessageBadge', handleUpdateAdminMessageBadge as EventListener);
+  window.addEventListener('clearAdminCourseChatNotification', handleClearCourseChatNotification);
+
+  return () => {
+    window.removeEventListener('clearAdminChatNotification', handleClearAdminChatNotification);
+    window.removeEventListener('updateAdminMessageBadge', handleUpdateAdminMessageBadge as EventListener);
+    window.removeEventListener('clearAdminCourseChatNotification', handleClearCourseChatNotification);
+  };
+}, []);
   // ─── MOBILE SIDEBAR ──────────────────────────────────────────────────────
   if (isMobile) {
     return (
@@ -8622,18 +8674,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showList, setShowList] = useState(true);
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [chatsWithUnread, setChatsWithUnread] = useState<Record<string, number>>({});
   const [latestMessages, setLatestMessages] = useState<Record<string, any>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Track which chats have unread messages from students
-  const [chatsWithUnread, setChatsWithUnread] = useState<Record<string, { 
-    studentId: string; 
-    studentName: string; 
-    message: string; 
-    time: string;
-    count: number;
-  }>>({});
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -8765,7 +8808,6 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       allPersonalMessages?.forEach((msg: any) => {
         const studentId = msg.sender_id === profile.id ? msg.receiver_id : msg.sender_id;
         
-        // If we don't have a message for this student yet, this is the latest (since we ordered by created_at desc)
         if (!latestPerStudent[studentId]) {
           latestPerStudent[studentId] = {
             ...msg,
@@ -8776,27 +8818,41 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
           };
         }
 
-        // Count unread messages from student
         if (msg.sender_id !== profile.id && !msg.read) {
           unreadPerStudent[studentId] = (unreadPerStudent[studentId] || 0) + 1;
         }
       });
 
-      // Update state with unread counts and latest messages
       setChatsWithUnread(unreadPerStudent);
       setLatestMessages(latestPerStudent);
+
+      // Update navbar badge count
+      updateNavbarBadge(Object.keys(unreadPerStudent).length);
 
     } catch (error) {
       console.error("Error fetching unread messages:", error);
     }
   };
 
-  // FIXED: Mark chat as read and update state immediately
+  // Update navbar badge
+  const updateNavbarBadge = (count: number) => {
+    const event = new CustomEvent('updateAdminMessageBadge', { 
+      detail: { count } 
+    });
+    window.dispatchEvent(event);
+  };
+
+  // Clear navbar notification
+  const clearNavbarNotification = () => {
+    const event = new CustomEvent('clearAdminChatNotification');
+    window.dispatchEvent(event);
+  };
+
+  // Mark chat as read and update state immediately
   const markChatAsRead = async (studentId: string) => {
     if (!profile?.id) return;
     
     try {
-      // Update database
       const { error } = await supabase
         .from("personal_messages")
         .update({ read: true })
@@ -8805,21 +8861,23 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         .eq("read", false);
 
       if (!error) {
-        // IMPORTANT: Update local state immediately to remove notification
+        // Update local state
         setChatsWithUnread(prev => {
           const newState = { ...prev };
           delete newState[studentId];
+          
+          // Update navbar badge
+          const remainingCount = Object.keys(newState).length;
+          updateNavbarBadge(remainingCount);
+          
+          // Clear navbar notification if no more unread
+          if (remainingCount === 0) {
+            clearNavbarNotification();
+          }
+          
           return newState;
         });
         
-        // Also update the unread counts for the student in the list
-        setUnreadCounts(prev => {
-          const newState = { ...prev };
-          delete newState[studentId];
-          return newState;
-        });
-        
-        // Refresh to ensure consistency
         await fetchUnreadMessages();
       }
     } catch (error) {
@@ -8827,7 +8885,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     }
   };
 
-  // FIXED: Mark all course chat messages as read
+  // Mark all course chat messages as read
   const markCourseChatAsRead = async (courseId: string) => {
     try {
       const { error } = await supabase
@@ -8838,6 +8896,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       
       if (!error) {
         await fetchUnreadMessages();
+        // Clear course chat notification
+        const event = new CustomEvent('clearAdminCourseChatNotification');
+        window.dispatchEvent(event);
       }
     } catch (error) {
       console.error('Error marking course messages as read:', error);
@@ -8853,7 +8914,6 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
 
   useEffect(() => {
     if (selectedStudentId && chatType === "personal" && profile?.id) {
-      // Mark as read when opening chat
       markChatAsRead(selectedStudentId);
       fetchPersonalMessages();
     }
@@ -8905,7 +8965,6 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         });
       } else if (data) {
         setPersonalMessages(data);
-        // Mark as read again after loading messages
         await markChatAsRead(selectedStudentId);
       }
     } catch (error) {
@@ -8915,12 +8974,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     }
   };
 
-  // FIXED: Handle student selection - clear notification immediately
   const handleStudentSelect = async (studentId: string) => {
     setSelectedStudentId(studentId);
     setShowList(false);
-    
-    // Immediately clear the notification for this student
     await markChatAsRead(studentId);
   };
 
@@ -8994,16 +9050,12 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const selectedCourse = courses.find(c => c.id === selectedCourseId);
-  
-  // Calculate total unread count
   const totalUnread = Object.values(chatsWithUnread).reduce((sum, val) => sum + val, 0);
 
-  // Render course message with sender identification
+  // Render functions (same as before)
   const renderCourseMessage = (msg: ChatMessage) => {
     const isAdmin = msg.user_id === "admin";
-    const isStudent = !isAdmin;
     const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
-    
     const student = students.find(s => s.id === msg.user_id);
 
     return (
@@ -9021,50 +9073,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         />
         <div className={cn(
           "p-3 rounded-lg text-sm",
-          isAdmin
-            ? "text-white"
-            : "bg-gray-100 text-gray-800"
-        )}
-        style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium">
-              {isAdmin ? "👑 Admin" : senderName}
-            </span>
-            {isAdmin && (
-              <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
-            )}
-            {isStudent && (
-              <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
-            )}
-          </div>
-          <p className="break-words">{msg.message}</p>
-          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-        </div>
-      </div>
-    );
-  };
-
-  // Render personal message with sender identification
-  const renderPersonalMessage = (msg: any) => {
-    const isAdmin = msg.sender_id === profile?.id;
-    const senderName = isAdmin ? "Admin" : selectedStudent?.full_name || "Student";
-    const senderAvatar = isAdmin ? undefined : selectedStudent?.avatar_url;
-
-    return (
-      <div
-        key={msg.id}
-        className={cn(
-          "flex items-start gap-3 max-w-[80%]",
-          isAdmin ? "ml-auto flex-row-reverse" : ""
-        )}
-      >
-        <Avatar name={senderName} size="sm" src={senderAvatar} />
-        <div className={cn(
-          "p-3 rounded-lg text-sm",
-          isAdmin
-            ? "text-white"
-            : "bg-gray-100 text-gray-800"
+          isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
         )}
         style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
         >
@@ -9086,13 +9095,49 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     );
   };
 
-  // Get the latest message preview for a student
+  const renderPersonalMessage = (msg: any) => {
+    const isAdmin = msg.sender_id === profile?.id;
+    const senderName = isAdmin ? "Admin" : selectedStudent?.full_name || "Student";
+    const senderAvatar = isAdmin ? undefined : selectedStudent?.avatar_url;
+
+    return (
+      <div
+        key={msg.id}
+        className={cn(
+          "flex items-start gap-3 max-w-[80%]",
+          isAdmin ? "ml-auto flex-row-reverse" : ""
+        )}
+      >
+        <Avatar name={senderName} size="sm" src={senderAvatar} />
+        <div className={cn(
+          "p-3 rounded-lg text-sm",
+          isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
+        )}
+        style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium">
+              {isAdmin ? "👑 Admin" : senderName}
+            </span>
+            {isAdmin && (
+              <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+            )}
+            {!isAdmin && (
+              <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
+            )}
+          </div>
+          <p className="break-words">{msg.message}</p>
+          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+        </div>
+      </div>
+    );
+  };
+
   const getStudentPreview = (studentId: string) => {
     const latest = latestMessages[studentId];
     if (!latest) return null;
     
     const isFromStudent = latest.sender_id !== profile?.id;
-    const isFromAdmin = latest.sender_id === profile?.id;
     const senderName = isFromStudent ? latest.studentName : "You";
     const messagePreview = latest.message?.length > 40 
       ? latest.message.substring(0, 40) + "..." 
@@ -9102,7 +9147,6 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       senderName,
       messagePreview,
       isFromStudent,
-      isFromAdmin,
       time: formatTime(latest.created_at),
       unreadCount: chatsWithUnread[studentId] || 0,
     };
