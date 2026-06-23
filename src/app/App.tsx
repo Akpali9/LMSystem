@@ -1364,7 +1364,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         <div className="absolute bottom-0 left-0 p-10 text-white">
           <div className="flex items-center gap-2.5 mb-8">
-            <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain bg-white/10 p-1" />
+            <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain p-1" />
           </div>
           <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
             "Education is the most powerful weapon you can use to change the world."
