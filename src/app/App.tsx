@@ -7044,6 +7044,7 @@ function AdminPayments() {
 
 // ─── Admin Assignments ────────────────────────────────────────────────────────
 
+
 function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignment }: { 
   courses: Course[];
   modules: Module[];
@@ -7069,12 +7070,12 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   const [gradingLoading, setGradingLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"pending" | "graded" | "all">("pending");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchSubmissions();
     fetchStudents();
     
-    // Real-time subscription for new submissions
     const subscription = supabase
       .channel("admin-assignments")
       .on("postgres_changes", 
@@ -7089,6 +7090,8 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   }, [refreshKey]);
 
   const fetchSubmissions = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -7136,9 +7139,10 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
         setSubmissions(data as StudentAssignment[]);
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error in fetchSubmissions:", error);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -7249,12 +7253,12 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       // Refresh the list after grading
       await fetchSubmissions();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error grading assignment:", error);
       toast({
         type: "error",
         title: "Grading Failed",
-        message: "Failed to grade assignment. Please try again.",
+        message: error.message || "Failed to grade assignment. Please try again.",
       });
     } finally {
       setGradingLoading(false);
@@ -7564,7 +7568,6 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       <Modal open={!!gradeModal} onClose={() => setGradeModal(null)} title="Grade Assignment" maxWidth="max-w-2xl">
         {gradeModal && (
           <div className="space-y-5">
-            {/* Student Info */}
             <div className="p-4 bg-gray-100 rounded-lg">
               <div className="flex items-center gap-4">
                 <Avatar name={gradeModal.profiles?.full_name || "Student"} size="lg" src={gradeModal.profiles?.avatar_url} />
@@ -7575,7 +7578,6 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
               </div>
             </div>
 
-            {/* Assignment Info */}
             <div className="border rounded-lg p-4" style={{ borderColor: '#e0e0e0' }}>
               <h3 className="font-semibold text-gray-800">{gradeModal.assignment?.title}</h3>
               {gradeModal.assignment?.description && (
@@ -7590,7 +7592,6 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
               </div>
             </div>
 
-            {/* Submission Preview */}
             {gradeModal.submission_url && gradeModal.submission_url.startsWith('http') && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <a 
@@ -7604,7 +7605,6 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
               </div>
             )}
             
-            {/* Grade Form */}
             <div className="space-y-4 border-t pt-4" style={{ borderColor: '#e0e0e0' }}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -7634,7 +7634,6 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
               />
             </div>
             
-            {/* Actions */}
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setGradeModal(null)}
@@ -9939,7 +9938,7 @@ export default function App() {
     }
   };
 
- const handleGradeAssignment = async (assignmentId: string, score: number, feedback: string) => {
+const handleGradeAssignment = async (assignmentId: string, score: number, feedback: string) => {
   try {
     const { error } = await supabase
       .from("student_assignments")
@@ -9953,20 +9952,22 @@ export default function App() {
     
     if (error) {
       console.error("Error grading assignment:", error);
-      throw error;
+      throw new Error(error.message || "Database update failed");
     }
     
-    toast({
-      type: "success",
-      title: "Assignment Graded",
-      message: "The assignment has been graded successfully.",
-    });
+    // Don't throw errors from fetch operations - they're non-critical
+    try {
+      await fetchEnrollments();
+    } catch (fetchError) {
+      console.warn("Failed to refresh enrollments:", fetchError);
+      // Don't re-throw - grading was successful
+    }
     
-    // Refresh the assignments list
-    await fetchSubmissions();
+    // Return success
+    return { success: true };
     
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in handleGradeAssignment:", error);
     throw error;
   }
 };
