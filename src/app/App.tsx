@@ -6714,93 +6714,84 @@ function AdminPayments() {
     }
   };
 
-const handleAction = async (id: string, action: "approved" | "rejected") => {
-  setProcessingId(id);
-  setLoading(true);
-  
-  try {
-    // First, get the payment record to get the enrollment_id
-    const { data: payment, error: fetchError } = await supabase
-      .from("payment_receipts")
-      .select("enrollment_id, student_id")
-      .eq("id", id)
-      .single();
+  const handleAction = async (id: string, action: "approved" | "rejected") => {
+    setProcessingId(id);
+    setLoading(true);
     
-    if (fetchError) {
-      console.error("Error fetching payment:", fetchError);
-      toast({
-        type: "error",
-        title: "Failed",
-        message: "Could not find payment record. Please refresh and try again.",
-      });
-      setLoading(false);
-      setProcessingId(null);
-      return;
-    }
-    
-    // Update the payment status - only update status and admin_notes
-    const updateData: any = { 
-      status: action
-    };
-    
-    // Only add admin_notes if there's content
-    if (notes && notes.trim()) {
-      updateData.admin_notes = notes.trim();
-    }
-    
-    const { error: updateError } = await supabase
-      .from("payment_receipts")
-      .update(updateData)
-      .eq("id", id);
-    
-    if (updateError) {
-      console.error("Update error:", updateError);
-      toast({
-        type: "error",
-        title: "Update Failed",
-        message: updateError.message || "Failed to update payment status. Please try again.",
-      });
-      setLoading(false);
-      setProcessingId(null);
-      return;
-    }
-    
-    // If approved, activate the enrollment
-    if (action === "approved" && payment) {
-      // First check if enrollment exists
-      const { data: enrollment, error: enrollmentCheckError } = await supabase
-        .from("enrollments")
-        .select("id, status")
-        .eq("id", payment.enrollment_id)
+    try {
+      // First, get the payment record to get the enrollment_id
+      const { data: payment, error: fetchError } = await supabase
+        .from("payment_receipts")
+        .select("enrollment_id, student_id")
+        .eq("id", id)
         .single();
       
-      if (enrollmentCheckError) {
-        console.error("Enrollment check error:", enrollmentCheckError);
+      if (fetchError) {
+        console.error("Error fetching payment:", fetchError);
         toast({
-          type: "warning",
-          title: "Payment Approved but Enrollment Not Found",
-          message: "Payment was approved but the enrollment record could not be found.",
+          type: "error",
+          title: "Failed",
+          message: "Could not find payment record. Please refresh and try again.",
         });
-      } else if (enrollment.status === "active") {
+        setLoading(false);
+        setProcessingId(null);
+        return;
+      }
+      
+      // Update the payment status - ONLY update status and admin_notes
+      const updateData: any = { 
+        status: action
+      };
+      
+      // Only add admin_notes if there's content
+      if (notes && notes.trim()) {
+        updateData.admin_notes = notes.trim();
+      }
+      
+      const { error: updateError } = await supabase
+        .from("payment_receipts")
+        .update(updateData)
+        .eq("id", id);
+      
+      if (updateError) {
+        console.error("Update error:", updateError);
         toast({
-          type: "info",
-          title: "Already Active",
-          message: "This enrollment is already active.",
+          type: "error",
+          title: "Update Failed",
+          message: updateError.message || "Failed to update payment status. Please try again.",
         });
-      } else {
-        // Update enrollment to active - only update fields that exist
-        const enrollmentUpdate: any = { 
-          status: "active"
-        };
+        setLoading(false);
+        setProcessingId(null);
+        return;
+      }
+      
+      // If approved, activate the enrollment
+      if (action === "approved" && payment) {
+        // First check if enrollment exists
+        const { data: enrollment, error: enrollmentCheckError } = await supabase
+          .from("enrollments")
+          .select("id, status")
+          .eq("id", payment.enrollment_id)
+          .single();
         
-        // Only add these fields if they exist in your schema
-        // Check if your enrollments table has these columns
-        try {
+        if (enrollmentCheckError) {
+          console.error("Enrollment check error:", enrollmentCheckError);
+          toast({
+            type: "warning",
+            title: "Payment Approved but Enrollment Not Found",
+            message: "Payment was approved but the enrollment record could not be found.",
+          });
+        } else if (enrollment.status === "active") {
+          toast({
+            type: "info",
+            title: "Already Active",
+            message: "This enrollment is already active.",
+          });
+        } else {
+          // Update enrollment to active - ONLY update status
           const { error: enrollmentError } = await supabase
             .from("enrollments")
-            .update({ 
-              status: "active"
-            })
+            .update({ status: "active" })
             .eq("id", payment.enrollment_id);
           
           if (enrollmentError) {
@@ -6808,7 +6799,7 @@ const handleAction = async (id: string, action: "approved" | "rejected") => {
             toast({
               type: "warning",
               title: "Payment Approved but Enrollment Failed",
-              message: "Payment was approved but course access may need manual activation. Error: " + enrollmentError.message,
+              message: "Payment was approved but course access may need manual activation.",
             });
           } else {
             toast({
@@ -6817,40 +6808,32 @@ const handleAction = async (id: string, action: "approved" | "rejected") => {
               message: "Course access has been granted to the student.",
             });
           }
-        } catch (enrollmentError) {
-          console.error("Enrollment update error:", enrollmentError);
-          toast({
-            type: "warning",
-            title: "Payment Approved but Enrollment Failed",
-            message: "Payment was approved but course access may need manual activation.",
-          });
         }
+      } else {
+        toast({
+          type: "info",
+          title: "Payment Rejected",
+          message: "The payment has been rejected.",
+        });
       }
-    } else if (action === "rejected") {
+      
+      setViewReceipt(null);
+      setNotes("");
+      await fetchPayments();
+      
+    } catch (error) {
+      console.error("Error:", error);
       toast({
-        type: "info",
-        title: "Payment Rejected",
-        message: "The payment has been rejected.",
+        type: "error",
+        title: "Action Failed",
+        message: "An unexpected error occurred. Please try again.",
       });
+    } finally {
+      setLoading(false);
+      setProcessingId(null);
     }
-    
-    setViewReceipt(null);
-    setNotes("");
-    await fetchPayments();
-    
-  } catch (error) {
-    console.error("Error:", error);
-    toast({
-      type: "error",
-      title: "Action Failed",
-      message: "An unexpected error occurred. Please try again.",
-    });
-  } finally {
-    setLoading(false);
-    setProcessingId(null);
-  }
-};
-  
+  };
+
   const pendingCount = payments.filter(p => p.status === "pending").length;
 
   return (
@@ -6927,7 +6910,381 @@ const handleAction = async (id: string, action: "approved" | "rejected") => {
       </div>
 
       {/* Review Modal */}
-     <Modal open={!!viewReceipt} onClose={() => { setViewReceipt(null); setNotes(""); }} title="Review Payment Receipt">
+      <Modal open={!!viewReceipt} onClose={() => { setViewReceipt(null); setNotes(""); }} title="Review Payment Receipt">
+        {viewReceipt && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-gray-100 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Student</p>
+                <p className="font-semibold mt-0.5 text-gray-800">{viewReceipt.student_name}</p>
+              </div>
+              <div className="bg-gray-100 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Course</p>
+                <p className="font-semibold mt-0.5 text-gray-800">{viewReceipt.course_title}</p>
+              </div>
+              <div className="bg-gray-100 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Amount</p>
+                <p className="font-semibold mt-0.5" style={{ color: '#f7530b' }}>{formatNaira(viewReceipt.amount)}</p>
+              </div>
+              <div className="bg-gray-100 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Submitted</p>
+                <p className="font-semibold mt-0.5 text-gray-800">{formatDate(viewReceipt.submitted_at)}</p>
+              </div>
+            </div>
+            
+            <div className="bg-gray-100 rounded-lg p-6 text-center">
+              <FileText className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+              {viewReceipt.receipt_url ? (
+                <a 
+                  href={viewReceipt.receipt_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-sm hover:underline flex items-center gap-1 mx-auto justify-center"
+                  style={{ color: '#f7530b' }}
+                >
+                  <Eye className="w-4 h-4" /> View Receipt Document
+                </a>
+              ) : (
+                <p className="text-sm text-gray-500">No receipt file attached</p>
+              )}
+            </div>
+            
+            <Textarea 
+              label="Admin Notes (optional)" 
+              value={notes} 
+              onChange={setNotes} 
+              placeholder="Add a note for the student (e.g., reason for approval/rejection)..." 
+              rows={2} 
+            />
+            
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  showConfirm({
+                    title: "Reject Payment",
+                    message: "Are you sure you want to reject this payment?",
+                    confirmLabel: "Reject",
+                    type: "danger",
+                    onConfirm: () => handleAction(viewReceipt.id, "rejected"),
+                  });
+                }}
+                disabled={loading && processingId === viewReceipt.id}
+                className="py-2.5 bg-red-50 text-red-600 border border-red-200 font-semibold rounded-lg hover:bg-red-100 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading && processingId === viewReceipt.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                Reject
+              </button>
+              <button
+                onClick={() => {
+                  showConfirm({
+                    title: "Approve Payment",
+                    message: "Are you sure you want to approve this payment? This will activate the course for the student.",
+                    confirmLabel: "Approve",
+                    type: "info",
+                    onConfirm: () => handleAction(viewReceipt.id, "approved"),
+                  });
+                }}
+                disabled={loading && processingId === viewReceipt.id}
+                className="py-2.5 text-white font-semibold rounded-lg hover:opacity-90 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ backgroundColor: '#f7530b' }}
+              >
+                {loading && processingId === viewReceipt.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Approve & Activate</>}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}// ─── Admin Payments ───────────────────────────────────────────────────────────
+
+function AdminPayments() {
+  const [payments, setPayments] = useState<any[]>([]);
+  const [viewReceipt, setViewReceipt] = useState<any | null>(null);
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchPayments();
+    
+    const subscription = supabase
+      .channel("admin-payments")
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_receipts" }, () => fetchPayments())
+      .subscribe();
+
+    return () => { subscription.unsubscribe(); };
+  }, []);
+
+  const fetchPayments = async () => {
+    setLoading(true);
+    try {
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from("payment_receipts")
+        .select(`
+          *,
+          enrollment:enrollment_id (
+            id,
+            course_id,
+            course:course_id (
+              id,
+              title,
+              price
+            )
+          )
+        `)
+        .order("submitted_at", { ascending: false });
+      
+      if (paymentsError) {
+        console.error("Error fetching payments:", paymentsError);
+        toast({
+          type: "error",
+          title: "Failed to Load",
+          message: "Could not load payment records.",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      if (paymentsData) {
+        const paymentsWithStudents = await Promise.all(
+          paymentsData.map(async (payment) => {
+            let studentName = "Unknown";
+            let studentEmail = "";
+            
+            if (payment.student_id) {
+              const { data: studentData } = await supabase
+                .from("profiles")
+                .select("full_name, email")
+                .eq("id", payment.student_id)
+                .single();
+              
+              if (studentData) {
+                studentName = studentData.full_name;
+                studentEmail = studentData.email;
+              }
+            }
+            
+            return {
+              ...payment,
+              student_name: studentName,
+              student_email: studentEmail,
+              course_title: payment.enrollment?.course?.title || "Unknown Course",
+            };
+          })
+        );
+        
+        setPayments(paymentsWithStudents);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        type: "error",
+        title: "Failed to Load",
+        message: "An error occurred while loading payments.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAction = async (id: string, action: "approved" | "rejected") => {
+    setProcessingId(id);
+    setLoading(true);
+    
+    try {
+      // First, get the payment record to get the enrollment_id
+      const { data: payment, error: fetchError } = await supabase
+        .from("payment_receipts")
+        .select("enrollment_id, student_id")
+        .eq("id", id)
+        .single();
+      
+      if (fetchError) {
+        console.error("Error fetching payment:", fetchError);
+        toast({
+          type: "error",
+          title: "Failed",
+          message: "Could not find payment record. Please refresh and try again.",
+        });
+        setLoading(false);
+        setProcessingId(null);
+        return;
+      }
+      
+      // Update the payment status - ONLY update status and admin_notes
+      const updateData: any = { 
+        status: action
+      };
+      
+      // Only add admin_notes if there's content
+      if (notes && notes.trim()) {
+        updateData.admin_notes = notes.trim();
+      }
+      
+      const { error: updateError } = await supabase
+        .from("payment_receipts")
+        .update(updateData)
+        .eq("id", id);
+      
+      if (updateError) {
+        console.error("Update error:", updateError);
+        toast({
+          type: "error",
+          title: "Update Failed",
+          message: updateError.message || "Failed to update payment status. Please try again.",
+        });
+        setLoading(false);
+        setProcessingId(null);
+        return;
+      }
+      
+      // If approved, activate the enrollment
+      if (action === "approved" && payment) {
+        // First check if enrollment exists
+        const { data: enrollment, error: enrollmentCheckError } = await supabase
+          .from("enrollments")
+          .select("id, status")
+          .eq("id", payment.enrollment_id)
+          .single();
+        
+        if (enrollmentCheckError) {
+          console.error("Enrollment check error:", enrollmentCheckError);
+          toast({
+            type: "warning",
+            title: "Payment Approved but Enrollment Not Found",
+            message: "Payment was approved but the enrollment record could not be found.",
+          });
+        } else if (enrollment.status === "active") {
+          toast({
+            type: "info",
+            title: "Already Active",
+            message: "This enrollment is already active.",
+          });
+        } else {
+          // Update enrollment to active - ONLY update status
+          const { error: enrollmentError } = await supabase
+            .from("enrollments")
+            .update({ status: "active" })
+            .eq("id", payment.enrollment_id);
+          
+          if (enrollmentError) {
+            console.error("Enrollment update error:", enrollmentError);
+            toast({
+              type: "warning",
+              title: "Payment Approved but Enrollment Failed",
+              message: "Payment was approved but course access may need manual activation.",
+            });
+          } else {
+            toast({
+              type: "success",
+              title: "Payment Approved",
+              message: "Course access has been granted to the student.",
+            });
+          }
+        }
+      } else {
+        toast({
+          type: "info",
+          title: "Payment Rejected",
+          message: "The payment has been rejected.",
+        });
+      }
+      
+      setViewReceipt(null);
+      setNotes("");
+      await fetchPayments();
+      
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        type: "error",
+        title: "Action Failed",
+        message: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+      setProcessingId(null);
+    }
+  };
+
+  const pendingCount = payments.filter(p => p.status === "pending").length;
+
+  return (
+    <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+          Payment Approvals
+        </h1>
+        <p className="text-gray-500 mt-1 text-sm md:text-base">Review and approve student payment receipts.</p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
+        <StatCard icon={Clock} label="Pending" value={pendingCount} />
+        <StatCard icon={CheckCircle} label="Approved" value={payments.filter(p => p.status === "approved").length} />
+        <StatCard icon={XCircle} label="Rejected" value={payments.filter(p => p.status === "rejected").length} />
+      </div>
+
+      {/* Payment List */}
+      <div className="space-y-4">
+        {loading && payments.length === 0 ? (
+          <Card className="p-8 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
+            <p className="text-gray-500 mt-4">Loading payments...</p>
+          </Card>
+        ) : payments.length === 0 ? (
+          <Card className="p-8 text-center">
+            <DollarSign className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No payment receipts submitted yet.</p>
+          </Card>
+        ) : (
+          payments.map((p) => (
+            <Card key={p.id} className="p-4 md:p-5">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#fdddce' }}>
+                  <FileText className="w-5 h-5" style={{ color: '#f7530b' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-gray-800">{p.student_name}</p>
+                      <p className="text-xs text-gray-500">{p.student_email}</p>
+                    </div>
+                    <StatusBadge status={p.status} />
+                  </div>
+                  <p className="text-sm font-medium text-gray-700 mt-2">
+                    Course: {p.course_title}
+                  </p>
+                  <p className="text-lg font-bold mt-1" style={{ color: '#f7530b' }}>
+                    {formatNaira(p.amount)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Submitted: {formatDate(p.submitted_at)}
+                  </p>
+                  {p.admin_notes && (
+                    <div className="mt-2 p-2 bg-gray-100 rounded-lg text-xs text-gray-500">
+                      Admin note: {p.admin_notes}
+                    </div>
+                  )}
+                </div>
+                {p.status === "pending" && (
+                  <button
+                    onClick={() => setViewReceipt(p)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg hover:opacity-90 transition-colors flex items-center gap-1.5 shrink-0"
+                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Review
+                  </button>
+                )}
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Review Modal */}
+      <Modal open={!!viewReceipt} onClose={() => { setViewReceipt(null); setNotes(""); }} title="Review Payment Receipt">
         {viewReceipt && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3 text-sm">
