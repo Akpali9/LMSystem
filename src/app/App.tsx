@@ -2110,13 +2110,7 @@ adminNavItems.push({
   key: "admin-assignments",
   badge: showAssignmentsBadge ? adminPendingAssignmentsCount : undefined
 });
-  adminNavItems.push({ 
-  view: "admin-grading" as View, 
-  icon: Award, 
-  label: "Grading", 
-  key: "admin-grading" 
-});
-
+ 
 adminNavItems.push({ view: "admin-quizzes" as View, icon: HelpCircle, label: "Quizzes", key: "admin-quizzes" });
 
 // --- ADMIN MESSAGES (Unified - Course Chat + Student Messages) ---
