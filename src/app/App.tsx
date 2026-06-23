@@ -8003,18 +8003,7 @@ function AdminGrading({ courses, modules, students, onGradeModule, onGradeAssign
         >
           All Students
         </button>
-        <button
-          onClick={() => setActiveTab("pending")}
-          className={cn(
-            "px-5 py-2 rounded-lg text-sm font-medium transition-all",
-            activeTab === "pending"
-              ? "text-white shadow-md"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          )}
-          style={activeTab === "pending" ? { backgroundColor: '#f7530b' } : {}}
-        >
-          Pending Grading
-        </button>
+       
         <button
           onClick={() => setActiveTab("graded")}
           className={cn(
