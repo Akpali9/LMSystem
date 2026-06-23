@@ -6629,13 +6629,9 @@ function AdminPayments() {
   const [viewReceipt, setViewReceipt] = useState<any | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const markAsViewed = async () => {
-      // For admin, we just refresh the count
-    };
-    
-    markAsViewed();
     fetchPayments();
     
     const subscription = supabase
@@ -6647,81 +6643,126 @@ function AdminPayments() {
   }, []);
 
   const fetchPayments = async () => {
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from("payment_receipts")
-      .select(`
-        *,
-        enrollment:enrollment_id (
-          id,
-          course_id,
-          course:course_id (
+    setLoading(true);
+    try {
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from("payment_receipts")
+        .select(`
+          *,
+          enrollment:enrollment_id (
             id,
-            title,
-            price
+            course_id,
+            course:course_id (
+              id,
+              title,
+              price
+            )
           )
-        )
-      `)
-      .order("submitted_at", { ascending: false });
-    
-    if (paymentsError) {
-      console.error("Error fetching payments:", paymentsError);
-      return;
-    }
-    
-    if (paymentsData) {
-      const paymentsWithStudents = await Promise.all(
-        paymentsData.map(async (payment) => {
-          let studentName = "Unknown";
-          let studentEmail = "";
-          
-          if (payment.student_id) {
-            const { data: studentData } = await supabase
-              .from("profiles")
-              .select("full_name, email")
-              .eq("id", payment.student_id)
-              .single();
-            
-            if (studentData) {
-              studentName = studentData.full_name;
-              studentEmail = studentData.email;
-            }
-          }
-          
-          return {
-            ...payment,
-            student_name: studentName,
-            student_email: studentEmail,
-            course_title: payment.enrollment?.course?.title || "Unknown Course",
-          };
-        })
-      );
+        `)
+        .order("submitted_at", { ascending: false });
       
-      setPayments(paymentsWithStudents);
+      if (paymentsError) {
+        console.error("Error fetching payments:", paymentsError);
+        toast({
+          type: "error",
+          title: "Failed to Load",
+          message: "Could not load payment records.",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      if (paymentsData) {
+        const paymentsWithStudents = await Promise.all(
+          paymentsData.map(async (payment) => {
+            let studentName = "Unknown";
+            let studentEmail = "";
+            
+            if (payment.student_id) {
+              const { data: studentData } = await supabase
+                .from("profiles")
+                .select("full_name, email")
+                .eq("id", payment.student_id)
+                .single();
+              
+              if (studentData) {
+                studentName = studentData.full_name;
+                studentEmail = studentData.email;
+              }
+            }
+            
+            return {
+              ...payment,
+              student_name: studentName,
+              student_email: studentEmail,
+              course_title: payment.enrollment?.course?.title || "Unknown Course",
+            };
+          })
+        );
+        
+        setPayments(paymentsWithStudents);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        type: "error",
+        title: "Failed to Load",
+        message: "An error occurred while loading payments.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAction = async (id: string, action: "approved" | "rejected") => {
+    setProcessingId(id);
     setLoading(true);
     
-    const { error: updateError } = await supabase
-      .from("payment_receipts")
-      .update({ status: action, admin_notes: notes })
-      .eq("id", id);
-    
-    if (updateError) {
-      toast({
-        type: "error",
-        title: "Action Failed",
-        message: "Failed to update payment status. Please try again.",
-      });
-      setLoading(false);
-      return;
-    }
-    
-    if (action === "approved") {
-      const payment = payments.find(p => p.id === id);
-      if (payment) {
-        await supabase
+    try {
+      // First, get the payment record to get the enrollment_id
+      const { data: payment, error: fetchError } = await supabase
+        .from("payment_receipts")
+        .select("enrollment_id, student_id")
+        .eq("id", id)
+        .single();
+      
+      if (fetchError) {
+        console.error("Error fetching payment:", fetchError);
+        toast({
+          type: "error",
+          title: "Failed",
+          message: "Could not find payment record. Please refresh and try again.",
+        });
+        setLoading(false);
+        setProcessingId(null);
+        return;
+      }
+      
+      // Update the payment status
+      const { error: updateError } = await supabase
+        .from("payment_receipts")
+        .update({ 
+          status: action, 
+          admin_notes: notes || null,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq("id", id);
+      
+      if (updateError) {
+        console.error("Update error:", updateError);
+        toast({
+          type: "error",
+          title: "Update Failed",
+          message: updateError.message || "Failed to update payment status. Please try again.",
+        });
+        setLoading(false);
+        setProcessingId(null);
+        return;
+      }
+      
+      // If approved, activate the enrollment
+      if (action === "approved" && payment) {
+        const { error: enrollmentError } = await supabase
           .from("enrollments")
           .update({ 
             status: "active", 
@@ -6730,28 +6771,48 @@ function AdminPayments() {
           })
           .eq("id", payment.enrollment_id);
         
+        if (enrollmentError) {
+          console.error("Enrollment update error:", enrollmentError);
+          toast({
+            type: "warning",
+            title: "Payment Approved but Enrollment Failed",
+            message: "Payment was approved but course access may need manual activation.",
+          });
+        } else {
+          toast({
+            type: "success",
+            title: "Payment Approved",
+            message: "Course access has been granted to the student.",
+          });
+        }
+      } else {
         toast({
-          type: "success",
-          title: "Payment Approved",
-          message: "Course access has been granted to the student.",
+          type: "info",
+          title: "Payment Rejected",
+          message: "The payment has been rejected.",
         });
       }
-    } else {
+      
+      setViewReceipt(null);
+      setNotes("");
+      await fetchPayments();
+      
+    } catch (error) {
+      console.error("Error:", error);
       toast({
-        type: "info",
-        title: "Payment Rejected",
-        message: "The payment has been rejected. Please add a note for the student.",
+        type: "error",
+        title: "Action Failed",
+        message: "An unexpected error occurred. Please try again.",
       });
+    } finally {
+      setLoading(false);
+      setProcessingId(null);
     }
-    
-    setViewReceipt(null);
-    setNotes("");
-    setLoading(false);
-    fetchPayments();
   };
 
   const pendingCount = payments.filter(p => p.status === "pending").length;
- return (
+
+  return (
     <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div>
         <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
@@ -6760,14 +6821,21 @@ function AdminPayments() {
         <p className="text-gray-500 mt-1 text-sm md:text-base">Review and approve student payment receipts.</p>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-3 md:gap-4">
         <StatCard icon={Clock} label="Pending" value={pendingCount} />
         <StatCard icon={CheckCircle} label="Approved" value={payments.filter(p => p.status === "approved").length} />
         <StatCard icon={XCircle} label="Rejected" value={payments.filter(p => p.status === "rejected").length} />
       </div>
 
+      {/* Payment List */}
       <div className="space-y-4">
-        {payments.length === 0 ? (
+        {loading && payments.length === 0 ? (
+          <Card className="p-8 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
+            <p className="text-gray-500 mt-4">Loading payments...</p>
+          </Card>
+        ) : payments.length === 0 ? (
           <Card className="p-8 text-center">
             <DollarSign className="w-10 h-10 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No payment receipts submitted yet.</p>
@@ -6817,7 +6885,8 @@ function AdminPayments() {
         )}
       </div>
 
-      <Modal open={!!viewReceipt} onClose={() => setViewReceipt(null)} title="Review Payment Receipt">
+      {/* Review Modal */}
+      <Modal open={!!viewReceipt} onClose={() => { setViewReceipt(null); setNotes(""); }} title="Review Payment Receipt">
         {viewReceipt && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3 text-sm">
@@ -6841,15 +6910,19 @@ function AdminPayments() {
             
             <div className="bg-gray-100 rounded-lg p-6 text-center">
               <FileText className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-              <a 
-                href={viewReceipt.receipt_url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-sm hover:underline flex items-center gap-1 mx-auto justify-center"
-                style={{ color: '#f7530b' }}
-              >
-                <Eye className="w-4 h-4" /> View Receipt Document
-              </a>
+              {viewReceipt.receipt_url ? (
+                <a 
+                  href={viewReceipt.receipt_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-sm hover:underline flex items-center gap-1 mx-auto justify-center"
+                  style={{ color: '#f7530b' }}
+                >
+                  <Eye className="w-4 h-4" /> View Receipt Document
+                </a>
+              ) : (
+                <p className="text-sm text-gray-500">No receipt file attached</p>
+              )}
             </div>
             
             <Textarea 
@@ -6871,10 +6944,11 @@ function AdminPayments() {
                     onConfirm: () => handleAction(viewReceipt.id, "rejected"),
                   });
                 }}
-                disabled={loading}
-                className="py-2.5 bg-red-50 text-red-600 border border-red-200 font-semibold rounded-lg hover:bg-red-100 transition-colors text-sm flex items-center justify-center gap-2"
+                disabled={loading && processingId === viewReceipt.id}
+                className="py-2.5 bg-red-50 text-red-600 border border-red-200 font-semibold rounded-lg hover:bg-red-100 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <XCircle className="w-4 h-4" /> Reject
+                {loading && processingId === viewReceipt.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                Reject
               </button>
               <button
                 onClick={() => {
@@ -6886,11 +6960,11 @@ function AdminPayments() {
                     onConfirm: () => handleAction(viewReceipt.id, "approved"),
                   });
                 }}
-                disabled={loading}
-                className="py-2.5 text-white font-semibold rounded-lg hover:opacity-90 transition-colors text-sm flex items-center justify-center gap-2"
+                disabled={loading && processingId === viewReceipt.id}
+                className="py-2.5 text-white font-semibold rounded-lg hover:opacity-90 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                 style={{ backgroundColor: '#f7530b' }}
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Approve & Activate Course</>}
+                {loading && processingId === viewReceipt.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Approve & Activate</>}
               </button>
             </div>
           </div>
