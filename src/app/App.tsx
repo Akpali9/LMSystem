@@ -3572,9 +3572,9 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
               </p>
               <p className="text-sm text-gray-600">Transfer <strong style={{ color: '#f7530b' }}>{formatNaira(selectedCourse.price)}</strong> to:</p>
               <div className="bg-white rounded-lg p-3 font-mono text-sm space-y-1 border" style={{ borderColor: '#e0e0e0' }}>
-                <p><span className="text-gray-500">Bank:</span> Pruta Academy</p>
-                <p><span className="text-gray-500">Account:</span> 0123456789</p>
-                <p><span className="text-gray-500">Bank:</span> First Bank of Nigeria</p>
+                <p><span className="text-gray-500">Bank:</span> PRUTA MEDIA</p>
+                <p><span className="text-gray-500">Account:</span> 0894153782</p>
+                <p><span className="text-gray-500">Bank:</span> GTB </p>
                 <p><span className="text-gray-500">Reference:</span> {profile.id.slice(0, 8).toUpperCase()}-{selectedCourse.id.slice(0, 8).toUpperCase()}</p>
               </div>
             </div>
