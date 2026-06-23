@@ -947,10 +947,10 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <a href="#courses" className="hover:text-white transition-colors">Courses</a>
-            <a href="#how" className="hover:text-white transition-colors">How It Works</a>
-            <a href="#why" className="hover:text-white transition-colors">Why Pruta</a>
-            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+            <a href="#courses" className="hover:text-white transition-colors"></a>
+            <a href="#how" className="hover:text-white transition-colors"></a>
+            <a href="#why" className="hover:text-white transition-colors"></a>
+            <a href="#contact" className="hover:text-white transition-colors"></a>
           </div>
           <button
             onClick={onAuth}
@@ -1164,11 +1164,11 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <div>
               <p className="text-sm text-gray-500 font-medium">Call Us</p>
               <a 
-                href="tel:+2347047115663" 
+                href="tel:+2347018090107" 
                 className="text-xl font-bold hover:underline"
                 style={{ color: '#f7530b' }}
               >
-                +234 704 711 5663
+                +2347018090107
               </a>
               <p className="text-xs text-gray-400 mt-1">Mon - Fri, 9am - 6pm</p>
             </div>
@@ -1180,11 +1180,11 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <div>
               <p className="text-sm text-gray-500 font-medium">Email Us</p>
               <a 
-                href="mailto:info@prutaacademy.com" 
+                href="mailto:info@prutamagic.com" 
                 className="text-lg font-bold hover:underline"
                 style={{ color: '#f7530b' }}
               >
-                info@prutaacademy.com
+                info@prutamagic.com
               </a>
               <p className="text-xs text-gray-400 mt-1">We respond within 24 hours</p>
             </div>
