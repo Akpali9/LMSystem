@@ -8622,9 +8622,18 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showList, setShowList] = useState(true);
-  const [unreadCourseCount, setUnreadCourseCount] = useState(0);
-  const [unreadPersonalCount, setUnreadPersonalCount] = useState(0);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [latestMessages, setLatestMessages] = useState<Record<string, any>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Track which chats have unread messages from students
+  const [chatsWithUnread, setChatsWithUnread] = useState<Record<string, { 
+    studentId: string; 
+    studentName: string; 
+    message: string; 
+    time: string;
+    count: number;
+  }>>({});
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -8647,53 +8656,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Fetch unread counts
-  const fetchUnreadCounts = async () => {
-    if (!profile) return;
-    
-    try {
-      // Course chat unread
-      const { count: courseCount, error: courseError } = await supabase
-        .from('chat_messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('read', false);
-      
-      if (!courseError) {
-        setUnreadCourseCount(courseCount || 0);
-      }
-
-      // Personal messages unread
-      const { count: personalCount, error: personalError } = await supabase
-        .from('personal_messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('receiver_id', profile.id)
-        .eq('read', false);
-      
-      if (!personalError) {
-        setUnreadPersonalCount(personalCount || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching unread counts:', error);
-    }
-  };
-
-  // Auto-select on mobile
+  // Fetch admin profile and unread messages
   useEffect(() => {
-    if (isMobile) {
-      if (chatType === "course" && courses.length > 0 && !selectedCourseId) {
-        setSelectedCourseId(courses[0].id);
-        setShowList(false);
-      }
-      if (chatType === "personal" && students.length > 0 && !selectedStudentId) {
-        setSelectedStudentId(students[0].id);
-        setShowList(false);
-      }
-    }
-  }, [isMobile, chatType, courses, students]);
-
-  // Fetch admin profile
-  useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndUnread = async () => {
       try {
         const { data, error } = await supabase
           .from("profiles")
@@ -8709,13 +8674,13 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         
         if (data) {
           setProfile(data as Profile);
-          fetchUnreadCounts();
+          await fetchUnreadMessages();
         }
       } catch (error) {
         console.error("Error:", error);
       }
     };
-    fetchProfile();
+    fetchProfileAndUnread();
 
     // Subscribe to new messages
     const courseSubscription = supabase
@@ -8723,7 +8688,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
         () => {
-          fetchUnreadCounts();
+          fetchUnreadMessages();
           if (selectedCourseId) fetchMessages();
         }
       )
@@ -8734,7 +8699,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'personal_messages' },
         () => {
-          fetchUnreadCounts();
+          fetchUnreadMessages();
           if (selectedStudentId) fetchPersonalMessages();
         }
       )
@@ -8744,7 +8709,113 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       courseSubscription.unsubscribe();
       personalSubscription.unsubscribe();
     };
-  }, [profile?.id]);
+  }, []);
+
+  // Fetch unread messages and show who sent them
+  const fetchUnreadMessages = async () => {
+    if (!profile?.id) return;
+
+    try {
+      // 1. Get unread personal messages with sender info
+      const { data: unreadPersonal, error: personalError } = await supabase
+        .from("personal_messages")
+        .select(`
+          *,
+          sender:sender_id (
+            id,
+            full_name,
+            email,
+            avatar_url
+          )
+        `)
+        .eq("receiver_id", profile.id)
+        .eq("read", false)
+        .order("created_at", { ascending: false });
+
+      if (personalError) {
+        console.error("Error fetching unread personal messages:", personalError);
+        return;
+      }
+
+      // 2. Get latest message from each student for preview
+      const { data: allPersonalMessages, error: allError } = await supabase
+        .from("personal_messages")
+        .select(`
+          *,
+          sender:sender_id (
+            id,
+            full_name,
+            email,
+            avatar_url
+          )
+        `)
+        .or(`receiver_id.eq.${profile.id},sender_id.eq.${profile.id}`)
+        .order("created_at", { ascending: false });
+
+      if (allError) {
+        console.error("Error fetching all personal messages:", allError);
+        return;
+      }
+
+      // Group by student to get latest message per chat
+      const latestPerStudent: Record<string, any> = {};
+      const unreadPerStudent: Record<string, number> = {};
+
+      // Process all messages to get latest per student
+      allPersonalMessages?.forEach((msg: any) => {
+        const studentId = msg.sender_id === profile.id ? msg.receiver_id : msg.sender_id;
+        
+        // If we don't have a message for this student yet, this is the latest (since we ordered by created_at desc)
+        if (!latestPerStudent[studentId]) {
+          latestPerStudent[studentId] = {
+            ...msg,
+            studentId: studentId,
+            studentName: msg.sender?.full_name || "Unknown Student",
+            isFromStudent: msg.sender_id !== profile.id,
+            isFromAdmin: msg.sender_id === profile.id,
+          };
+        }
+
+        // Count unread messages from student
+        if (msg.sender_id !== profile.id && !msg.read) {
+          unreadPerStudent[studentId] = (unreadPerStudent[studentId] || 0) + 1;
+        }
+      });
+
+      // Update state with unread counts and latest messages
+      setChatsWithUnread(unreadPerStudent);
+      setLatestMessages(latestPerStudent);
+
+    } catch (error) {
+      console.error("Error fetching unread messages:", error);
+    }
+  };
+
+  // Update unread counts when viewing a chat
+  const markChatAsRead = async (studentId: string) => {
+    if (!profile?.id) return;
+    
+    try {
+      const { error } = await supabase
+        .from("personal_messages")
+        .update({ read: true })
+        .eq("receiver_id", profile.id)
+        .eq("sender_id", studentId)
+        .eq("read", false);
+
+      if (!error) {
+        // Update local state
+        setChatsWithUnread(prev => {
+          const newState = { ...prev };
+          delete newState[studentId];
+          return newState;
+        });
+        await fetchUnreadMessages();
+      }
+    } catch (error) {
+      console.error("Error marking chat as read:", error);
+    }
+  };
 
   useEffect(() => {
     if (selectedCourseId && chatType === "course") {
@@ -8759,7 +8830,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
             .eq('read', false);
           
           if (!error) {
-            fetchUnreadCounts();
+            fetchUnreadMessages();
           }
         } catch (error) {
           console.error('Error marking messages as read:', error);
@@ -8772,26 +8843,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
 
   useEffect(() => {
     if (selectedStudentId && chatType === "personal" && profile?.id) {
+      // Mark as read when opening chat
+      markChatAsRead(selectedStudentId);
       fetchPersonalMessages();
-      
-      const markAsRead = async () => {
-        try {
-          const { error } = await supabase
-            .from('personal_messages')
-            .update({ read: true })
-            .eq('receiver_id', profile.id)
-            .eq('sender_id', selectedStudentId)
-            .eq('read', false);
-          
-          if (!error) {
-            fetchUnreadCounts();
-          }
-        } catch (error) {
-          console.error('Error marking personal messages as read:', error);
-        }
-      };
-      
-      markAsRead();
     }
   }, [selectedStudentId, chatType, profile?.id]);
 
@@ -8803,7 +8857,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         .from("chat_messages")
         .select("*")
         .eq("course_id", selectedCourseId)
-        .order("created_at", { ascending: true }); // Oldest first, newest at bottom
+        .order("created_at", { ascending: true });
       
       if (error) {
         console.error("Error fetching messages:", error);
@@ -8830,7 +8884,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         .from("personal_messages")
         .select("*")
         .or(`and(sender_id.eq.${selectedStudentId},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${selectedStudentId})`)
-        .order("created_at", { ascending: true }); // Oldest first, newest at bottom
+        .order("created_at", { ascending: true });
       
       if (error) {
         console.error("Error fetching personal messages:", error);
@@ -8842,12 +8896,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       } else if (data) {
         setPersonalMessages(data);
         // Mark as read
-        await supabase
-          .from("personal_messages")
-          .update({ read: true })
-          .eq('receiver_id', profile.id)
-          .eq('sender_id', selectedStudentId);
-        fetchUnreadCounts();
+        await markChatAsRead(selectedStudentId);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -8926,7 +8975,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const selectedCourse = courses.find(c => c.id === selectedCourseId);
-  const totalUnread = unreadCourseCount + unreadPersonalCount;
+  
+  // Calculate total unread count
+  const totalUnread = Object.values(chatsWithUnread).reduce((sum, val) => sum + val, 0);
 
   // Render course message with sender identification
   const renderCourseMessage = (msg: ChatMessage) => {
@@ -8934,7 +8985,6 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     const isStudent = !isAdmin;
     const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
     
-    // Find the student if it's a student message
     const student = students.find(s => s.id === msg.user_id);
 
     return (
@@ -9017,7 +9067,29 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     );
   };
 
-  // Mobile chat view for admin
+  // Get the latest message preview for a student
+  const getStudentPreview = (studentId: string) => {
+    const latest = latestMessages[studentId];
+    if (!latest) return null;
+    
+    const isFromStudent = latest.sender_id !== profile?.id;
+    const isFromAdmin = latest.sender_id === profile?.id;
+    const senderName = isFromStudent ? latest.studentName : "You";
+    const messagePreview = latest.message?.length > 40 
+      ? latest.message.substring(0, 40) + "..." 
+      : latest.message;
+    
+    return {
+      senderName,
+      messagePreview,
+      isFromStudent,
+      isFromAdmin,
+      time: formatTime(latest.created_at),
+      unreadCount: chatsWithUnread[studentId] || 0,
+    };
+  };
+
+  // Mobile chat view
   if (isMobile) {
     return (
       <div className="h-full flex flex-col bg-[#eeeeee]" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -9066,9 +9138,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                 style={chatType === "course" ? { backgroundColor: '#f7530b' } : { borderColor: '#e0e0e0' }}
               >
                 Course Chat
-                {unreadCourseCount > 0 && (
+                {totalUnread > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    {unreadCourseCount > 9 ? '9+' : unreadCourseCount}
+                    {totalUnread > 9 ? '9+' : totalUnread}
                   </span>
                 )}
               </button>
@@ -9081,9 +9153,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                 style={chatType === "personal" ? { backgroundColor: '#f7530b' } : { borderColor: '#e0e0e0' }}
               >
                 Student Messages
-                {unreadPersonalCount > 0 && (
+                {Object.keys(chatsWithUnread).length > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    {unreadPersonalCount > 9 ? '9+' : unreadPersonalCount}
+                    {Object.keys(chatsWithUnread).length > 9 ? '9+' : Object.keys(chatsWithUnread).length}
                   </span>
                 )}
               </button>
@@ -9119,23 +9191,69 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-xs text-gray-500 px-1">Select a student:</p>
-                {students.map((student) => (
-                  <Card
-                    key={student.id}
-                    className="p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-                    onClick={() => { setSelectedStudentId(student.id); setShowList(false); }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-800 text-sm truncate">{student.full_name}</p>
-                        <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                <p className="text-xs text-gray-500 px-1">Students with messages:</p>
+                {students.map((student) => {
+                  const preview = getStudentPreview(student.id);
+                  const hasUnread = (chatsWithUnread[student.id] || 0) > 0;
+                  
+                  return (
+                    <Card
+                      key={student.id}
+                      className={cn(
+                        "p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]",
+                        hasUnread ? "bg-orange-50 border-orange-200" : ""
+                      )}
+                      onClick={() => { setSelectedStudentId(student.id); setShowList(false); }}
+                      style={hasUnread ? { borderColor: '#f7530b' } : {}}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
+                          {hasUnread && (
+                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                              {chatsWithUnread[student.id]}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className={cn(
+                              "font-medium text-sm truncate",
+                              hasUnread ? "text-gray-900 font-semibold" : "text-gray-800"
+                            )}>
+                              {student.full_name}
+                            </p>
+                            {preview && (
+                              <span className="text-[10px] text-gray-400 shrink-0 ml-2">
+                                {preview.time}
+                              </span>
+                            )}
+                          </div>
+                          {preview && (
+                            <div className="flex items-center gap-2">
+                              <p className={cn(
+                                "text-xs truncate",
+                                hasUnread ? "text-gray-700 font-medium" : "text-gray-500"
+                              )}>
+                                {preview.isFromStudent ? `${preview.senderName}: ` : `You: `}
+                                {preview.messagePreview}
+                              </p>
+                              {hasUnread && (
+                                <span className="w-2 h-2 bg-orange-500 rounded-full shrink-0 animate-pulse" />
+                              )}
+                            </div>
+                          )}
+                          {!preview && (
+                            <p className="text-xs text-gray-400">No messages yet</p>
+                          )}
+                        </div>
+                        {!hasUnread && (
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                        )}
                       </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
                 {students.length === 0 && (
                   <div className="text-center text-gray-500 py-8">
                     <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
@@ -9146,6 +9264,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
             )}
           </div>
         ) : (
+          // Mobile chat view (same as before)
           <div className="flex-1 flex flex-col bg-white">
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {loading ? (
@@ -9231,9 +9350,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
           style={chatType === "course" ? { backgroundColor: '#f7530b' } : {}}
         >
           Course Chat
-          {unreadCourseCount > 0 && (
+          {totalUnread > 0 && (
             <span className="ml-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
-              {unreadCourseCount}
+              {totalUnread}
             </span>
           )}
         </button>
@@ -9246,9 +9365,9 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
           style={chatType === "personal" ? { backgroundColor: '#f7530b' } : {}}
         >
           Student Messages
-          {unreadPersonalCount > 0 && (
+          {Object.keys(chatsWithUnread).length > 0 && (
             <span className="ml-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
-              {unreadPersonalCount}
+              {Object.keys(chatsWithUnread).length} unread
             </span>
           )}
         </button>
@@ -9282,26 +9401,80 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
             </>
           ) : (
             <>
-              <h3 className="font-semibold text-gray-800 text-sm mb-3">Students</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-800 text-sm">Students</h3>
+                {Object.keys(chatsWithUnread).length > 0 && (
+                  <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
+                    {Object.keys(chatsWithUnread).length} unread
+                  </span>
+                )}
+              </div>
               <div className="space-y-2">
                 {students.length === 0 && (
                   <p className="text-xs text-gray-500">No students available.</p>
                 )}
-                {students.map((student) => (
-                  <button
-                    key={student.id}
-                    onClick={() => setSelectedStudentId(student.id)}
-                    className={cn(
-                      "w-full text-left p-3 rounded-lg text-sm transition-all flex items-center gap-2",
-                      selectedStudentId === student.id
-                        ? "border" : "hover:bg-gray-50 text-gray-600"
-                    )}
-                    style={selectedStudentId === student.id ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
-                  >
-                    <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
-                    <span className="font-medium truncate flex-1">{student.full_name}</span>
-                  </button>
-                ))}
+                {students.map((student) => {
+                  const preview = getStudentPreview(student.id);
+                  const unreadCount = chatsWithUnread[student.id] || 0;
+                  const hasUnread = unreadCount > 0;
+                  
+                  return (
+                    <button
+                      key={student.id}
+                      onClick={() => setSelectedStudentId(student.id)}
+                      className={cn(
+                        "w-full text-left p-3 rounded-lg text-sm transition-all",
+                        selectedStudentId === student.id
+                          ? "border" : "hover:bg-gray-50 text-gray-600",
+                        hasUnread && "bg-orange-50"
+                      )}
+                      style={selectedStudentId === student.id ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
+                          {hasUnread && (
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                              {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className={cn(
+                              "font-medium truncate",
+                              hasUnread ? "text-gray-900 font-semibold" : "text-gray-700"
+                            )}>
+                              {student.full_name}
+                            </span>
+                            {preview && (
+                              <span className="text-[10px] text-gray-400 shrink-0 ml-1">
+                                {preview.time}
+                              </span>
+                            )}
+                          </div>
+                          {preview && (
+                            <div className="flex items-center gap-1">
+                              <p className={cn(
+                                "text-xs truncate",
+                                hasUnread ? "text-gray-700 font-medium" : "text-gray-500"
+                              )}>
+                                {preview.isFromStudent ? `${preview.senderName}: ` : `You: `}
+                                {preview.messagePreview}
+                              </p>
+                              {hasUnread && (
+                                <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0 animate-pulse" />
+                              )}
+                            </div>
+                          )}
+                          {!preview && (
+                            <p className="text-xs text-gray-400">No messages yet</p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}
@@ -9429,6 +9602,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     </div>
   );
 }
+
 
 // ─── Admin Scholarship ─────────────────────────────────────────────────────
 
