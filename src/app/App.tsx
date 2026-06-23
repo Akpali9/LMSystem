@@ -3658,6 +3658,7 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
   const [sending, setSending] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showCourseList, setShowCourseList] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -3697,7 +3698,9 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
         .channel(`chat-${selectedCourseId}`)
         .on("postgres_changes", 
           { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
-          () => fetchMessages()
+          () => {
+            fetchMessages();
+          }
         )
         .subscribe();
 
@@ -3707,42 +3710,80 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
     }
   }, [selectedCourseId]);
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (isMobile && enrolledCourses.length > 0 && !selectedCourseId) {
-      setSelectedCourseId(enrolledCourses[0].id);
-      setShowCourseList(false);
-    }
-  }, [isMobile, enrolledCourses]);
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
 
   const fetchMessages = async () => {
     if (!selectedCourseId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("chat_messages")
-      .select("*")
-      .eq("course_id", selectedCourseId)
-      .order("created_at", { ascending: true });
-    if (data) setMessages(data as ChatMessage[]);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("course_id", selectedCourseId)
+        .order("created_at", { ascending: true }); // Oldest first, newest at bottom
+      
+      if (error) {
+        console.error("Error fetching messages:", error);
+        toast({
+          type: "error",
+          title: "Failed to Load",
+          message: "Could not load messages.",
+        });
+      } else if (data) {
+        setMessages(data as ChatMessage[]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedCourseId || sending) return;
     setSending(true);
     
-    const { error } = await supabase.from("chat_messages").insert({
-      course_id: selectedCourseId,
-      user_id: profile.id,
-      user_name: profile.full_name,
-      user_avatar: profile.avatar_url,
-      message: newMessage.trim(),
-    });
-    
-    if (!error) {
-      setNewMessage("");
-      fetchMessages();
+    try {
+      const { error } = await supabase.from("chat_messages").insert({
+        course_id: selectedCourseId,
+        user_id: profile.id,
+        user_name: profile.full_name,
+        user_avatar: profile.avatar_url,
+        message: newMessage.trim(),
+      });
+      
+      if (error) {
+        console.error("Error sending message:", error);
+        toast({
+          type: "error",
+          title: "Send Failed",
+          message: "Could not send message. Please try again.",
+        });
+      } else {
+        setNewMessage("");
+        await fetchMessages();
+        // Scroll to bottom after sending
+        setTimeout(() => scrollToBottom(), 100);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        type: "error",
+        title: "Send Failed",
+        message: "Could not send message. Please try again.",
+      });
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   };
 
   const handleCourseSelect = (courseId: string) => {
@@ -3757,6 +3798,53 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
   };
 
   const selectedCourse = courses.find(c => c.id === selectedCourseId);
+
+  // Render message with proper sender identification
+  const renderMessage = (msg: ChatMessage) => {
+    const isOwnMessage = msg.user_id === profile.id;
+    const senderName = isOwnMessage ? "You" : msg.user_name || "Unknown Student";
+    const isAdmin = msg.user_id === "admin";
+
+    return (
+      <div
+        key={msg.id}
+        className={cn(
+          "flex items-start gap-2 max-w-[85%]",
+          isOwnMessage ? "ml-auto flex-row-reverse" : ""
+        )}
+      >
+        <Avatar 
+          name={senderName} 
+          size="sm" 
+          src={isOwnMessage ? profile.avatar_url : msg.user_avatar} 
+        />
+        <div className={cn(
+          "p-3 rounded-lg text-sm",
+          isOwnMessage
+            ? "text-white"
+            : isAdmin 
+              ? "bg-orange-100 text-gray-800" 
+              : "bg-gray-100 text-gray-800"
+        )}
+        style={isOwnMessage ? { backgroundColor: '#f7530b' } : {}}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium">
+              {isAdmin ? "👑 Admin" : senderName}
+            </span>
+            {isAdmin && (
+              <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+            )}
+            {!isOwnMessage && !isAdmin && (
+              <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
+            )}
+          </div>
+          <p className="break-words">{msg.message}</p>
+          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+        </div>
+      </div>
+    );
+  };
 
   // Mobile chat view
   if (isMobile) {
@@ -3834,29 +3922,10 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
                   <p className="text-xs text-gray-400 mt-1">Start the conversation!</p>
                 </div>
               ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={cn(
-                      "flex items-start gap-2 max-w-[85%]",
-                      msg.user_id === profile.id ? "ml-auto flex-row-reverse" : ""
-                    )}
-                  >
-                    <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
-                    <div className={cn(
-                      "p-3 rounded-lg text-sm",
-                      msg.user_id === profile.id
-                        ? "text-white"
-                        : "bg-gray-100 text-gray-800"
-                    )}
-                    style={msg.user_id === profile.id ? { backgroundColor: '#f7530b' } : {}}
-                    >
-                      <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
-                      <p className="mt-0.5 break-words">{msg.message}</p>
-                      <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                    </div>
-                  </div>
-                ))
+                <>
+                  {messages.map(renderMessage)}
+                  <div ref={messagesEndRef} />
+                </>
               )}
             </div>
 
@@ -3928,10 +3997,11 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
             </div>
           ) : (
             <>
-              <div className="p-4 border-b" style={{ borderColor: '#e0e0e0' }}>
+              <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: '#e0e0e0' }}>
                 <p className="font-semibold text-gray-800">
                   {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
                 </p>
+                <Badge variant="info">{messages.length} messages</Badge>
               </div>
 
               <div className="flex-1 p-4 overflow-y-auto space-y-3">
@@ -3941,32 +4011,14 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="text-center text-gray-500 py-8">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
                     <p>No messages yet. Start the conversation!</p>
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        "flex items-start gap-3 max-w-[80%]",
-                        msg.user_id === profile.id ? "ml-auto flex-row-reverse" : ""
-                      )}
-                    >
-                      <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
-                      <div className={cn(
-                        "p-3 rounded-lg text-sm",
-                        msg.user_id === profile.id
-                          ? "text-white"
-                          : "bg-gray-100 text-gray-800"
-                      )}
-                      style={msg.user_id === profile.id ? { backgroundColor: '#f7530b' } : {}}
-                      >
-                        <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
-                        <p className="mt-0.5">{msg.message}</p>
-                        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                      </div>
-                    </div>
-                  ))
+                  <>
+                    {messages.map(renderMessage)}
+                    <div ref={messagesEndRef} />
+                  </>
                 )}
               </div>
 
@@ -3981,10 +4033,11 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
                 <button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || sending}
-                  className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+                  className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
                   style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
                 >
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Send
                 </button>
               </div>
             </>
@@ -8571,6 +8624,18 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
   const [showList, setShowList] = useState(true);
   const [unreadCourseCount, setUnreadCourseCount] = useState(0);
   const [unreadPersonalCount, setUnreadPersonalCount] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, personalMessages]);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
 
   // Detect mobile
   useEffect(() => {
@@ -8586,20 +8651,30 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
   const fetchUnreadCounts = async () => {
     if (!profile) return;
     
-    // Course chat unread
-    const { count: courseCount } = await supabase
-      .from('chat_messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('read', false);
-    setUnreadCourseCount(courseCount || 0);
+    try {
+      // Course chat unread
+      const { count: courseCount, error: courseError } = await supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('read', false);
+      
+      if (!courseError) {
+        setUnreadCourseCount(courseCount || 0);
+      }
 
-    // Personal messages unread
-    const { count: personalCount } = await supabase
-      .from('personal_messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('receiver_id', profile.id)
-      .eq('read', false);
-    setUnreadPersonalCount(personalCount || 0);
+      // Personal messages unread
+      const { count: personalCount, error: personalError } = await supabase
+        .from('personal_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('receiver_id', profile.id)
+        .eq('read', false);
+      
+      if (!personalError) {
+        setUnreadPersonalCount(personalCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching unread counts:', error);
+    }
   };
 
   // Auto-select on mobile
@@ -8616,17 +8691,28 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     }
   }, [isMobile, chatType, courses, students]);
 
+  // Fetch admin profile
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("role", "admin")
-        .limit(1)
-        .single();
-      if (data) {
-        setProfile(data as Profile);
-        fetchUnreadCounts();
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("role", "admin")
+          .limit(1)
+          .single();
+        
+        if (error) {
+          console.error("Error fetching admin profile:", error);
+          return;
+        }
+        
+        if (data) {
+          setProfile(data as Profile);
+          fetchUnreadCounts();
+        }
+      } catch (error) {
+        console.error("Error:", error);
       }
     };
     fetchProfile();
@@ -8636,15 +8722,21 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       .channel('admin-course-messages')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-        () => fetchUnreadCounts()
+        () => {
+          fetchUnreadCounts();
+          if (selectedCourseId) fetchMessages();
+        }
       )
       .subscribe();
 
     const personalSubscription = supabase
       .channel('admin-personal-messages')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `receiver_id=eq.${profile?.id || ''}` },
-        () => fetchUnreadCounts()
+        { event: 'INSERT', schema: 'public', table: 'personal_messages' },
+        () => {
+          fetchUnreadCounts();
+          if (selectedStudentId) fetchPersonalMessages();
+        }
       )
       .subscribe();
 
@@ -8670,23 +8762,11 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
             fetchUnreadCounts();
           }
         } catch (error) {
-          console.error('Error:', error);
+          console.error('Error marking messages as read:', error);
         }
       };
       
       markAsRead();
-      
-      const subscription = supabase
-        .channel(`admin-chat-${selectedCourseId}`)
-        .on("postgres_changes", 
-          { event: "INSERT", schema: "public", table: "chat_messages", filter: `course_id=eq.${selectedCourseId}` },
-          () => fetchMessages()
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
     }
   }, [selectedCourseId, chatType]);
 
@@ -8707,104 +8787,235 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
             fetchUnreadCounts();
           }
         } catch (error) {
-          console.error('Error:', error);
+          console.error('Error marking personal messages as read:', error);
         }
       };
       
       markAsRead();
-      
-      const subscription = supabase
-        .channel(`personal-chat-${selectedStudentId}`)
-        .on("postgres_changes", 
-          { event: "INSERT", schema: "public", table: "personal_messages", 
-            filter: `sender_id=eq.${selectedStudentId},receiver_id=eq.${profile.id}` },
-          () => fetchPersonalMessages()
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
     }
   }, [selectedStudentId, chatType, profile?.id]);
 
   const fetchMessages = async () => {
     if (!selectedCourseId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("chat_messages")
-      .select("*")
-      .eq("course_id", selectedCourseId)
-      .order("created_at", { ascending: true });
-    if (data) setMessages(data as ChatMessage[]);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("course_id", selectedCourseId)
+        .order("created_at", { ascending: true }); // Oldest first, newest at bottom
+      
+      if (error) {
+        console.error("Error fetching messages:", error);
+        toast({
+          type: "error",
+          title: "Failed to Load",
+          message: "Could not load messages.",
+        });
+      } else if (data) {
+        setMessages(data as ChatMessage[]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchPersonalMessages = async () => {
     if (!selectedStudentId || !profile?.id) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("personal_messages")
-      .select("*")
-      .or(`and(sender_id.eq.${selectedStudentId},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${selectedStudentId})`)
-      .order("created_at", { ascending: true });
-    if (data) {
-      setPersonalMessages(data);
-      await supabase
+    try {
+      const { data, error } = await supabase
         .from("personal_messages")
-        .update({ read: true })
-        .eq('receiver_id', profile.id)
-        .eq('sender_id', selectedStudentId);
-      fetchUnreadCounts();
+        .select("*")
+        .or(`and(sender_id.eq.${selectedStudentId},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${selectedStudentId})`)
+        .order("created_at", { ascending: true }); // Oldest first, newest at bottom
+      
+      if (error) {
+        console.error("Error fetching personal messages:", error);
+        toast({
+          type: "error",
+          title: "Failed to Load",
+          message: "Could not load messages.",
+        });
+      } else if (data) {
+        setPersonalMessages(data);
+        // Mark as read
+        await supabase
+          .from("personal_messages")
+          .update({ read: true })
+          .eq('receiver_id', profile.id)
+          .eq('sender_id', selectedStudentId);
+        fetchUnreadCounts();
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;
     setSending(true);
     
-    if (chatType === "course" && selectedCourseId) {
-      const adminName = "Admin";
-      const { error } = await supabase.from("chat_messages").insert({
-        course_id: selectedCourseId,
-        user_id: "admin",
-        user_name: adminName,
-        user_avatar: null,
-        message: newMessage.trim(),
-      });
-      if (!error) {
-        setNewMessage("");
-        fetchMessages();
-        toast({
-          type: "success",
-          title: "Message Sent",
-          message: "Your message has been sent to the course chat.",
+    try {
+      if (chatType === "course" && selectedCourseId) {
+        const adminName = "Admin";
+        const { error } = await supabase.from("chat_messages").insert({
+          course_id: selectedCourseId,
+          user_id: "admin",
+          user_name: adminName,
+          user_avatar: null,
+          message: newMessage.trim(),
         });
-      }
-    } else if (chatType === "personal" && selectedStudentId && profile?.id) {
-      const { error } = await supabase.from("personal_messages").insert({
-        sender_id: profile.id,
-        receiver_id: selectedStudentId,
-        message: newMessage.trim(),
-      });
-      if (!error) {
-        setNewMessage("");
-        fetchPersonalMessages();
-        toast({
-          type: "success",
-          title: "Message Sent",
-          message: "Your message has been sent to the student.",
+        
+        if (error) {
+          console.error("Error sending message:", error);
+          toast({
+            type: "error",
+            title: "Send Failed",
+            message: "Could not send message. Please try again.",
+          });
+        } else {
+          setNewMessage("");
+          await fetchMessages();
+          toast({
+            type: "success",
+            title: "Message Sent",
+            message: "Your message has been sent to the course chat.",
+          });
+        }
+      } else if (chatType === "personal" && selectedStudentId && profile?.id) {
+        const { error } = await supabase.from("personal_messages").insert({
+          sender_id: profile.id,
+          receiver_id: selectedStudentId,
+          message: newMessage.trim(),
+          read: false,
         });
+        
+        if (error) {
+          console.error("Error sending personal message:", error);
+          toast({
+            type: "error",
+            title: "Send Failed",
+            message: "Could not send message. Please try again.",
+          });
+        } else {
+          setNewMessage("");
+          await fetchPersonalMessages();
+          toast({
+            type: "success",
+            title: "Message Sent",
+            message: "Your message has been sent to the student.",
+          });
+        }
       }
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        type: "error",
+        title: "Send Failed",
+        message: "Could not send message. Please try again.",
+      });
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   };
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const selectedCourse = courses.find(c => c.id === selectedCourseId);
-
   const totalUnread = unreadCourseCount + unreadPersonalCount;
+
+  // Render course message with sender identification
+  const renderCourseMessage = (msg: ChatMessage) => {
+    const isAdmin = msg.user_id === "admin";
+    const isStudent = !isAdmin;
+    const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
+    
+    // Find the student if it's a student message
+    const student = students.find(s => s.id === msg.user_id);
+
+    return (
+      <div
+        key={msg.id}
+        className={cn(
+          "flex items-start gap-3 max-w-[80%]",
+          isAdmin ? "ml-auto flex-row-reverse" : ""
+        )}
+      >
+        <Avatar 
+          name={senderName} 
+          size="sm" 
+          src={isAdmin ? undefined : student?.avatar_url || msg.user_avatar} 
+        />
+        <div className={cn(
+          "p-3 rounded-lg text-sm",
+          isAdmin
+            ? "text-white"
+            : "bg-gray-100 text-gray-800"
+        )}
+        style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium">
+              {isAdmin ? "👑 Admin" : senderName}
+            </span>
+            {isAdmin && (
+              <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+            )}
+            {isStudent && (
+              <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
+            )}
+          </div>
+          <p className="break-words">{msg.message}</p>
+          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+        </div>
+      </div>
+    );
+  };
+
+  // Render personal message with sender identification
+  const renderPersonalMessage = (msg: any) => {
+    const isAdmin = msg.sender_id === profile?.id;
+    const senderName = isAdmin ? "Admin" : selectedStudent?.full_name || "Student";
+    const senderAvatar = isAdmin ? undefined : selectedStudent?.avatar_url;
+
+    return (
+      <div
+        key={msg.id}
+        className={cn(
+          "flex items-start gap-3 max-w-[80%]",
+          isAdmin ? "ml-auto flex-row-reverse" : ""
+        )}
+      >
+        <Avatar name={senderName} size="sm" src={senderAvatar} />
+        <div className={cn(
+          "p-3 rounded-lg text-sm",
+          isAdmin
+            ? "text-white"
+            : "bg-gray-100 text-gray-800"
+        )}
+        style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium">
+              {isAdmin ? "👑 Admin" : senderName}
+            </span>
+            {isAdmin && (
+              <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+            )}
+            {!isAdmin && (
+              <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
+            )}
+          </div>
+          <p className="break-words">{msg.message}</p>
+          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+        </div>
+      </div>
+    );
+  };
 
   // Mobile chat view for admin
   if (isMobile) {
@@ -8949,29 +9160,10 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                     <p className="text-xs text-gray-400 mt-1">Start the conversation!</p>
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        "flex items-start gap-2 max-w-[85%]",
-                        msg.user_id === "admin" ? "ml-auto flex-row-reverse" : ""
-                      )}
-                    >
-                      <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
-                      <div className={cn(
-                        "p-3 rounded-lg text-sm",
-                        msg.user_id === "admin"
-                          ? "text-white"
-                          : "bg-gray-100 text-gray-800"
-                      )}
-                      style={msg.user_id === "admin" ? { backgroundColor: '#f7530b' } : {}}
-                      >
-                        <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
-                        <p className="mt-0.5 break-words">{msg.message}</p>
-                        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                      </div>
-                    </div>
-                  ))
+                  <>
+                    {messages.map(renderCourseMessage)}
+                    <div ref={messagesEndRef} />
+                  </>
                 )
               ) : (
                 personalMessages.length === 0 ? (
@@ -8981,34 +9173,10 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                     <p className="text-xs text-gray-400 mt-1">Send a message to this student</p>
                   </div>
                 ) : (
-                  personalMessages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        "flex items-start gap-2 max-w-[85%]",
-                        msg.sender_id === profile?.id ? "ml-auto flex-row-reverse" : ""
-                      )}
-                    >
-                      <Avatar 
-                        name={msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"} 
-                        size="sm" 
-                      />
-                      <div className={cn(
-                        "p-3 rounded-lg text-sm",
-                        msg.sender_id === profile?.id
-                          ? "text-white"
-                          : "bg-gray-100 text-gray-800"
-                      )}
-                      style={msg.sender_id === profile?.id ? { backgroundColor: '#f7530b' } : {}}
-                      >
-                        <p className="text-xs font-medium opacity-70">
-                          {msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"}
-                        </p>
-                        <p className="mt-0.5 break-words">{msg.message}</p>
-                        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                      </div>
-                    </div>
-                  ))
+                  <>
+                    {personalMessages.map(renderPersonalMessage)}
+                    <div ref={messagesEndRef} />
+                  </>
                 )
               )}
             </div>
@@ -9150,10 +9318,11 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
               </div>
             ) : (
               <>
-                <div className="p-4 border-b" style={{ borderColor: '#e0e0e0' }}>
+                <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: '#e0e0e0' }}>
                   <p className="font-semibold text-gray-800">
                     {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
                   </p>
+                  <Badge variant="info">{messages.length} messages</Badge>
                 </div>
 
                 <div className="flex-1 p-4 overflow-y-auto space-y-3">
@@ -9163,32 +9332,14 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                     </div>
                   ) : messages.length === 0 ? (
                     <div className="text-center text-gray-500 py-8">
-                      <p>No messages yet.</p>
+                      <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                      <p>No messages yet. Start the conversation!</p>
                     </div>
                   ) : (
-                    messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={cn(
-                          "flex items-start gap-3 max-w-[80%]",
-                          msg.user_id === "admin" ? "ml-auto flex-row-reverse" : ""
-                        )}
-                      >
-                        <Avatar name={msg.user_name} size="sm" src={msg.user_avatar} />
-                        <div className={cn(
-                          "p-3 rounded-lg text-sm",
-                          msg.user_id === "admin"
-                            ? "text-white"
-                            : "bg-gray-100 text-gray-800"
-                        )}
-                        style={msg.user_id === "admin" ? { backgroundColor: '#f7530b' } : {}}
-                        >
-                          <p className="text-xs font-medium opacity-70">{msg.user_name}</p>
-                          <p className="mt-0.5">{msg.message}</p>
-                          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                        </div>
-                      </div>
-                    ))
+                    <>
+                      {messages.map(renderCourseMessage)}
+                      <div ref={messagesEndRef} />
+                    </>
                   )}
                 </div>
 
@@ -9203,10 +9354,11 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                   <button
                     onClick={sendMessage}
                     disabled={!newMessage.trim() || sending}
-                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
                     style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
                   >
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Send
                   </button>
                 </div>
               </>
@@ -9221,12 +9373,15 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
               </div>
             ) : (
               <>
-                <div className="p-4 border-b flex items-center gap-3" style={{ borderColor: '#e0e0e0' }}>
-                  <Avatar name={selectedStudent?.full_name || "Student"} size="sm" src={selectedStudent?.avatar_url} />
-                  <div>
-                    <p className="font-semibold text-gray-800">{selectedStudent?.full_name || "Student"}</p>
-                    <p className="text-xs text-gray-500">{selectedStudent?.email}</p>
+                <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: '#e0e0e0' }}>
+                  <div className="flex items-center gap-3">
+                    <Avatar name={selectedStudent?.full_name || "Student"} size="sm" src={selectedStudent?.avatar_url} />
+                    <div>
+                      <p className="font-semibold text-gray-800">{selectedStudent?.full_name || "Student"}</p>
+                      <p className="text-xs text-gray-500">{selectedStudent?.email}</p>
+                    </div>
                   </div>
+                  <Badge variant="info">{personalMessages.length} messages</Badge>
                 </div>
 
                 <div className="flex-1 p-4 overflow-y-auto space-y-3">
@@ -9236,38 +9391,15 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                     </div>
                   ) : personalMessages.length === 0 ? (
                     <div className="text-center text-gray-500 py-8">
+                      <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
                       <p>No messages yet.</p>
                       <p className="text-xs mt-1">Send a message to this student</p>
                     </div>
                   ) : (
-                    personalMessages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={cn(
-                          "flex items-start gap-3 max-w-[80%]",
-                          msg.sender_id === profile?.id ? "ml-auto flex-row-reverse" : ""
-                        )}
-                      >
-                        <Avatar 
-                          name={msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"} 
-                          size="sm" 
-                        />
-                        <div className={cn(
-                          "p-3 rounded-lg text-sm",
-                          msg.sender_id === profile?.id
-                            ? "text-white"
-                            : "bg-gray-100 text-gray-800"
-                        )}
-                        style={msg.sender_id === profile?.id ? { backgroundColor: '#f7530b' } : {}}
-                        >
-                          <p className="text-xs font-medium opacity-70">
-                            {msg.sender_id === profile?.id ? "Admin" : selectedStudent?.full_name || "Student"}
-                          </p>
-                          <p className="mt-0.5">{msg.message}</p>
-                          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                        </div>
-                      </div>
-                    ))
+                    <>
+                      {personalMessages.map(renderPersonalMessage)}
+                      <div ref={messagesEndRef} />
+                    </>
                   )}
                 </div>
 
@@ -9282,10 +9414,11 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                   <button
                     onClick={sendMessage}
                     disabled={!newMessage.trim() || sending}
-                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
                     style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
                   >
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Send
                   </button>
                 </div>
               </>
