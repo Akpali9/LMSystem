@@ -7613,6 +7613,606 @@ const handleGradeModule = async (studentId: string, moduleId: string, score: num
     throw error;
   }
 };
+// ─── Admin Grading ────────────────────────────────────────────────────────────
+
+function AdminGrading({ courses, modules, students, onGradeModule, onGradeAssignment }: { 
+  courses: Course[];
+  modules: Module[];
+  students: Profile[];
+  onGradeModule: (studentId: string, moduleId: string, score: number, feedback: string) => Promise<void>;
+  onGradeAssignment: (assignmentId: string, score: number, feedback: string) => Promise<void>;
+}) {
+  const [selectedStudent, setSelectedStudent] = useState<Profile | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState<string>("all");
+  const [studentData, setStudentData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [gradeModal, setGradeModal] = useState<any>(null);
+  const [gradeForm, setGradeForm] = useState({ score: "", feedback: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | "pending" | "graded">("all");
+
+  useEffect(() => {
+    if (students.length > 0) {
+      fetchAllStudentData();
+    }
+  }, [students, modules]);
+
+  const fetchAllStudentData = async () => {
+    setLoading(true);
+    try {
+      const studentDataArray = [];
+      
+      for (const student of students) {
+        // Get enrollments with course data
+        const { data: enrollments } = await supabase
+          .from("enrollments")
+          .select(`
+            id,
+            course_id,
+            current_module_index,
+            course:course_id (
+              id,
+              title
+            )
+          `)
+          .eq("student_id", student.id)
+          .eq("status", "active");
+        
+        if (!enrollments || enrollments.length === 0) continue;
+        
+        const enrollmentData = await Promise.all(
+          enrollments.map(async (enrollment) => {
+            // Get modules for this course
+            const courseModules = modules.filter(m => m.course_id === enrollment.course_id);
+            
+            // Get module progress
+            const { data: progressData } = await supabase
+              .from("module_progress")
+              .select("*")
+              .eq("enrollment_id", enrollment.id);
+            
+            // Get assignments for this enrollment
+            const { data: assignments } = await supabase
+              .from("student_assignments")
+              .select(`
+                *,
+                assignment:assignment_id (
+                  id,
+                  title,
+                  max_score,
+                  module_id
+                )
+              `)
+              .eq("enrollment_id", enrollment.id);
+            
+            // Get quiz attempts
+            const { data: quizAttempts } = await supabase
+              .from("quiz_attempts")
+              .select("*")
+              .eq("enrollment_id", enrollment.id);
+            
+            // Build modules with progress, assignments, and quizzes
+            const modulesWithData = await Promise.all(
+              courseModules.map(async (module) => {
+                const progress = progressData?.find(p => p.module_id === module.id);
+                
+                // Find assignment for this module
+                const assignmentData = assignments?.find(
+                  a => a.assignment?.module_id === module.id
+                );
+                
+                // Find quiz for this module
+                const { data: quiz } = await supabase
+                  .from("quizzes")
+                  .select("*")
+                  .eq("module_id", module.id)
+                  .maybeSingle();
+                
+                let quizAttempt = null;
+                if (quiz) {
+                  quizAttempt = quizAttempts?.find(
+                    a => a.quiz_id === quiz.id
+                  );
+                }
+                
+                return {
+                  id: module.id,
+                  title: module.title,
+                  pass_score: module.pass_score || 70,
+                  progress: progress ? {
+                    id: progress.id,
+                    status: progress.status,
+                    score: progress.score || 0,
+                    completed_at: progress.completed_at,
+                  } : undefined,
+                  assignment: assignmentData ? {
+                    id: assignmentData.assignment.id,
+                    title: assignmentData.assignment.title,
+                    max_score: assignmentData.assignment.max_score || 100,
+                    submitted_at: assignmentData.submitted_at,
+                    student_assignment: {
+                      id: assignmentData.id,
+                      status: assignmentData.status,
+                      score: assignmentData.score,
+                      feedback: assignmentData.feedback,
+                      submitted_at: assignmentData.submitted_at,
+                    }
+                  } : undefined,
+                  quiz: quiz ? {
+                    id: quiz.id,
+                    title: quiz.title,
+                    pass_score: quiz.pass_score || 70,
+                    attempt: quizAttempt ? {
+                      score: quizAttempt.score,
+                      passed: quizAttempt.passed,
+                      completed_at: quizAttempt.completed_at,
+                    } : undefined
+                  } : undefined
+                };
+              })
+            );
+            
+            return {
+              id: enrollment.id,
+              course_id: enrollment.course_id,
+              course_title: enrollment.course?.title || "Unknown Course",
+              current_module_index: enrollment.current_module_index || 0,
+              modules: modulesWithData,
+            };
+          })
+        );
+        
+        studentDataArray.push({
+          id: student.id,
+          full_name: student.full_name,
+          email: student.email,
+          avatar_url: student.avatar_url,
+          enrollments: enrollmentData,
+        });
+      }
+      
+      setStudentData(studentDataArray);
+    } catch (error) {
+      console.error("Error fetching student data:", error);
+      toast({
+        type: "error",
+        title: "Failed to Load",
+        message: "Could not load student data. Please refresh.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGradeModule = async () => {
+    if (!gradeModal) return;
+    
+    const scoreNum = parseInt(gradeForm.score);
+    if (isNaN(scoreNum) || scoreNum < 0) {
+      toast({
+        type: "warning",
+        title: "Invalid Score",
+        message: "Please enter a valid score.",
+      });
+      return;
+    }
+    
+    if (scoreNum > gradeModal.maxScore) {
+      toast({
+        type: "warning",
+        title: "Score Exceeds Maximum",
+        message: `Score cannot exceed ${gradeModal.maxScore}.`,
+      });
+      return;
+    }
+    
+    if (!gradeForm.feedback.trim()) {
+      toast({
+        type: "warning",
+        title: "Feedback Required",
+        message: "Please provide feedback for the student.",
+      });
+      return;
+    }
+    
+    setSubmitting(true);
+    try {
+      if (gradeModal.type === "module") {
+        await onGradeModule(
+          gradeModal.studentId,
+          gradeModal.moduleId,
+          scoreNum,
+          gradeForm.feedback
+        );
+      } else if (gradeModal.type === "assignment" && gradeModal.assignmentId) {
+        await onGradeAssignment(
+          gradeModal.assignmentId,
+          scoreNum,
+          gradeForm.feedback
+        );
+      }
+      
+      toast({
+        type: "success",
+        title: "Grade Submitted!",
+        message: `Grade of ${scoreNum}/${gradeModal.maxScore} has been recorded.`,
+      });
+      
+      setGradeModal(null);
+      setGradeForm({ score: "", feedback: "" });
+      await fetchAllStudentData();
+    } catch (error) {
+      console.error("Error grading:", error);
+      toast({
+        type: "error",
+        title: "Grading Failed",
+        message: "Failed to submit grade. Please try again.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getFilteredStudents = () => {
+    let filtered = studentData;
+    
+    // Filter by search
+    if (searchTerm) {
+      filtered = filtered.filter((s: any) => 
+        s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Filter by course
+    if (selectedCourse !== "all") {
+      filtered = filtered.filter((s: any) => 
+        s.enrollments.some((e: any) => e.course_id === selectedCourse)
+      );
+    }
+    
+    // Filter by grading status
+    if (activeTab === "pending") {
+      filtered = filtered.filter((s: any) => {
+        return s.enrollments.some((e: any) => 
+          e.modules.some((m: any) => 
+            m.progress?.status !== "passed" && 
+            (m.assignment?.student_assignment?.status === "submitted" || 
+             m.quiz?.attempt?.passed === false)
+          )
+        );
+      });
+    } else if (activeTab === "graded") {
+      filtered = filtered.filter((s: any) => {
+        return s.enrollments.some((e: any) => 
+          e.modules.some((m: any) => 
+            m.progress?.status === "passed" ||
+            m.assignment?.student_assignment?.status === "graded"
+          )
+        );
+      });
+    }
+    
+    return filtered;
+  };
+
+  const filteredStudents = getFilteredStudents();
+
+  const openGradeModal = (
+    studentId: string,
+    studentName: string,
+    moduleId: string,
+    moduleTitle: string,
+    type: "module" | "assignment",
+    maxScore: number,
+    currentScore?: number,
+    feedback?: string,
+    assignmentId?: string
+  ) => {
+    setGradeModal({
+      studentId,
+      studentName,
+      moduleId,
+      moduleTitle,
+      type,
+      maxScore,
+      currentScore,
+      feedback,
+      assignmentId,
+    });
+    setGradeForm({
+      score: currentScore?.toString() || "",
+      feedback: feedback || "",
+    });
+  };
+
+  return (
+    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+          Manual Grading
+        </h1>
+        <p className="text-gray-500 mt-1 text-sm md:text-base">Manually grade student modules and assignments.</p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex-1 min-w-[200px]">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search students..."
+              className="w-full pl-9 pr-4 py-2 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
+              style={{ borderColor: '#e0e0e0' }}
+            />
+          </div>
+        </div>
+        
+        <select
+          value={selectedCourse}
+          onChange={(e) => setSelectedCourse(e.target.value)}
+          className="px-4 py-2 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
+          style={{ borderColor: '#e0e0e0' }}
+        >
+          <option value="all">All Courses</option>
+          {courses.map(c => (
+            <option key={c.id} value={c.id}>{c.title}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2 border-b pb-2" style={{ borderColor: '#e0e0e0' }}>
+        <button
+          onClick={() => setActiveTab("all")}
+          className={cn(
+            "px-5 py-2 rounded-lg text-sm font-medium transition-all",
+            activeTab === "all"
+              ? "text-white shadow-md"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          )}
+          style={activeTab === "all" ? { backgroundColor: '#6b7280' } : {}}
+        >
+          All Students
+        </button>
+        <button
+          onClick={() => setActiveTab("pending")}
+          className={cn(
+            "px-5 py-2 rounded-lg text-sm font-medium transition-all",
+            activeTab === "pending"
+              ? "text-white shadow-md"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          )}
+          style={activeTab === "pending" ? { backgroundColor: '#f7530b' } : {}}
+        >
+          Pending Grading
+        </button>
+        <button
+          onClick={() => setActiveTab("graded")}
+          className={cn(
+            "px-5 py-2 rounded-lg text-sm font-medium transition-all",
+            activeTab === "graded"
+              ? "text-white shadow-md"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          )}
+          style={activeTab === "graded" ? { backgroundColor: '#10b981' } : {}}
+        >
+          Graded
+        </button>
+      </div>
+
+      {/* Students List */}
+      {loading ? (
+        <div className="text-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
+          <p className="text-gray-500 mt-4">Loading student data...</p>
+        </div>
+      ) : filteredStudents.length === 0 ? (
+        <Card className="p-12 text-center">
+          <Users className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+          <h3 className="font-semibold text-gray-700 text-lg mb-2">No Students Found</h3>
+          <p className="text-sm text-gray-500">
+            {searchTerm ? "No students match your search criteria." : "No students enrolled in courses yet."}
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {filteredStudents.map((student: any) => (
+            <Card key={student.id} className="p-4 md:p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <Avatar name={student.full_name} size="lg" src={student.avatar_url} />
+                <div>
+                  <h3 className="font-semibold text-gray-800 text-lg">{student.full_name}</h3>
+                  <p className="text-sm text-gray-500">{student.email}</p>
+                </div>
+              </div>
+              
+              {student.enrollments.map((enrollment: any) => (
+                <div key={enrollment.id} className="mt-4 border-t pt-4" style={{ borderColor: '#e0e0e0' }}>
+                  <h4 className="font-semibold text-gray-700 text-sm mb-3">
+                    {enrollment.course_title}
+                  </h4>
+                  <div className="space-y-4">
+                    {enrollment.modules.map((module: any) => (
+                      <div key={module.id} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-800">{module.title}</p>
+                            <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-500">
+                              <span>Pass: {module.pass_score}%</span>
+                              {module.progress && (
+                                <Badge variant={module.progress.status === "passed" ? "success" : "warning"}>
+                                  {module.progress.status === "passed" ? `✅ Passed (${module.progress.score}%)` : `⏳ ${module.progress.status}`}
+                                </Badge>
+                              )}
+                              {module.quiz?.attempt && (
+                                <Badge variant={module.quiz.attempt.passed ? "success" : "danger"}>
+                                  Quiz: {module.quiz.attempt.score}%
+                                </Badge>
+                              )}
+                              {module.assignment?.student_assignment && (
+                                <Badge variant={
+                                  module.assignment.student_assignment.status === "graded" ? "success" :
+                                  module.assignment.student_assignment.status === "submitted" ? "info" : "muted"
+                                }>
+                                  Assignment: {module.assignment.student_assignment.status}
+                                  {module.assignment.student_assignment.score !== undefined && 
+                                    ` (${module.assignment.student_assignment.score}/${module.assignment.max_score})`
+                                  }
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!module.progress?.status || module.progress.status !== "passed" ? (
+                              <button
+                                onClick={() => openGradeModal(
+                                  student.id,
+                                  student.full_name,
+                                  module.id,
+                                  module.title,
+                                  "module",
+                                  100,
+                                  module.progress?.score,
+                                  module.progress?.status === "failed" ? "Previous attempt failed. Please review the material and try again." : "",
+                                )}
+                                className="px-4 py-2 text-sm font-medium rounded-lg hover:opacity-90 transition-colors flex items-center gap-2"
+                                style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                              >
+                                <Edit className="w-4 h-4" /> Grade Module
+                              </button>
+                            ) : (
+                              <Badge variant="success">✅ Completed</Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Assignment Grade Button */}
+                        {module.assignment?.student_assignment && 
+                         module.assignment.student_assignment.status !== "graded" && (
+                          <div className="mt-3 pt-3 border-t" style={{ borderColor: '#e0e0e0' }}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">
+                                  Assignment: {module.assignment.title}
+                                </p>
+                                {module.assignment.submitted_at && (
+                                  <p className="text-xs text-gray-500">
+                                    Submitted: {formatDate(module.assignment.submitted_at)}
+                                  </p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => openGradeModal(
+                                  student.id,
+                                  student.full_name,
+                                  module.id,
+                                  module.assignment.title,
+                                  "assignment",
+                                  module.assignment.max_score,
+                                  module.assignment.student_assignment?.score,
+                                  module.assignment.student_assignment?.feedback,
+                                  module.assignment.student_assignment?.id
+                                )}
+                                className="px-4 py-2 text-sm font-medium rounded-lg hover:opacity-90 transition-colors flex items-center gap-2"
+                                style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                              >
+                                <Edit className="w-4 h-4" /> Grade Assignment
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Grade Modal */}
+      <Modal open={!!gradeModal} onClose={() => setGradeModal(null)} title="Grade Module/Assignment" maxWidth="max-w-2xl">
+        {gradeModal && (
+          <div className="space-y-5">
+            <div className="p-4 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-4">
+                <Avatar name={gradeModal.studentName} size="lg" />
+                <div>
+                  <p className="text-lg font-semibold text-gray-800">{gradeModal.studentName}</p>
+                  <p className="text-sm text-gray-500">
+                    {gradeModal.type === "module" ? "Module" : "Assignment"}: {gradeModal.moduleTitle}
+                  </p>
+                  {gradeModal.currentScore !== undefined && (
+                    <p className="text-sm text-gray-500">
+                      Current Score: {gradeModal.currentScore}/{gradeModal.maxScore}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Score (out of {gradeModal.maxScore}) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={gradeForm.score}
+                  onChange={(e) => setGradeForm((p) => ({ ...p, score: e.target.value }))}
+                  placeholder={`Enter score (0-${gradeModal.maxScore})`}
+                  className="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400 transition-all"
+                  style={{ borderColor: '#e0e0e0' }}
+                  min="0"
+                  max={gradeModal.maxScore}
+                  required
+                />
+                <p className="text-xs text-gray-400 mt-1">Enter a number between 0 and {gradeModal.maxScore}</p>
+              </div>
+              
+              <Textarea 
+                label="Feedback" 
+                value={gradeForm.feedback} 
+                onChange={(v) => setGradeForm((p) => ({ ...p, feedback: v }))} 
+                placeholder="Provide detailed feedback for the student..." 
+                rows={4} 
+                required 
+              />
+            </div>
+            
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setGradeModal(null)}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGradeModule}
+                disabled={!gradeForm.score || !gradeForm.feedback || submitting}
+                className={cn(
+                  "flex-1 py-2.5 font-medium rounded-lg transition-colors flex items-center justify-center gap-2",
+                  !gradeForm.score || !gradeForm.feedback || submitting
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "hover:opacity-90"
+                )}
+                style={!gradeForm.score || !gradeForm.feedback || submitting ? {} : { backgroundColor: '#f7530b', color: '#ffffff' }}
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Submit Grade
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
 
 // ─── Admin Quizzes ────────────────────────────────────────────────────────────
 
