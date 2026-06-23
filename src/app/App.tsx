@@ -8661,21 +8661,26 @@ function AdminQuizzes({ courses, modules, onQuizCreate, onQuizDelete }: {
 }
 
 // ─── Admin Chat (Unified) ────────────────────────────────────────────────────────────
-
 function AdminChat({ courses, students }: { courses: Course[]; students: Profile[] }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [personalMessages, setPersonalMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [chatType, setChatType] = useState<"course" | "personal">("course");
+  const [chatType, setChatType] = useState<"course" | "personal">("personal"); // Default to personal
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showList, setShowList] = useState(true);
-  const [chatsWithUnread, setChatsWithUnread] = useState<Record<string, number>>({});
+  const [chatsWithUnread, setChatsWithUnread] = useState<Record<string, { 
+    count: number; 
+    latestMessage: string; 
+    senderName: string;
+    time: string;
+  }>>({});
   const [latestMessages, setLatestMessages] = useState<Record<string, any>>({});
+  const [unreadStudentNames, setUnreadStudentNames] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -8718,6 +8723,8 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         if (data) {
           setProfile(data as Profile);
           await fetchUnreadMessages();
+          // Set default to personal chat view
+          setChatType("personal");
         }
       } catch (error) {
         console.error("Error:", error);
@@ -8744,6 +8751,13 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         () => {
           fetchUnreadMessages();
           if (selectedStudentId) fetchPersonalMessages();
+          // Show toast notification for new message
+          toast({
+            type: "info",
+            title: "New Message",
+            message: "You have a new message from a student.",
+            duration: 3000,
+          });
         }
       )
       .subscribe();
@@ -8759,7 +8773,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     if (!profile?.id) return;
 
     try {
-      // 1. Get unread personal messages with sender info
+      // Get unread personal messages with sender info
       const { data: unreadPersonal, error: personalError } = await supabase
         .from("personal_messages")
         .select(`
@@ -8780,7 +8794,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         return;
       }
 
-      // 2. Get latest message from each student for preview
+      // Get all personal messages for preview
       const { data: allPersonalMessages, error: allError } = await supabase
         .from("personal_messages")
         .select(`
@@ -8800,11 +8814,35 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         return;
       }
 
-      // Group by student to get latest message per chat
+      // Process messages to get unread counts and latest per student
+      const unreadPerStudent: Record<string, { 
+        count: number; 
+        latestMessage: string; 
+        senderName: string;
+        time: string;
+      }> = {};
+      
       const latestPerStudent: Record<string, any> = {};
-      const unreadPerStudent: Record<string, number> = {};
+      const studentNames: string[] = [];
 
-      // Process all messages to get latest per student
+      // Process unread messages
+      unreadPersonal?.forEach((msg: any) => {
+        const studentId = msg.sender_id;
+        const studentName = msg.sender?.full_name || "Unknown Student";
+        
+        if (!unreadPerStudent[studentId]) {
+          unreadPerStudent[studentId] = {
+            count: 0,
+            latestMessage: msg.message || "No message preview",
+            senderName: studentName,
+            time: formatTime(msg.created_at),
+          };
+          studentNames.push(studentName);
+        }
+        unreadPerStudent[studentId].count += 1;
+      });
+
+      // Process all messages for latest preview
       allPersonalMessages?.forEach((msg: any) => {
         const studentId = msg.sender_id === profile.id ? msg.receiver_id : msg.sender_id;
         
@@ -8817,17 +8855,26 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
             isFromAdmin: msg.sender_id === profile.id,
           };
         }
-
-        if (msg.sender_id !== profile.id && !msg.read) {
-          unreadPerStudent[studentId] = (unreadPerStudent[studentId] || 0) + 1;
-        }
       });
 
       setChatsWithUnread(unreadPerStudent);
       setLatestMessages(latestPerStudent);
+      setUnreadStudentNames(studentNames);
 
-      // Update navbar badge count
-      updateNavbarBadge(Object.keys(unreadPerStudent).length);
+      // Update navbar badge
+      const totalUnread = Object.keys(unreadPerStudent).length;
+      updateNavbarBadge(totalUnread);
+
+      // If there are unread messages, show a summary toast
+      if (totalUnread > 0) {
+        const names = studentNames.join(", ");
+        toast({
+          type: "info",
+          title: `📬 ${totalUnread} Unread Message${totalUnread > 1 ? 's' : ''}`,
+          message: `From: ${names}`,
+          duration: 5000,
+        });
+      }
 
     } catch (error) {
       console.error("Error fetching unread messages:", error);
@@ -8896,7 +8943,6 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       
       if (!error) {
         await fetchUnreadMessages();
-        // Clear course chat notification
         const event = new CustomEvent('clearAdminCourseChatNotification');
         window.dispatchEvent(event);
       }
@@ -9050,9 +9096,11 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const selectedCourse = courses.find(c => c.id === selectedCourseId);
-  const totalUnread = Object.values(chatsWithUnread).reduce((sum, val) => sum + val, 0);
+  
+  // Calculate total unread count
+  const totalUnread = Object.keys(chatsWithUnread).length;
 
-  // Render functions (same as before)
+  // Render functions
   const renderCourseMessage = (msg: ChatMessage) => {
     const isAdmin = msg.user_id === "admin";
     const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
@@ -9133,6 +9181,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     );
   };
 
+  // Get the latest message preview for a student
   const getStudentPreview = (studentId: string) => {
     const latest = latestMessages[studentId];
     if (!latest) return null;
@@ -9148,8 +9197,106 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       messagePreview,
       isFromStudent,
       time: formatTime(latest.created_at),
-      unreadCount: chatsWithUnread[studentId] || 0,
+      unreadCount: chatsWithUnread[studentId]?.count || 0,
     };
+  };
+
+  // Render the student list with unread indicators
+  const renderStudentList = () => {
+    if (students.length === 0) {
+      return (
+        <div className="text-center text-gray-500 py-8">
+          <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
+          <p>No students available</p>
+        </div>
+      );
+    }
+
+    return students.map((student) => {
+      const preview = getStudentPreview(student.id);
+      const unreadData = chatsWithUnread[student.id];
+      const hasUnread = unreadData && unreadData.count > 0;
+      
+      return (
+        <button
+          key={student.id}
+          onClick={() => handleStudentSelect(student.id)}
+          className={cn(
+            "w-full text-left p-3 rounded-lg text-sm transition-all relative",
+            selectedStudentId === student.id
+              ? "border shadow-sm" : "hover:bg-gray-50",
+            hasUnread && "bg-orange-50 border-l-4 border-orange-500"
+          )}
+          style={selectedStudentId === student.id ? { 
+            backgroundColor: '#fdddce', 
+            borderColor: '#fcba9d', 
+            color: '#f7530b' 
+          } : {}}
+        >
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
+              {hasUnread && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md animate-pulse">
+                  {unreadData.count > 9 ? '9+' : unreadData.count}
+                </span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className={cn(
+                  "font-medium truncate",
+                  hasUnread ? "text-gray-900 font-semibold" : "text-gray-700"
+                )}>
+                  {student.full_name}
+                  {hasUnread && (
+                    <span className="ml-2 text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full">
+                      New
+                    </span>
+                  )}
+                </span>
+                {preview && (
+                  <span className="text-[10px] text-gray-400 shrink-0 ml-1">
+                    {preview.time}
+                  </span>
+                )}
+              </div>
+              {preview ? (
+                <div className="flex items-center gap-1">
+                  <p className={cn(
+                    "text-xs truncate",
+                    hasUnread ? "text-gray-700 font-medium" : "text-gray-500"
+                  )}>
+                    {preview.isFromStudent ? (
+                      <span className="text-orange-600">📩 {preview.senderName}: </span>
+                    ) : (
+                      <span className="text-gray-400">You: </span>
+                    )}
+                    {preview.messagePreview}
+                  </p>
+                  {hasUnread && (
+                    <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0 animate-pulse" />
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400">No messages yet</p>
+              )}
+            </div>
+            {!hasUnread && selectedStudentId !== student.id && (
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            )}
+          </div>
+          {hasUnread && unreadData.latestMessage && (
+            <div className="mt-1 text-xs text-gray-500 truncate pl-11">
+              <span className="text-orange-600 font-medium">{unreadData.senderName}: </span>
+              {unreadData.latestMessage.length > 50 
+                ? unreadData.latestMessage.substring(0, 50) + "..." 
+                : unreadData.latestMessage}
+            </div>
+          )}
+        </button>
+      );
+    });
   };
 
   // Mobile chat view
@@ -9168,13 +9315,12 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                 </button>
               )}
               <h1 className="text-lg font-bold text-gray-800">
-                {showList ? "Messages" : 
-                  chatType === "course" ? selectedCourse?.title || "Course Chat" :
-                  selectedStudent?.full_name || "Student Chat"}
-                {!showList && totalUnread > 0 && (
-                  <span className="ml-2 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
-                    {totalUnread}
-                  </span>
+                {showList ? (
+                  <span>Messages {totalUnread > 0 && `(${totalUnread} new)`}</span>
+                ) : chatType === "course" ? (
+                  selectedCourse?.title || "Course Chat"
+                ) : (
+                  selectedStudent?.full_name || "Student Chat"
                 )}
               </h1>
             </div>
@@ -9187,26 +9333,18 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
               </button>
             )}
           </div>
+          {showList && totalUnread > 0 && (
+            <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-xs text-orange-700">
+                📬 {totalUnread} unread message{totalUnread > 1 ? 's' : ''} from {unreadStudentNames.join(", ")}
+              </p>
+            </div>
+          )}
         </div>
 
         {showList ? (
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div className="flex gap-2 mb-2">
-              <button
-                onClick={() => { setChatType("course"); setSelectedStudentId(null); }}
-                className={cn(
-                  "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
-                  chatType === "course" ? "text-white" : "bg-white text-gray-700 border"
-                )}
-                style={chatType === "course" ? { backgroundColor: '#f7530b' } : { borderColor: '#e0e0e0' }}
-              >
-                Course Chat
-                {totalUnread > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    {totalUnread > 9 ? '9+' : totalUnread}
-                  </span>
-                )}
-              </button>
               <button
                 onClick={() => { setChatType("personal"); setSelectedCourseId(null); }}
                 className={cn(
@@ -9215,16 +9353,33 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                 )}
                 style={chatType === "personal" ? { backgroundColor: '#f7530b' } : { borderColor: '#e0e0e0' }}
               >
-                Student Messages
-                {Object.keys(chatsWithUnread).length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    {Object.keys(chatsWithUnread).length > 9 ? '9+' : Object.keys(chatsWithUnread).length}
+                📩 Student Messages
+                {totalUnread > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                    {totalUnread > 9 ? '9+' : totalUnread}
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => { setChatType("course"); setSelectedStudentId(null); }}
+                className={cn(
+                  "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
+                  chatType === "course" ? "text-white" : "bg-white text-gray-700 border"
+                )}
+                style={chatType === "course" ? { backgroundColor: '#f7530b' } : { borderColor: '#e0e0e0' }}
+              >
+                💬 Course Chat
+              </button>
             </div>
 
-            {chatType === "course" ? (
+            {chatType === "personal" ? (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 px-1">
+                  {totalUnread > 0 ? `📬 ${totalUnread} unread message${totalUnread > 1 ? 's' : ''}` : "No unread messages"}
+                </p>
+                {renderStudentList()}
+              </div>
+            ) : (
               <div className="space-y-3">
                 <p className="text-xs text-gray-500 px-1">Select a course:</p>
                 {courses.map((course) => (
@@ -9245,89 +9400,6 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                     </div>
                   </Card>
                 ))}
-                {courses.length === 0 && (
-                  <div className="text-center text-gray-500 py-8">
-                    <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                    <p>No courses available</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-gray-500 px-1">Students with messages:</p>
-                {students.map((student) => {
-                  const preview = getStudentPreview(student.id);
-                  const hasUnread = (chatsWithUnread[student.id] || 0) > 0;
-                  
-                  return (
-                    <Card
-                      key={student.id}
-                      className={cn(
-                        "p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]",
-                        hasUnread ? "bg-orange-50 border-orange-200" : ""
-                      )}
-                      onClick={() => { 
-                        setSelectedStudentId(student.id); 
-                        setShowList(false);
-                        // Clear notification immediately
-                        markChatAsRead(student.id);
-                      }}
-                      style={hasUnread ? { borderColor: '#f7530b' } : {}}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
-                          {hasUnread && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
-                              {chatsWithUnread[student.id]}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className={cn(
-                              "font-medium text-sm truncate",
-                              hasUnread ? "text-gray-900 font-semibold" : "text-gray-800"
-                            )}>
-                              {student.full_name}
-                            </p>
-                            {preview && (
-                              <span className="text-[10px] text-gray-400 shrink-0 ml-2">
-                                {preview.time}
-                              </span>
-                            )}
-                          </div>
-                          {preview && (
-                            <div className="flex items-center gap-2">
-                              <p className={cn(
-                                "text-xs truncate",
-                                hasUnread ? "text-gray-700 font-medium" : "text-gray-500"
-                              )}>
-                                {preview.isFromStudent ? `${preview.senderName}: ` : `You: `}
-                                {preview.messagePreview}
-                              </p>
-                              {hasUnread && (
-                                <span className="w-2 h-2 bg-orange-500 rounded-full shrink-0 animate-pulse" />
-                              )}
-                            </div>
-                          )}
-                          {!preview && (
-                            <p className="text-xs text-gray-400">No messages yet</p>
-                          )}
-                        </div>
-                        {!hasUnread && (
-                          <ChevronRight className="w-4 h-4 text-gray-400" />
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
-                {students.length === 0 && (
-                  <div className="text-center text-gray-500 py-8">
-                    <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                    <p>No students available</p>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -9400,30 +9472,21 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
             <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
               Messages
             </h1>
-            <p className="text-gray-500 mt-1 text-sm md:text-base">Monitor course discussions and message students personally.</p>
+            <p className="text-gray-500 mt-1 text-sm md:text-base">
+              {totalUnread > 0 
+                ? `📬 ${totalUnread} unread message${totalUnread > 1 ? 's' : ''} from ${unreadStudentNames.join(", ")}`
+                : "No unread messages"}
+            </p>
           </div>
           {totalUnread > 0 && (
-            <Badge variant="warning">{totalUnread} Unread</Badge>
+            <Badge variant="warning" className="animate-pulse">
+              {totalUnread} New
+            </Badge>
           )}
         </div>
       </div>
 
       <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => { setChatType("course"); setSelectedStudentId(null); }}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-colors relative",
-            chatType === "course" ? "text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-          )}
-          style={chatType === "course" ? { backgroundColor: '#f7530b' } : {}}
-        >
-          Course Chat
-          {totalUnread > 0 && (
-            <span className="ml-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
-              {totalUnread}
-            </span>
-          )}
-        </button>
         <button
           onClick={() => { setChatType("personal"); setSelectedCourseId(null); }}
           className={cn(
@@ -9432,12 +9495,22 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
           )}
           style={chatType === "personal" ? { backgroundColor: '#f7530b' } : {}}
         >
-          Student Messages
-          {Object.keys(chatsWithUnread).length > 0 && (
-            <span className="ml-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
-              {Object.keys(chatsWithUnread).length} unread
+          📩 Student Messages
+          {totalUnread > 0 && (
+            <span className="ml-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
+              {totalUnread}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => { setChatType("course"); setSelectedStudentId(null); }}
+          className={cn(
+            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            chatType === "course" ? "text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+          )}
+          style={chatType === "course" ? { backgroundColor: '#f7530b' } : {}}
+        >
+          💬 Course Chat
         </button>
       </div>
 
@@ -9470,83 +9543,17 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
           ) : (
             <>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-800 text-sm">Students</h3>
-                {Object.keys(chatsWithUnread).length > 0 && (
-                  <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
-                    {Object.keys(chatsWithUnread).length} unread
-                  </span>
-                )}
+                <h3 className="font-semibold text-gray-800 text-sm">
+                  Students
+                  {totalUnread > 0 && (
+                    <span className="ml-2 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
+                      {totalUnread} new
+                    </span>
+                  )}
+                </h3>
               </div>
-              <div className="space-y-2">
-                {students.length === 0 && (
-                  <p className="text-xs text-gray-500">No students available.</p>
-                )}
-                {students.map((student) => {
-                  const preview = getStudentPreview(student.id);
-                  const unreadCount = chatsWithUnread[student.id] || 0;
-                  const hasUnread = unreadCount > 0;
-                  
-                  return (
-                    <button
-                      key={student.id}
-                      onClick={() => {
-                        setSelectedStudentId(student.id);
-                        // Clear notification immediately
-                        markChatAsRead(student.id);
-                      }}
-                      className={cn(
-                        "w-full text-left p-3 rounded-lg text-sm transition-all",
-                        selectedStudentId === student.id
-                          ? "border" : "hover:bg-gray-50 text-gray-600",
-                        hasUnread && "bg-orange-50"
-                      )}
-                      style={selectedStudentId === student.id ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="relative">
-                          <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
-                          {hasUnread && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                              {unreadCount > 9 ? '9+' : unreadCount}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className={cn(
-                              "font-medium truncate",
-                              hasUnread ? "text-gray-900 font-semibold" : "text-gray-700"
-                            )}>
-                              {student.full_name}
-                            </span>
-                            {preview && (
-                              <span className="text-[10px] text-gray-400 shrink-0 ml-1">
-                                {preview.time}
-                              </span>
-                            )}
-                          </div>
-                          {preview && (
-                            <div className="flex items-center gap-1">
-                              <p className={cn(
-                                "text-xs truncate",
-                                hasUnread ? "text-gray-700 font-medium" : "text-gray-500"
-                              )}>
-                                {preview.isFromStudent ? `${preview.senderName}: ` : `You: `}
-                                {preview.messagePreview}
-                              </p>
-                              {hasUnread && (
-                                <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0 animate-pulse" />
-                              )}
-                            </div>
-                          )}
-                          {!preview && (
-                            <p className="text-xs text-gray-400">No messages yet</p>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="space-y-1">
+                {renderStudentList()}
               </div>
             </>
           )}
@@ -9614,6 +9621,13 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                 <div className="text-center">
                   <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
                   <p>Select a student to message personally</p>
+                  {totalUnread > 0 && (
+                    <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <p className="text-sm text-orange-700">
+                        📬 {totalUnread} unread message{totalUnread > 1 ? 's' : ''} from {unreadStudentNames.join(", ")}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
