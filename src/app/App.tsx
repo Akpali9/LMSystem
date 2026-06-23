@@ -6738,13 +6738,12 @@ function AdminPayments() {
         return;
       }
       
-      // Update the payment status
+      // Update the payment status - removed reviewed_at
       const { error: updateError } = await supabase
         .from("payment_receipts")
         .update({ 
           status: action, 
-          admin_notes: notes || null,
-          reviewed_at: new Date().toISOString()
+          admin_notes: notes || null
         })
         .eq("id", id);
       
@@ -6762,28 +6761,51 @@ function AdminPayments() {
       
       // If approved, activate the enrollment
       if (action === "approved" && payment) {
-        const { error: enrollmentError } = await supabase
+        // First check if enrollment exists
+        const { data: enrollment, error: enrollmentCheckError } = await supabase
           .from("enrollments")
-          .update({ 
-            status: "active", 
-            enrolled_at: new Date().toISOString(), 
-            expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() 
-          })
-          .eq("id", payment.enrollment_id);
+          .select("id, status")
+          .eq("id", payment.enrollment_id)
+          .single();
         
-        if (enrollmentError) {
-          console.error("Enrollment update error:", enrollmentError);
+        if (enrollmentCheckError) {
+          console.error("Enrollment check error:", enrollmentCheckError);
           toast({
             type: "warning",
-            title: "Payment Approved but Enrollment Failed",
-            message: "Payment was approved but course access may need manual activation.",
+            title: "Payment Approved but Enrollment Not Found",
+            message: "Payment was approved but the enrollment record could not be found.",
+          });
+        } else if (enrollment.status === "active") {
+          toast({
+            type: "info",
+            title: "Already Active",
+            message: "This enrollment is already active.",
           });
         } else {
-          toast({
-            type: "success",
-            title: "Payment Approved",
-            message: "Course access has been granted to the student.",
-          });
+          // Update enrollment to active
+          const { error: enrollmentError } = await supabase
+            .from("enrollments")
+            .update({ 
+              status: "active", 
+              enrolled_at: new Date().toISOString(), 
+              expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() 
+            })
+            .eq("id", payment.enrollment_id);
+          
+          if (enrollmentError) {
+            console.error("Enrollment update error:", enrollmentError);
+            toast({
+              type: "warning",
+              title: "Payment Approved but Enrollment Failed",
+              message: "Payment was approved but course access may need manual activation. Error: " + enrollmentError.message,
+            });
+          } else {
+            toast({
+              type: "success",
+              title: "Payment Approved",
+              message: "Course access has been granted to the student.",
+            });
+          }
         }
       } else {
         toast({
