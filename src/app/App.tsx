@@ -60,6 +60,7 @@ import {
   MessageCircle,
   Gift,
   Unlock,
+  Phone,
 } from "lucide-react";
 
 // ─── Toast System ──────────────────────────────────────────────────────────────
@@ -944,12 +945,12 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
-           
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <a href="#courses" className="hover:text-white transition-colors"></a>
-            <a href="#how" className="hover:text-white transition-colors"></a>
-            <a href="#why" className="hover:text-white transition-colors"></a>
+            <a href="#courses" className="hover:text-white transition-colors">Courses</a>
+            <a href="#how" className="hover:text-white transition-colors">How It Works</a>
+            <a href="#why" className="hover:text-white transition-colors">Why Pruta</a>
+            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
           </div>
           <button
             onClick={onAuth}
@@ -1145,13 +1146,58 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
+      {/* Contact Section */}
+      <section id="contact" className="max-w-7xl mx-auto px-6 py-20 border-t" style={{ borderColor: '#e0e0e0' }}>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+            Contact Us
+          </h2>
+          <p className="text-gray-500 max-w-xl mx-auto mt-2">
+            Have questions? Reach out to us and we'll get back to you as soon as possible.
+          </p>
+        </div>
+        <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
+          <div className="flex items-center gap-4 p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow" style={{ borderColor: '#e0e0e0' }}>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#fdddce' }}>
+              <Phone className="w-7 h-7" style={{ color: '#f7530b' }} />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Call Us</p>
+              <a 
+                href="tel:+2347047115663" 
+                className="text-xl font-bold hover:underline"
+                style={{ color: '#f7530b' }}
+              >
+                +234 704 711 5663
+              </a>
+              <p className="text-xs text-gray-400 mt-1">Mon - Fri, 9am - 6pm</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow" style={{ borderColor: '#e0e0e0' }}>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#fdddce' }}>
+              <Mail className="w-7 h-7" style={{ color: '#f7530b' }} />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Email Us</p>
+              <a 
+                href="mailto:info@prutaacademy.com" 
+                className="text-lg font-bold hover:underline"
+                style={{ color: '#f7530b' }}
+              >
+                info@prutaacademy.com
+              </a>
+              <p className="text-xs text-gray-400 mt-1">We respond within 24 hours</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer className="border-t" style={{ borderColor: '#e0e0e0' }}>
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <img src="https://i.postimg.cc/Qd3jCBQp/PRUTALOGO.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain" />
-            
           </div>
-          <p className="text-sm text-gray-500"></p>
+          <p className="text-sm text-gray-500">© {new Date().getFullYear()} Pruta Academy. All rights reserved.</p>
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Shield className="w-3.5 h-3.5" />
             <span>Content Protected</span>
@@ -1319,7 +1365,6 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         <div className="absolute bottom-0 left-0 p-10 text-white">
           <div className="flex items-center gap-2.5 mb-8">
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain bg-white/10 p-1" />
-           
           </div>
           <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
             "Education is the most powerful weapon you can use to change the world."
@@ -1333,7 +1378,6 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
           <div className="mb-8">
             <div className="flex items-center gap-2.5 mb-8 lg:hidden">
               <img src="https://i.postimg.cc/Qd3jCBQp/PRUTALOGO.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain" />
-            
             </div>
             <h1 className="text-3xl font-bold mb-2" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
               {mode === "login" ? "Welcome back" : "Join Pruta Academy"}
@@ -2584,7 +2628,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
               <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
               <p className="text-sm font-medium text-gray-700">Click to upload your submission</p>
               <p className="text-xs text-gray-500 mt-1">
-                PDF, DOC, DOCX, ZIP, or images · Max 10MB
+                PDF, DOC, DOCX, ZIP, or images • Max 10MB
               </p>
             </>
           )}
@@ -3157,7 +3201,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-gray-800 text-base md:text-lg">{activeEnrollment.course.title || "Course"}</p>
                   <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-                    Module {activeEnrollment.current_module_index + 1 || 1} · Expires {formatDate(activeEnrollment.expires_at || "")}
+                    Module {activeEnrollment.current_module_index + 1 || 1} • Expires {formatDate(activeEnrollment.expires_at || "")}
                   </p>
                   <StatusBadge status={activeEnrollment.status || "active"} />
                 </div>
@@ -3403,7 +3447,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                       <div>
                         <p className="font-bold text-gray-800 text-base md:text-lg">{enrollment.course?.title}</p>
                         <p className="text-xs md:text-sm text-gray-500 mt-1">
-                          Enrolled: {formatDate(enrollment.enrolled_at || "")} · Expires: {formatDate(enrollment.expires_at || "")}
+                          Enrolled: {formatDate(enrollment.enrolled_at || "")} • Expires: {formatDate(enrollment.expires_at || "")}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -3541,7 +3585,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                 <img src={c.thumbnail_url} alt="" className="w-14 h-10 rounded-lg object-cover" />
                 <div className="flex-1">
                   <p className="font-medium text-gray-800 text-sm">{c.title}</p>
-                  <p className="text-xs text-gray-500">{formatNaira(c.price)} · {c.duration_months} months</p>
+                  <p className="text-xs text-gray-500">{formatNaira(c.price)} • {c.duration_months} months</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </button>
@@ -3551,7 +3595,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
           <div className="space-y-5">
             <div className="p-4 bg-gray-100 rounded-lg">
               <p className="font-semibold text-gray-800">{selectedCourse.title}</p>
-              <p className="text-sm text-gray-500 mt-1">{formatNaira(selectedCourse.price)} · {selectedCourse.duration_months} months access</p>
+              <p className="text-sm text-gray-500 mt-1">{formatNaira(selectedCourse.price)} • {selectedCourse.duration_months} months access</p>
             </div>
             
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -3585,7 +3629,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
             >
               <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
               <p className="text-sm font-medium text-gray-800">{receiptFile ? receiptFile.name : "Upload Payment Receipt"}</p>
-              <p className="text-xs text-gray-500 mt-1">PDF, JPG, or PNG · Max 10MB</p>
+              <p className="text-xs text-gray-500 mt-1">PDF, JPG, or PNG • Max 10MB</p>
               <input
                 id="receipt-upload"
                 type="file"
@@ -5077,7 +5121,7 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
                   )}
                   <p className="text-sm text-gray-500 mt-2">
                     Pass score: <span className="font-semibold" style={{ color: '#f7530b' }}>{quizData.pass_score}%</span>
-                    {quizQuestions.length > 0 && ` · ${quizQuestions.length} questions`}
+                    {quizQuestions.length > 0 && ` • ${quizQuestions.length} questions`}
                   </p>
                 </div>
                 
@@ -6019,7 +6063,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                 <>
                   <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">Click to upload course thumbnail</p>
-                  <p className="text-xs text-gray-400">JPG, PNG · Recommended: 600x340px</p>
+                  <p className="text-xs text-gray-400">JPG, PNG • Recommended: 600x340px</p>
                 </>
               )}
               <input
@@ -6128,7 +6172,7 @@ function AdminCourses({ courses, modules, moduleContents, onCourseAdd, onCourseU
                   <>
                     <Video className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">Click to upload module video</p>
-                    <p className="text-xs text-gray-400">MP4, MOV · Max 500MB · DRM Protected</p>
+                    <p className="text-xs text-gray-400">MP4, MOV • Max 500MB • DRM Protected</p>
                     <p className="text-xs text-amber-600 mt-1">Large files are uploaded in chunks for reliability</p>
                   </>
                 )}
@@ -7115,13 +7159,13 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
     return submissions.filter(sa => sa.status === activeTab);
   };
 
-const getStatusCounts = () => {
-  const total = assignments.length;
-  const pending = assignments.filter(sa => sa.status === "pending").length;
-  const submitted = assignments.filter(sa => sa.status === "submitted").length;
-  const graded = assignments.filter(sa => sa.status === "graded").length;
-  return { total, pending, submitted, graded };
-};
+  const getStatusCounts = () => {
+    const total = submissions.length;
+    const pending = submissions.filter(sa => sa.status === "pending" || sa.status === "submitted").length;
+    const graded = submissions.filter(sa => sa.status === "graded").length;
+    return { total, pending, graded };
+  };
+  
   const counts = getStatusCounts();
 
   const handleCreateAssignment = async () => {
@@ -7355,7 +7399,7 @@ const getStatusCounts = () => {
                   {sa.assignment?.module?.title && (
                     <p className="text-xs text-gray-500 mt-0.5">
                       Module: {sa.assignment.module.title} 
-                      {sa.assignment.module.course?.title && ` · Course: ${sa.assignment.module.course.title}`}
+                      {sa.assignment.module.course?.title && ` • Course: ${sa.assignment.module.course.title}`}
                     </p>
                   )}
                   <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-gray-500">
@@ -7619,98 +7663,7 @@ const getStatusCounts = () => {
     </div>
   );
 }
-// Add these functions in the App component
 
-const handleGradeModule = async (studentId: string, moduleId: string, score: number, feedback: string) => {
-  try {
-    // First, find the enrollment for this student and module
-    const { data: enrollments } = await supabase
-      .from("enrollments")
-      .select("id")
-      .eq("student_id", studentId)
-      .eq("status", "active");
-    
-    if (!enrollments || enrollments.length === 0) {
-      throw new Error("No active enrollment found for this student");
-    }
-    
-    // Check if module progress exists
-    const { data: existingProgress } = await supabase
-      .from("module_progress")
-      .select("*")
-      .eq("enrollment_id", enrollments[0].id)
-      .eq("module_id", moduleId)
-      .maybeSingle();
-    
-    const status = score >= 70 ? "passed" : "failed";
-    
-    if (existingProgress) {
-      // Update existing progress
-      const { error } = await supabase
-        .from("module_progress")
-        .update({
-          status,
-          score,
-          completed_at: status === "passed" ? new Date().toISOString() : undefined,
-        })
-        .eq("id", existingProgress.id);
-      
-      if (error) throw error;
-    } else {
-      // Create new progress
-      const { error } = await supabase
-        .from("module_progress")
-        .insert({
-          enrollment_id: enrollments[0].id,
-          module_id: moduleId,
-          status,
-          score,
-          completed_at: status === "passed" ? new Date().toISOString() : undefined,
-        });
-      
-      if (error) throw error;
-    }
-    
-    // If passed, update enrollment current module index
-    if (status === "passed") {
-      const { data: moduleData } = await supabase
-        .from("modules")
-        .select("order_index, course_id")
-        .eq("id", moduleId)
-        .single();
-      
-      if (moduleData) {
-        const { data: allModules } = await supabase
-          .from("modules")
-          .select("id, order_index")
-          .eq("course_id", moduleData.course_id)
-          .order("order_index", { ascending: true });
-        
-        if (allModules) {
-          const currentIndex = allModules.findIndex(m => m.id === moduleId);
-          const nextModule = allModules[currentIndex + 1];
-          
-          if (nextModule) {
-            await supabase
-              .from("enrollments")
-              .update({ current_module_index: currentIndex + 1 })
-              .eq("id", enrollments[0].id);
-          }
-        }
-      }
-    }
-    
-    toast({
-      type: "success",
-      title: "Module Graded",
-      message: `Score of ${score}% recorded for this module.`,
-    });
-    
-  } catch (error) {
-    console.error("Error grading module:", error);
-    throw error;
-  }
-};
 // ─── Admin Grading ────────────────────────────────────────────────────────────
 
 function AdminGrading({ courses, modules, students, onGradeModule, onGradeAssignment }: { 
@@ -7952,54 +7905,55 @@ function AdminGrading({ courses, modules, students, onGradeModule, onGradeAssign
     }
   };
 
- const getFilteredStudents = () => {
-  let filtered = studentData;
-  
-  // Filter by search
-  if (searchTerm) {
-    filtered = filtered.filter((s: any) => 
-      s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }
-  
-  // Filter by course
-  if (selectedCourse !== "all") {
-    filtered = filtered.filter((s: any) => 
-      s.enrollments.some((e: any) => e.course_id === selectedCourse)
-    );
-  }
-  
-  // Filter by grading status
-  if (activeTab === "pending") {
-    filtered = filtered.filter((s: any) => {
-      // Check if student has any pending submissions (submitted assignments or failed quizzes)
-      return s.enrollments.some((e: any) => 
-        e.modules.some((m: any) => {
-          // Check for submitted assignments that need grading
-          const hasPendingAssignment = m.assignment?.student_assignment?.status === "submitted";
-          // Check for failed quizzes that need review
-          const hasFailedQuiz = m.quiz?.attempt?.passed === false;
-          // Check for modules with no progress yet but have assignments submitted
-          const hasModuleWithoutProgress = !m.progress && m.assignment?.student_assignment?.status === "submitted";
-          
-          return hasPendingAssignment || hasFailedQuiz || hasModuleWithoutProgress;
-        })
+  const getFilteredStudents = () => {
+    let filtered = studentData;
+    
+    // Filter by search
+    if (searchTerm) {
+      filtered = filtered.filter((s: any) => 
+        s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    });
-  } else if (activeTab === "graded") {
-    filtered = filtered.filter((s: any) => {
-      return s.enrollments.some((e: any) => 
-        e.modules.some((m: any) => 
-          m.progress?.status === "passed" ||
-          m.assignment?.student_assignment?.status === "graded"
-        )
+    }
+    
+    // Filter by course
+    if (selectedCourse !== "all") {
+      filtered = filtered.filter((s: any) => 
+        s.enrollments.some((e: any) => e.course_id === selectedCourse)
       );
-    });
-  }
+    }
+    
+    // Filter by grading status
+    if (activeTab === "pending") {
+      filtered = filtered.filter((s: any) => {
+        // Check if student has any pending submissions (submitted assignments or failed quizzes)
+        return s.enrollments.some((e: any) => 
+          e.modules.some((m: any) => {
+            // Check for submitted assignments that need grading
+            const hasPendingAssignment = m.assignment?.student_assignment?.status === "submitted";
+            // Check for failed quizzes that need review
+            const hasFailedQuiz = m.quiz?.attempt?.passed === false;
+            // Check for modules with no progress yet but have assignments submitted
+            const hasModuleWithoutProgress = !m.progress && m.assignment?.student_assignment?.status === "submitted";
+            
+            return hasPendingAssignment || hasFailedQuiz || hasModuleWithoutProgress;
+          })
+        );
+      });
+    } else if (activeTab === "graded") {
+      filtered = filtered.filter((s: any) => {
+        return s.enrollments.some((e: any) => 
+          e.modules.some((m: any) => 
+            m.progress?.status === "passed" ||
+            m.assignment?.student_assignment?.status === "graded"
+          )
+        );
+      });
+    }
+    
+    return filtered;
+  };
   
-  return filtered;
-};
   const filteredStudents = getFilteredStudents();
 
   const openGradeModal = (
@@ -9985,37 +9939,37 @@ export default function App() {
     }
   };
 
-const handleGradeAssignment = async (assignmentId: string, score: number, feedback: string) => {
-  try {
-    const { error } = await supabase
-      .from("student_assignments")
-      .update({ 
-        status: "graded", 
-        score, 
-        feedback,
-        graded_at: new Date().toISOString()
-      })
-      .eq("id", assignmentId);
-    
-    if (error) {
-      console.error("Error grading assignment:", error);
+  const handleGradeAssignment = async (assignmentId: string, score: number, feedback: string) => {
+    try {
+      const { error } = await supabase
+        .from("student_assignments")
+        .update({ 
+          status: "graded", 
+          score, 
+          feedback,
+          graded_at: new Date().toISOString()
+        })
+        .eq("id", assignmentId);
+      
+      if (error) {
+        console.error("Error grading assignment:", error);
+        throw error;
+      }
+      
+      toast({
+        type: "success",
+        title: "Assignment Graded",
+        message: "The assignment has been graded successfully.",
+      });
+      
+      // Refresh the assignments list
+      await fetchEnrollments();
+      
+    } catch (error) {
+      console.error("Error:", error);
       throw error;
     }
-    
-    toast({
-      type: "success",
-      title: "Assignment Graded",
-      message: "The assignment has been graded successfully.",
-    });
-    
-    // Refresh the assignments list
-    await fetchEnrollments();
-    
-  } catch (error) {
-    console.error("Error:", error);
-    throw error;
-  }
-};
+  };
   
   const handleQuizCreate = async (quizData: any) => {
     const { data: quiz, error } = await supabase
@@ -10058,6 +10012,97 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
     await supabase.from("quiz_attempts").delete().eq("quiz_id", quizId);
     await supabase.from("quiz_questions").delete().eq("quiz_id", quizId);
     await supabase.from("quizzes").delete().eq("id", quizId);
+  };
+
+  const handleGradeModule = async (studentId: string, moduleId: string, score: number, feedback: string) => {
+    try {
+      // First, find the enrollment for this student and module
+      const { data: enrollments } = await supabase
+        .from("enrollments")
+        .select("id")
+        .eq("student_id", studentId)
+        .eq("status", "active");
+      
+      if (!enrollments || enrollments.length === 0) {
+        throw new Error("No active enrollment found for this student");
+      }
+      
+      // Check if module progress exists
+      const { data: existingProgress } = await supabase
+        .from("module_progress")
+        .select("*")
+        .eq("enrollment_id", enrollments[0].id)
+        .eq("module_id", moduleId)
+        .maybeSingle();
+      
+      const status = score >= 70 ? "passed" : "failed";
+      
+      if (existingProgress) {
+        // Update existing progress
+        const { error } = await supabase
+          .from("module_progress")
+          .update({
+            status,
+            score,
+            completed_at: status === "passed" ? new Date().toISOString() : undefined,
+          })
+          .eq("id", existingProgress.id);
+        
+        if (error) throw error;
+      } else {
+        // Create new progress
+        const { error } = await supabase
+          .from("module_progress")
+          .insert({
+            enrollment_id: enrollments[0].id,
+            module_id: moduleId,
+            status,
+            score,
+            completed_at: status === "passed" ? new Date().toISOString() : undefined,
+          });
+        
+        if (error) throw error;
+      }
+      
+      // If passed, update enrollment current module index
+      if (status === "passed") {
+        const { data: moduleData } = await supabase
+          .from("modules")
+          .select("order_index, course_id")
+          .eq("id", moduleId)
+          .single();
+        
+        if (moduleData) {
+          const { data: allModules } = await supabase
+            .from("modules")
+            .select("id, order_index")
+            .eq("course_id", moduleData.course_id)
+            .order("order_index", { ascending: true });
+          
+          if (allModules) {
+            const currentIndex = allModules.findIndex(m => m.id === moduleId);
+            const nextModule = allModules[currentIndex + 1];
+            
+            if (nextModule) {
+              await supabase
+                .from("enrollments")
+                .update({ current_module_index: currentIndex + 1 })
+                .eq("id", enrollments[0].id);
+            }
+          }
+        }
+      }
+      
+      toast({
+        type: "success",
+        title: "Module Graded",
+        message: `Score of ${score}% recorded for this module.`,
+      });
+      
+    } catch (error) {
+      console.error("Error grading module:", error);
+      throw error;
+    }
   };
 
   // ─── Fetch progress ──────────────────────────────────────────────────────
@@ -10114,14 +10159,14 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
             onModuleContentAdd={handleAddModuleContent}
             onModuleContentDelete={handleDeleteModuleContent}
           />;
-          case "admin-grading":
-  return <AdminGrading 
-    courses={courses || []}
-    modules={modules || []}
-    students={students || []}
-    onGradeModule={handleGradeModule}
-    onGradeAssignment={handleGradeAssignment}
-  />;
+        case "admin-grading":
+          return <AdminGrading 
+            courses={courses || []}
+            modules={modules || []}
+            students={students || []}
+            onGradeModule={handleGradeModule}
+            onGradeAssignment={handleGradeAssignment}
+          />;
         case "admin-students":
           return <AdminStudents 
             students={students || []} 
@@ -10130,13 +10175,13 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
           />;
         case "admin-payments":
           return <AdminPayments />;
-       case "admin-assignments":
-  return <AdminAssignments 
-    courses={courses || []}
-    modules={modules || []}
-    onCreateAssignment={handleCreateAssignment}
-    onGradeAssignment={handleGradeAssignment}
-  />;
+        case "admin-assignments":
+          return <AdminAssignments 
+            courses={courses || []}
+            modules={modules || []}
+            onCreateAssignment={handleCreateAssignment}
+            onGradeAssignment={handleGradeAssignment}
+          />;
         case "admin-quizzes":
           return <AdminQuizzes 
             courses={courses || []}
