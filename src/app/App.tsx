@@ -8791,11 +8791,12 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     }
   };
 
-  // Update unread counts when viewing a chat
+  // FIXED: Mark chat as read and update state immediately
   const markChatAsRead = async (studentId: string) => {
     if (!profile?.id) return;
     
     try {
+      // Update database
       const { error } = await supabase
         .from("personal_messages")
         .update({ read: true })
@@ -8804,12 +8805,21 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         .eq("read", false);
 
       if (!error) {
-        // Update local state
+        // IMPORTANT: Update local state immediately to remove notification
         setChatsWithUnread(prev => {
           const newState = { ...prev };
           delete newState[studentId];
           return newState;
         });
+        
+        // Also update the unread counts for the student in the list
+        setUnreadCounts(prev => {
+          const newState = { ...prev };
+          delete newState[studentId];
+          return newState;
+        });
+        
+        // Refresh to ensure consistency
         await fetchUnreadMessages();
       }
     } catch (error) {
@@ -8817,27 +8827,27 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     }
   };
 
+  // FIXED: Mark all course chat messages as read
+  const markCourseChatAsRead = async (courseId: string) => {
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ read: true })
+        .eq('course_id', courseId)
+        .eq('read', false);
+      
+      if (!error) {
+        await fetchUnreadMessages();
+      }
+    } catch (error) {
+      console.error('Error marking course messages as read:', error);
+    }
+  };
+
   useEffect(() => {
     if (selectedCourseId && chatType === "course") {
       fetchMessages();
-      
-      const markAsRead = async () => {
-        try {
-          const { error } = await supabase
-            .from('chat_messages')
-            .update({ read: true })
-            .eq('course_id', selectedCourseId)
-            .eq('read', false);
-          
-          if (!error) {
-            fetchUnreadMessages();
-          }
-        } catch (error) {
-          console.error('Error marking messages as read:', error);
-        }
-      };
-      
-      markAsRead();
+      markCourseChatAsRead(selectedCourseId);
     }
   }, [selectedCourseId, chatType]);
 
@@ -8895,7 +8905,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
         });
       } else if (data) {
         setPersonalMessages(data);
-        // Mark as read
+        // Mark as read again after loading messages
         await markChatAsRead(selectedStudentId);
       }
     } catch (error) {
@@ -8903,6 +8913,15 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     } finally {
       setLoading(false);
     }
+  };
+
+  // FIXED: Handle student selection - clear notification immediately
+  const handleStudentSelect = async (studentId: string) => {
+    setSelectedStudentId(studentId);
+    setShowList(false);
+    
+    // Immediately clear the notification for this student
+    await markChatAsRead(studentId);
   };
 
   const sendMessage = async () => {
@@ -9203,7 +9222,12 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                         "p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]",
                         hasUnread ? "bg-orange-50 border-orange-200" : ""
                       )}
-                      onClick={() => { setSelectedStudentId(student.id); setShowList(false); }}
+                      onClick={() => { 
+                        setSelectedStudentId(student.id); 
+                        setShowList(false);
+                        // Clear notification immediately
+                        markChatAsRead(student.id);
+                      }}
                       style={hasUnread ? { borderColor: '#f7530b' } : {}}
                     >
                       <div className="flex items-center gap-3">
@@ -9421,7 +9445,11 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
                   return (
                     <button
                       key={student.id}
-                      onClick={() => setSelectedStudentId(student.id)}
+                      onClick={() => {
+                        setSelectedStudentId(student.id);
+                        // Clear notification immediately
+                        markChatAsRead(student.id);
+                      }}
                       className={cn(
                         "w-full text-left p-3 rounded-lg text-sm transition-all",
                         selectedStudentId === student.id
@@ -9602,7 +9630,6 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     </div>
   );
 }
-
 
 // ─── Admin Scholarship ─────────────────────────────────────────────────────
 
