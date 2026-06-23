@@ -2607,13 +2607,33 @@ function StudentAssignments({ profile }: { profile: Profile }) {
     );
   };
 
-  const getStatusCounts = () => {
-    const total = assignments.length;
-    const pending = assignments.filter(sa => sa.status === "pending").length;
-    const submitted = assignments.filter(sa => sa.status === "submitted").length;
-    const graded = assignments.filter(sa => sa.status === "graded").length;
-    return { total, pending, submitted, graded };
-  };
+const getStatusCounts = () => {
+  let pendingCount = 0;
+  let gradedCount = 0;
+  
+  studentData.forEach((student: any) => {
+    student.enrollments.forEach((enrollment: any) => {
+      enrollment.modules.forEach((module: any) => {
+        // Check for pending submissions
+        if (module.assignment?.student_assignment?.status === "submitted") {
+          pendingCount++;
+        }
+        if (module.quiz?.attempt?.passed === false) {
+          pendingCount++;
+        }
+        // Check for graded
+        if (module.progress?.status === "passed") {
+          gradedCount++;
+        }
+        if (module.assignment?.student_assignment?.status === "graded") {
+          gradedCount++;
+        }
+      });
+    });
+  });
+  
+  return { pending: pendingCount, graded: gradedCount, total: studentData.length };
+};
 
   const counts = getStatusCounts();
 
@@ -7854,49 +7874,54 @@ function AdminGrading({ courses, modules, students, onGradeModule, onGradeAssign
     }
   };
 
-  const getFilteredStudents = () => {
-    let filtered = studentData;
-    
-    // Filter by search
-    if (searchTerm) {
-      filtered = filtered.filter((s: any) => 
-        s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.email.toLowerCase().includes(searchTerm.toLowerCase())
+ const getFilteredStudents = () => {
+  let filtered = studentData;
+  
+  // Filter by search
+  if (searchTerm) {
+    filtered = filtered.filter((s: any) => 
+      s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+  
+  // Filter by course
+  if (selectedCourse !== "all") {
+    filtered = filtered.filter((s: any) => 
+      s.enrollments.some((e: any) => e.course_id === selectedCourse)
+    );
+  }
+  
+  // Filter by grading status
+  if (activeTab === "pending") {
+    filtered = filtered.filter((s: any) => {
+      // Check if student has any pending submissions (submitted assignments or failed quizzes)
+      return s.enrollments.some((e: any) => 
+        e.modules.some((m: any) => {
+          // Check for submitted assignments that need grading
+          const hasPendingAssignment = m.assignment?.student_assignment?.status === "submitted";
+          // Check for failed quizzes that need review
+          const hasFailedQuiz = m.quiz?.attempt?.passed === false;
+          // Check for modules with no progress yet but have assignments submitted
+          const hasModuleWithoutProgress = !m.progress && m.assignment?.student_assignment?.status === "submitted";
+          
+          return hasPendingAssignment || hasFailedQuiz || hasModuleWithoutProgress;
+        })
       );
-    }
-    
-    // Filter by course
-    if (selectedCourse !== "all") {
-      filtered = filtered.filter((s: any) => 
-        s.enrollments.some((e: any) => e.course_id === selectedCourse)
+    });
+  } else if (activeTab === "graded") {
+    filtered = filtered.filter((s: any) => {
+      return s.enrollments.some((e: any) => 
+        e.modules.some((m: any) => 
+          m.progress?.status === "passed" ||
+          m.assignment?.student_assignment?.status === "graded"
+        )
       );
-    }
-    
-    // Filter by grading status
-    if (activeTab === "pending") {
-      filtered = filtered.filter((s: any) => {
-        return s.enrollments.some((e: any) => 
-          e.modules.some((m: any) => 
-            m.progress?.status !== "passed" && 
-            (m.assignment?.student_assignment?.status === "submitted" || 
-             m.quiz?.attempt?.passed === false)
-          )
-        );
-      });
-    } else if (activeTab === "graded") {
-      filtered = filtered.filter((s: any) => {
-        return s.enrollments.some((e: any) => 
-          e.modules.some((m: any) => 
-            m.progress?.status === "passed" ||
-            m.assignment?.student_assignment?.status === "graded"
-          )
-        );
-      });
-    }
-    
-    return filtered;
-  };
-
+    });
+  }
+  
+  return filtered;
+};
   const filteredStudents = getFilteredStudents();
 
   const openGradeModal = (
