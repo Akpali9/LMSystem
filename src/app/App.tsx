@@ -6714,81 +6714,92 @@ function AdminPayments() {
     }
   };
 
-  const handleAction = async (id: string, action: "approved" | "rejected") => {
-    setProcessingId(id);
-    setLoading(true);
+const handleAction = async (id: string, action: "approved" | "rejected") => {
+  setProcessingId(id);
+  setLoading(true);
+  
+  try {
+    // First, get the payment record to get the enrollment_id
+    const { data: payment, error: fetchError } = await supabase
+      .from("payment_receipts")
+      .select("enrollment_id, student_id")
+      .eq("id", id)
+      .single();
     
-    try {
-      // First, get the payment record to get the enrollment_id
-      const { data: payment, error: fetchError } = await supabase
-        .from("payment_receipts")
-        .select("enrollment_id, student_id")
-        .eq("id", id)
+    if (fetchError) {
+      console.error("Error fetching payment:", fetchError);
+      toast({
+        type: "error",
+        title: "Failed",
+        message: "Could not find payment record. Please refresh and try again.",
+      });
+      setLoading(false);
+      setProcessingId(null);
+      return;
+    }
+    
+    // Update the payment status - only update status and admin_notes
+    const updateData: any = { 
+      status: action
+    };
+    
+    // Only add admin_notes if there's content
+    if (notes && notes.trim()) {
+      updateData.admin_notes = notes.trim();
+    }
+    
+    const { error: updateError } = await supabase
+      .from("payment_receipts")
+      .update(updateData)
+      .eq("id", id);
+    
+    if (updateError) {
+      console.error("Update error:", updateError);
+      toast({
+        type: "error",
+        title: "Update Failed",
+        message: updateError.message || "Failed to update payment status. Please try again.",
+      });
+      setLoading(false);
+      setProcessingId(null);
+      return;
+    }
+    
+    // If approved, activate the enrollment
+    if (action === "approved" && payment) {
+      // First check if enrollment exists
+      const { data: enrollment, error: enrollmentCheckError } = await supabase
+        .from("enrollments")
+        .select("id, status")
+        .eq("id", payment.enrollment_id)
         .single();
       
-      if (fetchError) {
-        console.error("Error fetching payment:", fetchError);
+      if (enrollmentCheckError) {
+        console.error("Enrollment check error:", enrollmentCheckError);
         toast({
-          type: "error",
-          title: "Failed",
-          message: "Could not find payment record. Please refresh and try again.",
+          type: "warning",
+          title: "Payment Approved but Enrollment Not Found",
+          message: "Payment was approved but the enrollment record could not be found.",
         });
-        setLoading(false);
-        setProcessingId(null);
-        return;
-      }
-      
-      // Update the payment status - removed reviewed_at
-      const { error: updateError } = await supabase
-        .from("payment_receipts")
-        .update({ 
-          status: action, 
-          admin_notes: notes || null
-        })
-        .eq("id", id);
-      
-      if (updateError) {
-        console.error("Update error:", updateError);
+      } else if (enrollment.status === "active") {
         toast({
-          type: "error",
-          title: "Update Failed",
-          message: updateError.message || "Failed to update payment status. Please try again.",
+          type: "info",
+          title: "Already Active",
+          message: "This enrollment is already active.",
         });
-        setLoading(false);
-        setProcessingId(null);
-        return;
-      }
-      
-      // If approved, activate the enrollment
-      if (action === "approved" && payment) {
-        // First check if enrollment exists
-        const { data: enrollment, error: enrollmentCheckError } = await supabase
-          .from("enrollments")
-          .select("id, status")
-          .eq("id", payment.enrollment_id)
-          .single();
+      } else {
+        // Update enrollment to active - only update fields that exist
+        const enrollmentUpdate: any = { 
+          status: "active"
+        };
         
-        if (enrollmentCheckError) {
-          console.error("Enrollment check error:", enrollmentCheckError);
-          toast({
-            type: "warning",
-            title: "Payment Approved but Enrollment Not Found",
-            message: "Payment was approved but the enrollment record could not be found.",
-          });
-        } else if (enrollment.status === "active") {
-          toast({
-            type: "info",
-            title: "Already Active",
-            message: "This enrollment is already active.",
-          });
-        } else {
-          // Update enrollment to active
+        // Only add these fields if they exist in your schema
+        // Check if your enrollments table has these columns
+        try {
           const { error: enrollmentError } = await supabase
             .from("enrollments")
             .update({ 
-              status: "active", 
-              enrolled_at: new Date().toISOString(), 
-              expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() 
+              status: "active"
             })
             .eq("id", payment.enrollment_id);
           
@@ -6806,32 +6817,40 @@ function AdminPayments() {
               message: "Course access has been granted to the student.",
             });
           }
+        } catch (enrollmentError) {
+          console.error("Enrollment update error:", enrollmentError);
+          toast({
+            type: "warning",
+            title: "Payment Approved but Enrollment Failed",
+            message: "Payment was approved but course access may need manual activation.",
+          });
         }
-      } else {
-        toast({
-          type: "info",
-          title: "Payment Rejected",
-          message: "The payment has been rejected.",
-        });
       }
-      
-      setViewReceipt(null);
-      setNotes("");
-      await fetchPayments();
-      
-    } catch (error) {
-      console.error("Error:", error);
+    } else if (action === "rejected") {
       toast({
-        type: "error",
-        title: "Action Failed",
-        message: "An unexpected error occurred. Please try again.",
+        type: "info",
+        title: "Payment Rejected",
+        message: "The payment has been rejected.",
       });
-    } finally {
-      setLoading(false);
-      setProcessingId(null);
     }
-  };
-
+    
+    setViewReceipt(null);
+    setNotes("");
+    await fetchPayments();
+    
+  } catch (error) {
+    console.error("Error:", error);
+    toast({
+      type: "error",
+      title: "Action Failed",
+      message: "An unexpected error occurred. Please try again.",
+    });
+  } finally {
+    setLoading(false);
+    setProcessingId(null);
+  }
+};
+  
   const pendingCount = payments.filter(p => p.status === "pending").length;
 
   return (
@@ -6908,7 +6927,7 @@ function AdminPayments() {
       </div>
 
       {/* Review Modal */}
-      <Modal open={!!viewReceipt} onClose={() => { setViewReceipt(null); setNotes(""); }} title="Review Payment Receipt">
+     <Modal open={!!viewReceipt} onClose={() => { setViewReceipt(null); setNotes(""); }} title="Review Payment Receipt">
         {viewReceipt && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3 text-sm">
