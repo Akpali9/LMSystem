@@ -3082,7 +3082,6 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
 }
 
 // ─── Student Dashboard ──────────────────────────────────────────────────────
-
 function StudentDashboard({ profile, onNavigate, enrollments, progress, modules, courses }: { 
   profile: Profile; 
   onNavigate: (v: View) => void;
@@ -3095,14 +3094,29 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   const safeProgress = progress || [];
   const safeModules = modules || [];
   
-  // Get ALL active enrollments, not just the first one
+  // Get ALL active enrollments
   const activeEnrollments = safeEnrollments.filter(e => e?.status === "active") || [];
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
   
-  // Calculate progress for each enrollment
+  // ✅ Calculate TOTAL progress across ALL active enrollments
+  let passedCount = 0;
+  let totalModulesForActiveCourse = 0;
+
+  activeEnrollments.forEach(enrollment => {
+    const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
+    totalModulesForActiveCourse += courseModules.length;
+    
+    const passed = safeProgress.filter(p => 
+      p?.enrollment_id === enrollment?.id && 
+      p?.status === "passed"
+    ).length;
+    passedCount += passed;
+  });
+  
+  // Calculate progress for each enrollment (for display)
   const enrollmentsWithProgress = activeEnrollments.map(enrollment => {
     const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
-    const passedCount = safeProgress.filter(p => 
+    const passedModules = safeProgress.filter(p => 
       p?.enrollment_id === enrollment?.id && 
       p?.status === "passed"
     ).length;
@@ -3110,28 +3124,28 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
     return {
       ...enrollment,
       totalModules: courseModules.length,
-      passedModules: passedCount,
-      isComplete: passedCount === courseModules.length && courseModules.length > 0
+      passedModules: passedModules,
+      isComplete: passedModules === courseModules.length && courseModules.length > 0
     };
   });
   
   const [scholarshipApplications, setScholarshipApplications] = useState<any[]>([]);
   
-  let passedCount = 0;
-  let totalModulesForActiveCourse = 0;
+ // Calculate total progress across ALL active enrollments
+let passedCount = 0;
+let totalModulesForActiveCourse = 0;
 
-  const activeEnrollment = activeEnrollments[0]; 
+activeEnrollments.forEach(enrollment => {
+  const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
+  totalModulesForActiveCourse += courseModules.length;
   
-  if (activeEnrollment) {
-    const courseModules = safeModules.filter(m => m?.course_id === activeEnrollment?.course_id);
-    totalModulesForActiveCourse = courseModules.length;
-    
-    passedCount = safeProgress.filter(p => 
-      p?.enrollment_id === activeEnrollment?.id && 
-      p?.status === "passed"
-    ).length;
-  }
-
+  const passed = safeProgress.filter(p => 
+    p?.enrollment_id === enrollment?.id && 
+    p?.status === "passed"
+  ).length;
+  passedCount += passed;
+});
+  
   useEffect(() => {
     fetchScholarshipStatus();
   }, [profile.id]);
@@ -3241,7 +3255,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
           icon={CheckCircle} 
           label="Modules Passed" 
           value={passedCount} 
-          onClick={() => activeEnrollment && onNavigate("student-module")}
+          onClick={() => activeEnrollments.length > 0 && onNavigate("student-module")}
         />
         <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
         <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
@@ -3275,13 +3289,13 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-                Module {enrollment.current_module_index + 1 || 1} of {courseModules.length} • 
-                Expires {formatDate(enrollment.expires_at || "")}
-              </p>
-              <p className="text-sm text-gray-600 mt-1">
-                Progress: {passedModules.length}/{courseModules.length} modules completed
-              </p>
-              <ProgressBar value={passedModules.length} max={courseModules.length || 1} className="mt-2" />
+  Module {enrollment.current_module_index + 1 || 1} of {courseModules.length} • 
+  Expires {formatDate(enrollment.expires_at || "")}
+</p>
+<p className="text-sm text-gray-600 mt-1">
+  Progress: {passedModules.length}/{courseModules.length} modules completed
+</p>
+<ProgressBar value={passedModules.length} max={courseModules.length || 1} className="mt-2" />
             </div>
           </div>
           <button
