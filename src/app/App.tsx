@@ -4523,6 +4523,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   onProgressUpdate: (moduleId: string, status: string, score: number) => Promise<void>;
 }) {
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
+  const currentEnrollment = activeEnrollments.find(e => e.id === selectedEnrollmentId) || activeEnrollments[0] || null;
   const [selectedModuleIndex, setSelectedModuleIndex] = useState(0);
   const [videoProgress, setVideoProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<"content" | "quiz" | "exam">("content");
@@ -4545,11 +4546,15 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
 
   useEffect(() => {
     if (activeEnrollments.length > 0) {
-      if (!selectedEnrollmentId || !activeEnrollments.find(e => e.id === selectedEnrollmentId)) {
-        setSelectedEnrollmentId(activeEnrollments[0].id);
-      }
+       if (!selectedEnrollmentId || !activeEnrollments.find(e => e.id === selectedEnrollmentId)) {
+      // Try to find the first enrollment that has progress
+      const enrollmentWithProgress = activeEnrollments.find(e => 
+        progress.some(p => p.enrollment_id === e.id)
+      );
+      setSelectedEnrollmentId(enrollmentWithProgress?.id || activeEnrollments[0].id);
     }
-  }, [enrollments]);
+  }
+}, [enrollments, progress]);
   
   // ✅ ONLY ONE declaration - use this throughout
   const currentEnrollment = activeEnrollments.find(e => e.id === selectedEnrollmentId) || activeEnrollments[0] || null;
@@ -4915,6 +4920,29 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
     <div className="flex flex-col md:flex-row h-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="w-full md:w-64 bg-gray-100/30 border-b md:border-b-0 md:border-r p-4 shrink-0 overflow-y-auto max-h-[calc(100vh-80px)]" style={{ borderColor: '#e0e0e0' }}>
         <h3 className="font-semibold text-gray-800 mb-3 text-sm">Course Modules</h3>
+        <div className="p-4 border-b" style={{ borderColor: '#e0e0e0' }}>
+  <label className="block text-sm font-medium text-gray-700 mb-2">Select Course:</label>
+  <select
+    value={selectedEnrollmentId || activeEnrollments[0]?.id || ''}
+    onChange={(e) => {
+      setSelectedEnrollmentId(e.target.value);
+      setSelectedModuleIndex(0);
+      setActiveTab('content');
+      setQuizSubmitted(false);
+      setQuizAnswers({});
+      setQuizScore(0);
+      setQuizAttempted(false);
+    }}
+    className="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
+    style={{ borderColor: '#e0e0e0' }}
+  >
+    {activeEnrollments.map((enrollment) => (
+      <option key={enrollment.id} value={enrollment.id}>
+        {enrollment.course?.title || 'Unknown Course'}
+      </option>
+    ))}
+  </select>
+</div>
         <div className="space-y-1">
           {modules?.map((module, index) => {
             const isLocked = isModuleLocked(index);
