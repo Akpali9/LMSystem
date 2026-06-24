@@ -82,7 +82,7 @@ function notifyListeners() {
   toastListeners.forEach(listener => listener([...toasts]));
 }
 
-export function toast({
+function toast({
   type = "info",
   title,
   message,
