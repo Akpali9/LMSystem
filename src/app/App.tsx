@@ -4548,14 +4548,14 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   }, [enrollments]);
   
   const currentEnrollment = activeEnrollments.find(e => e.id === selectedEnrollmentId) || activeEnrollments[0] || null;
-  useEffect(() => {
-    if (enrollment) {
-      fetchStudentAssignments();
-    }
-  }, [enrollment]);
+useEffect(() => {
+  if (currentEnrollment) {
+    fetchStudentAssignments();
+  }
+}, [currentEnrollment]);
 
   const fetchStudentAssignments = async () => {
-    if (!enrollment) return;
+   if (!currentEnrollment) return;
     const { data } = await supabase
       .from("student_assignments")
       .select("*, assignment:assignment_id(*)")
@@ -4564,23 +4564,23 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
     if (data) setStudentAssignments(data as StudentAssignment[]);
   };
 
-  useEffect(() => {
-    if (enrollment) {
-      setCurrentEnrollment(enrollment);
-      setSelectedModuleIndex(enrollment.current_module_index || 0);
-      fetchProgress();
-      fetchQuizForModule();
-    }
-  }, [enrollment, quizRefreshKey]);
+useEffect(() => {
+  if (currentEnrollment) {
+    setCurrentEnrollment(currentEnrollment);
+    setSelectedModuleIndex(currentEnrollment.current_module_index || 0);
+    fetchProgress();
+    fetchQuizForModule();
+  }
+}, [currentEnrollment, quizRefreshKey]);
 
   useEffect(() => {
-    if (enrollment) {
-      const refreshInterval = setInterval(() => {
-        fetchEnrollmentData();
-      }, 3000);
-      return () => clearInterval(refreshInterval);
-    }
-  }, [enrollment]);
+  if (currentEnrollment) {
+    const refreshInterval = setInterval(() => {
+      fetchEnrollmentData();
+    }, 3000);
+    return () => clearInterval(refreshInterval);
+  }
+}, [currentEnrollment]);
 
   const fetchEnrollmentData = async () => {
     if (!enrollment) return;
@@ -4599,7 +4599,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   };
 
   const fetchProgress = async () => {
-    if (!enrollment) return;
+   if (!currentEnrollment) return;
     const { data } = await supabase
       .from("module_progress")
       .select("*")
@@ -4706,12 +4706,12 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       
       if (questions && questions.length > 0) {
         const { data: attempt } = await supabase
-          .from("quiz_attempts")
-          .select("score, passed")
-          .eq("quiz_id", quiz.id)
-          .eq("student_id", profile.id)
-          .eq("enrollment_id", enrollment?.id)
-          .maybeSingle();
+  .from("quiz_attempts")
+  .select("score, passed")
+  .eq("quiz_id", quiz.id)
+  .eq("student_id", profile.id)
+  .eq("enrollment_id", currentEnrollment?.id)
+  .maybeSingle();
         
         if (attempt && attempt.passed) {
           return { canPass: true, score: attempt.score, reason: "Quiz passed" };
@@ -4909,10 +4909,10 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
         await fetchProgress();
         
         const { data: updatedEnrollment } = await supabase
-          .from("enrollments")
-          .select("*")
-          .eq("id", enrollment?.id)
-          .single();
+  .from("enrollments")
+  .select("*")
+  .eq("id", currentEnrollment?.id)
+  .single();
         
         if (updatedEnrollment && updatedEnrollment.current_module_index > selectedModuleIndex) {
           toast({
@@ -4957,7 +4957,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
 
   const canCompleteModule = hasPassedQuiz || hasGradedAssignment;
 
-  if (!enrollment || !currentModule) {
+  if (!currentEnrollment || !currentModule) {
     return (
       <div className="p-8 text-center">
         <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
@@ -5312,7 +5312,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
                             .delete()
                             .eq("quiz_id", quizData.id)
                             .eq("student_id", profile.id)
-                            .eq("enrollment_id", enrollment?.id);
+                            .eq("enrollment_id", currentEnrollment?.id)
                           const existingProgress = progressData.find(p => p.module_id === currentModule.id);
                           if (existingProgress) {
                             await supabase
@@ -10295,7 +10295,7 @@ export default function App() {
         .eq("course_id", moduleInfo?.course_id)
         .single();
 
-      if (enrollment) {
+     if (currentEnrollment) {
         await supabase.from("student_assignments").insert({
           assignment_id: assignment.id,
           student_id: studentId,
