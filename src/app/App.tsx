@@ -4550,12 +4550,12 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
        if (!selectedEnrollmentId || !activeEnrollments.find(e => e.id === selectedEnrollmentId)) {
       // Try to find the first enrollment that has progress
       const enrollmentWithProgress = activeEnrollments.find(e => 
-        progress.some(p => p.enrollment_id === e.id)
+       progressData.some(p => p.enrollment_id === e.id) 
       );
       setSelectedEnrollmentId(enrollmentWithProgress?.id || activeEnrollments[0].id);
     }
   }
-}, [enrollments, progress]);
+},[enrollments, progressData]);
   
   
 
