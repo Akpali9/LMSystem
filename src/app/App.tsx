@@ -3097,8 +3097,9 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   // Get ALL active enrollments
   const activeEnrollments = safeEnrollments.filter(e => e?.status === "active") || [];
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
+  const completedEnrollments = safeEnrollments.filter(e => e?.status === "completed") || [];
   
-  // ✅ Calculate TOTAL progress across ALL active enrollments
+  // ✅ Calculate TOTAL progress across ALL active enrollments - ONLY ONCE
   let passedCount = 0;
   let totalModulesForActiveCourse = 0;
 
@@ -3113,38 +3114,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
     passedCount += passed;
   });
   
-  // Calculate progress for each enrollment (for display)
-  const enrollmentsWithProgress = activeEnrollments.map(enrollment => {
-    const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
-    const passedModules = safeProgress.filter(p => 
-      p?.enrollment_id === enrollment?.id && 
-      p?.status === "passed"
-    ).length;
-    
-    return {
-      ...enrollment,
-      totalModules: courseModules.length,
-      passedModules: passedModules,
-      isComplete: passedModules === courseModules.length && courseModules.length > 0
-    };
-  });
-  
   const [scholarshipApplications, setScholarshipApplications] = useState<any[]>([]);
-  
- // Calculate total progress across ALL active enrollments
-let passedCount = 0;
-let totalModulesForActiveCourse = 0;
-
-activeEnrollments.forEach(enrollment => {
-  const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
-  totalModulesForActiveCourse += courseModules.length;
-  
-  const passed = safeProgress.filter(p => 
-    p?.enrollment_id === enrollment?.id && 
-    p?.status === "passed"
-  ).length;
-  passedCount += passed;
-});
   
   useEffect(() => {
     fetchScholarshipStatus();
@@ -3250,7 +3220,7 @@ activeEnrollments.forEach(enrollment => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-        <StatCard icon={BookOpen} label="Enrolled Courses" value={safeEnrollments.filter(e => e?.status === "active").length} />
+        <StatCard icon={BookOpen} label="Enrolled Courses" value={activeEnrollments.length} />
         <StatCard 
           icon={CheckCircle} 
           label="Modules Passed" 
@@ -3258,58 +3228,58 @@ activeEnrollments.forEach(enrollment => {
           onClick={() => activeEnrollments.length > 0 && onNavigate("student-module")}
         />
         <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
-        <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
+        <StatCard icon={Award} label="Certificates Earned" value={completedEnrollments.length} />
       </div>
 
       {activeEnrollments.length > 0 ? (
-  <div className="space-y-6">
-    {activeEnrollments.map((enrollment) => {
-      const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
-      const passedModules = safeProgress.filter(p => 
-        p?.enrollment_id === enrollment?.id && 
-        p?.status === "passed"
-      );
-      const isComplete = passedModules.length === courseModules.length && courseModules.length > 0;
-      
-      return (
-        <Card key={enrollment.id} className="p-4 md:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-800 text-lg md:text-xl">
-              {enrollment.course?.title || "Course"}
-            </h2>
-            <StatusBadge status={isComplete ? "completed" : "active"} />
-          </div>
-          <div className="flex flex-col md:flex-row gap-4 mb-5">
-            <div className="w-full md:w-24 h-32 md:h-24 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-              <img 
-                src={enrollment.course?.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
-                alt="" 
-                className="w-full h-full object-cover" 
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-  Module {enrollment.current_module_index + 1 || 1} of {courseModules.length} • 
-  Expires {formatDate(enrollment.expires_at || "")}
-</p>
-<p className="text-sm text-gray-600 mt-1">
-  Progress: {passedModules.length}/{courseModules.length} modules completed
-</p>
-<ProgressBar value={passedModules.length} max={courseModules.length || 1} className="mt-2" />
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate("student-module")}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
-            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-          >
-            <Play className="w-3.5 h-3.5" /> Continue Learning
-          </button>
-        </Card>
-      );
-    })}
-  </div>
-) : safeEnrollments.length === 0 ? (
+        <div className="space-y-6">
+          {activeEnrollments.map((enrollment) => {
+            const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
+            const passedModules = safeProgress.filter(p => 
+              p?.enrollment_id === enrollment?.id && 
+              p?.status === "passed"
+            );
+            const isComplete = passedModules.length === courseModules.length && courseModules.length > 0;
+            
+            return (
+              <Card key={enrollment.id} className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-semibold text-gray-800 text-lg md:text-xl">
+                    {enrollment.course?.title || "Course"}
+                  </h2>
+                  <StatusBadge status={isComplete ? "completed" : "active"} />
+                </div>
+                <div className="flex flex-col md:flex-row gap-4 mb-5">
+                  <div className="w-full md:w-24 h-32 md:h-24 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                    <img 
+                      src={enrollment.course?.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
+                      alt="" 
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs md:text-sm text-gray-500 mt-0.5">
+                      Module {enrollment.current_module_index + 1 || 1} of {courseModules.length} • 
+                      Expires {formatDate(enrollment.expires_at || "")}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Progress: {passedModules.length}/{courseModules.length} modules completed
+                    </p>
+                    <ProgressBar value={passedModules.length} max={courseModules.length || 1} className="mt-2" />
+                  </div>
+                </div>
+                <button
+                  onClick={() => onNavigate("student-module")}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
+                  style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                >
+                  <Play className="w-3.5 h-3.5" /> Continue Learning
+                </button>
+              </Card>
+            );
+          })}
+        </div>
+      ) : safeEnrollments.length === 0 ? (
         <Card className="p-12 text-center">
           <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <h3 className="font-semibold text-gray-800 mb-2">No Active Courses</h3>
