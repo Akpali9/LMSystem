@@ -2025,7 +2025,13 @@ function Sidebar({
   
   studentNavItems.push({ view: "student-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "student-dashboard" });
   studentNavItems.push({ view: "student-courses" as View, icon: BookOpen, label: "My Courses", key: "student-courses" });
-  studentNavItems.push({ view: "student-module" as View, icon: Video, label: "Learning", key: "student-module" });
+
+studentNavItems.push({ 
+  view: "student-module" as View, 
+  icon: Video, 
+  label: "Learning", 
+  key: "student-module" 
+});
   
   // --- ASSIGNMENTS ---
   studentNavItems.push({ 
@@ -3088,8 +3094,26 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   const safeProgress = progress || [];
   const safeModules = modules || [];
   
-  const activeEnrollment = safeEnrollments.find(e => e?.status === "active") || null;
+  // Get ALL active enrollments, not just the first one
+  const activeEnrollments = safeEnrollments.filter(e => e?.status === "active") || [];
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
+  
+  // Calculate progress for each enrollment
+  const enrollmentsWithProgress = activeEnrollments.map(enrollment => {
+    const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
+    const passedCount = safeProgress.filter(p => 
+      p?.enrollment_id === enrollment?.id && 
+      p?.status === "passed"
+    ).length;
+    
+    return {
+      ...enrollment,
+      totalModules: courseModules.length,
+      passedModules: passedCount,
+      isComplete: passedCount === courseModules.length && courseModules.length > 0
+    };
+  });
+  
   const [scholarshipApplications, setScholarshipApplications] = useState<any[]>([]);
   
   let passedCount = 0;
@@ -3220,70 +3244,55 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
         <StatCard icon={Award} label="Certificates Earned" value={activeEnrollment?.status === "completed" ? 1 : 0} />
       </div>
 
-      {activeEnrollment && activeEnrollment.course ? (
-        <div className="grid md:grid-cols-4 gap-6">
-          <div className="md:col-span-3">
-            <Card className="p-4 md:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-gray-800 text-lg md:text-xl" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                  Active Course Progress
-                </h2>
-                <button
-                  onClick={() => onNavigate("student-module")}
-                  className="text-xs hover:underline flex items-center gap-1"
-                  style={{ color: '#f7530b' }}
-                >
-                  View Details <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="flex flex-col md:flex-row gap-4 mb-5">
-                <div className="w-full md:w-24 h-32 md:h-24 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                  <img 
-                    src={activeEnrollment.course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
-                    alt="" 
-                    className="w-full h-full object-cover" 
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-gray-800 text-base md:text-lg">{activeEnrollment.course.title || "Course"}</p>
-                  <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-                    Module {activeEnrollment.current_module_index + 1 || 1} • Expires {formatDate(activeEnrollment.expires_at || "")}
-                  </p>
-                  <StatusBadge status={activeEnrollment.status || "active"} />
-                </div>
-              </div>
-              <button
-                onClick={() => onNavigate("student-module")}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
-                style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-              >
-                <Play className="w-3.5 h-3.5" /> Continue Learning
-              </button>
-            </Card>
+      {activeEnrollments.length > 0 ? (
+  <div className="space-y-6">
+    {activeEnrollments.map((enrollment) => {
+      const courseModules = safeModules.filter(m => m?.course_id === enrollment?.course_id);
+      const passedModules = safeProgress.filter(p => 
+        p?.enrollment_id === enrollment?.id && 
+        p?.status === "passed"
+      );
+      const isComplete = passedModules.length === courseModules.length && courseModules.length > 0;
+      
+      return (
+        <Card key={enrollment.id} className="p-4 md:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-800 text-lg md:text-xl">
+              {enrollment.course?.title || "Course"}
+            </h2>
+            <StatusBadge status={isComplete ? "completed" : "active"} />
           </div>
-
-          <div className="flex items-center justify-center">
-            <Card className="p-6 w-full flex flex-col items-center">
-              <h3 className="font-semibold text-gray-800 mb-4 text-sm text-center">Overall Progress</h3>
-              <CircularProgress 
-                value={activeEnrollment.current_module_index + 1} 
-                max={totalModulesForActiveCourse || 5} 
-                size={120}
-                onClick={() => onNavigate("student-module")}
+          <div className="flex flex-col md:flex-row gap-4 mb-5">
+            <div className="w-full md:w-24 h-32 md:h-24 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+              <img 
+                src={enrollment.course?.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
+                alt="" 
+                className="w-full h-full object-cover" 
               />
-              <p className="text-xs text-gray-500 mt-3 text-center">
-                {activeEnrollment.current_module_index + 1} modules passed
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-gray-500 mt-0.5">
+                Module {enrollment.current_module_index + 1 || 1} of {courseModules.length} • 
+                Expires {formatDate(enrollment.expires_at || "")}
               </p>
-                    
-              {passedCount === totalModulesForActiveCourse && totalModulesForActiveCourse > 0 && (
-                <div className="mt-3 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                  🎉 Course Complete!
-                </div>
-              )}
-            </Card>
+              <p className="text-sm text-gray-600 mt-1">
+                Progress: {passedModules.length}/{courseModules.length} modules completed
+              </p>
+              <ProgressBar value={passedModules.length} max={courseModules.length || 1} className="mt-2" />
+            </div>
           </div>
-        </div>
-      ) : safeEnrollments.length === 0 ? (
+          <button
+            onClick={() => onNavigate("student-module")}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
+            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+          >
+            <Play className="w-3.5 h-3.5" /> Continue Learning
+          </button>
+        </Card>
+      );
+    })}
+  </div>
+) : safeEnrollments.length === 0 ? (
         <Card className="p-12 text-center">
           <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <h3 className="font-semibold text-gray-800 mb-2">No Active Courses</h3>
@@ -4502,15 +4511,16 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
 
 // ─── Student Module Viewer ──────────────────────────────────────────────────
 
-function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onNavigate, onProgressUpdate }: { 
+function StudentModuleViewer({ profile, enrollments, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
-  enrollment: Enrollment | null;
+  enrollments: Enrollment[]; // Now receives all enrollments
   modules: Module[];
   moduleContents: ModuleContent[];
   onNavigate: (v: View) => void;
   onProgressUpdate: (moduleId: string, status: string, score: number) => Promise<void>;
 }) {
-  const [selectedModuleIndex, setSelectedModuleIndex] = useState(enrollment?.current_module_index || 0);
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
+  const [selectedModuleIndex, setSelectedModuleIndex] = useState(0);
   const [videoProgress, setVideoProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<"content" | "quiz" | "exam">("content");
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
@@ -4527,7 +4537,17 @@ function StudentModuleViewer({ profile, enrollment, modules, moduleContents, onN
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
   const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
   const [manualCompleteLoading, setManualCompleteLoading] = useState(false);
+  const activeEnrollments = enrollments.filter(e => e.status === "active");
 
+   useEffect(() => {
+    if (activeEnrollments.length > 0) {
+      if (!selectedEnrollmentId || !activeEnrollments.find(e => e.id === selectedEnrollmentId)) {
+        setSelectedEnrollmentId(activeEnrollments[0].id);
+      }
+    }
+  }, [enrollments]);
+  
+  const currentEnrollment = activeEnrollments.find(e => e.id === selectedEnrollmentId) || activeEnrollments[0] || null;
   useEffect(() => {
     if (enrollment) {
       fetchStudentAssignments();
@@ -10603,15 +10623,15 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
             enrollments={enrollments || []} 
             onEnroll={handleEnroll} 
           />;
-        case "student-module":
-          return <StudentModuleViewer 
-            profile={profile} 
-            enrollment={activeEnrollment || null} 
-            modules={modulesByCourse?.[activeEnrollment?.course_id || ""] || []} 
-            moduleContents={moduleContents || []}
-            onNavigate={setView} 
-            onProgressUpdate={handleProgressUpdate} 
-          />;
+       case "student-module":
+  return <StudentModuleViewer 
+    profile={profile} 
+    enrollments={enrollments || []} // Pass all enrollments
+    modules={modules || []} 
+    moduleContents={moduleContents || []}
+    onNavigate={setView} 
+    onProgressUpdate={handleProgressUpdate} 
+  />;
         case "student-assignments":
           return <StudentAssignments profile={profile} />;
         case "student-payment":
