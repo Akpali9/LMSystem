@@ -3119,6 +3119,8 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   
   let passedCount = 0;
   let totalModulesForActiveCourse = 0;
+
+  const activeEnrollment = activeEnrollments[0]; 
   
   if (activeEnrollment) {
     const courseModules = safeModules.filter(m => m?.course_id === activeEnrollment?.course_id);
