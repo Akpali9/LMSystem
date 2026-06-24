@@ -4626,7 +4626,8 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
     setQuizAnswers({});
     setQuizScore(0);
     setQuizAttempted(false);
-
+    
+};
   const canPassModule = async (moduleId: string): Promise<{ canPass: boolean; score: number; reason: string }> => {
     const existingProgress = progressData.find(p => p.module_id === moduleId);
     if (existingProgress?.status === "passed") {
