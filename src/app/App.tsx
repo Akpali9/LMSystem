@@ -4557,11 +4557,6 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
 }, [enrollments, progress]);
   
   
-  useEffect(() => {
-    if (currentEnrollment) {
-      fetchStudentAssignments();
-    }
-  }, [currentEnrollment]);
 
   const fetchStudentAssignments = async () => {
     if (!currentEnrollment) return;
@@ -4572,6 +4567,11 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       .eq("enrollment_id", currentEnrollment.id);
     if (data) setStudentAssignments(data as StudentAssignment[]);
   };
+  useEffect(() => {
+    if (currentEnrollment) {
+      fetchStudentAssignments();
+    }
+  }, [currentEnrollment]);
 
   useEffect(() => {
     if (currentEnrollment) {
