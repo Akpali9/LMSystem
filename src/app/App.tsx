@@ -4556,10 +4556,6 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   }
 }, [enrollments, progress]);
   
-  // ✅ ONLY ONE declaration - use this throughout
-  const currentEnrollment = activeEnrollments.find(e => e.id === selectedEnrollmentId) || activeEnrollments[0] || null;
-  
-  // ✅ REMOVE the duplicate declaration that was here
   
   useEffect(() => {
     if (currentEnrollment) {
