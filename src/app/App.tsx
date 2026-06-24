@@ -4522,6 +4522,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   onNavigate: (v: View) => void;
   onProgressUpdate: (moduleId: string, status: string, score: number) => Promise<void>;
 }) {
+  const activeEnrollments = enrollments.filter(e => e.status === "active");
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
   const currentEnrollment = activeEnrollments.find(e => e.id === selectedEnrollmentId) || activeEnrollments[0] || null;
   const [selectedModuleIndex, setSelectedModuleIndex] = useState(0);
@@ -4542,7 +4543,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
   const [manualCompleteLoading, setManualCompleteLoading] = useState(false);
   
-  const activeEnrollments = enrollments.filter(e => e.status === "active");
+ 
 
   useEffect(() => {
     if (activeEnrollments.length > 0) {
