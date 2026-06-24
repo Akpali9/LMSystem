@@ -3265,7 +3265,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                     <p className="text-sm text-gray-600 mt-1">
                       Progress: {passedModules.length}/{courseModules.length} modules completed
                     </p>
-                    <ProgressBar value={passedModules.length} max={courseModules.length || 1} className="mt-2" />
+                     <ProgressBar value={enrollment.current_module_index + 1} max={5} className="mt-4" />
                   </div>
                 </div>
                 <button
@@ -3499,7 +3499,7 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
                       </div>
                     </div>
                     <ProgressBar value={enrollment.current_module_index + 1} max={5} className="mt-4" />
-                    <p className="text-xs text-gray-500 mt-1">Module {enrollment.current_module_index + 1} of 5</p>
+                    <p className="text-xs text-gray-500 mt-1">Module {enrollment.current_module_index + 1} </p>
                     <button
                       onClick={() => onNavigate("student-module")}
                       className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
