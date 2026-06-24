@@ -4922,22 +4922,42 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   <select
     value={selectedEnrollmentId || activeEnrollments[0]?.id || ''}
     onChange={(e) => {
-      setSelectedEnrollmentId(e.target.value);
+      const newEnrollmentId = e.target.value;
+      setSelectedEnrollmentId(newEnrollmentId);
       setSelectedModuleIndex(0);
       setActiveTab('content');
       setQuizSubmitted(false);
       setQuizAnswers({});
       setQuizScore(0);
       setQuizAttempted(false);
+      
+      // Check if the selected course has modules
+      const selectedEnrollment = activeEnrollments.find(en => en.id === newEnrollmentId);
+      if (selectedEnrollment) {
+        const courseModules = modules.filter(m => m.course_id === selectedEnrollment.course_id);
+        if (courseModules.length === 0) {
+          toast({
+            type: "warning",
+            title: "Course Content Coming Soon!",
+            message: `"${selectedEnrollment.course?.title || 'This course'}" doesn't have any modules uploaded yet. You've been added to the waiting list and will be notified when content is available.`,
+            duration: 6000,
+          });
+        }
+      }
     }}
     className="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
     style={{ borderColor: '#e0e0e0' }}
   >
-    {activeEnrollments.map((enrollment) => (
-      <option key={enrollment.id} value={enrollment.id}>
-        {enrollment.course?.title || 'Unknown Course'}
-      </option>
-    ))}
+    {activeEnrollments.map((enrollment) => {
+      const courseModules = modules.filter(m => m.course_id === enrollment.course_id);
+      const hasModules = courseModules.length > 0;
+      return (
+        <option key={enrollment.id} value={enrollment.id}>
+          {enrollment.course?.title || 'Unknown Course'}
+          {!hasModules && ' ⏳ (Awaiting Content)'}
+        </option>
+      );
+    })}
   </select>
 </div>
         <div className="space-y-1">
