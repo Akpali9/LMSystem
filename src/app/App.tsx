@@ -4513,7 +4513,7 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
 
 function StudentModuleViewer({ profile, enrollments, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
-  enrollments: Enrollment[]; // Now receives all enrollments
+  enrollments: Enrollment[];
   modules: Module[];
   moduleContents: ModuleContent[];
   onNavigate: (v: View) => void;
@@ -4532,14 +4532,15 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   const [loadingQuiz, setLoadingQuiz] = useState(false);
   const [quizAttempted, setQuizAttempted] = useState(false);
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
-  const [currentEnrollment, setCurrentEnrollment] = useState<Enrollment | null>(enrollment);
+  const [currentEnrollmentState, setCurrentEnrollmentState] = useState<Enrollment | null>(null);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
   const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
   const [manualCompleteLoading, setManualCompleteLoading] = useState(false);
+  
   const activeEnrollments = enrollments.filter(e => e.status === "active");
 
-   useEffect(() => {
+  useEffect(() => {
     if (activeEnrollments.length > 0) {
       if (!selectedEnrollmentId || !activeEnrollments.find(e => e.id === selectedEnrollmentId)) {
         setSelectedEnrollmentId(activeEnrollments[0].id);
@@ -4547,50 +4548,54 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
     }
   }, [enrollments]);
   
+  // ✅ ONLY ONE declaration - use this throughout
   const currentEnrollment = activeEnrollments.find(e => e.id === selectedEnrollmentId) || activeEnrollments[0] || null;
-useEffect(() => {
-  if (currentEnrollment) {
-    fetchStudentAssignments();
-  }
-}, [currentEnrollment]);
+  
+  // ✅ REMOVE the duplicate declaration that was here
+  
+  useEffect(() => {
+    if (currentEnrollment) {
+      fetchStudentAssignments();
+    }
+  }, [currentEnrollment]);
 
   const fetchStudentAssignments = async () => {
-   if (!currentEnrollment) return;
+    if (!currentEnrollment) return;
     const { data } = await supabase
       .from("student_assignments")
       .select("*, assignment:assignment_id(*)")
       .eq("student_id", profile.id)
-      .eq("enrollment_id", enrollment.id);
+      .eq("enrollment_id", currentEnrollment.id);
     if (data) setStudentAssignments(data as StudentAssignment[]);
   };
 
-useEffect(() => {
-  if (currentEnrollment) {
-    setCurrentEnrollment(currentEnrollment);
-    setSelectedModuleIndex(currentEnrollment.current_module_index || 0);
-    fetchProgress();
-    fetchQuizForModule();
-  }
-}, [currentEnrollment, quizRefreshKey]);
+  useEffect(() => {
+    if (currentEnrollment) {
+      setCurrentEnrollmentState(currentEnrollment);
+      setSelectedModuleIndex(currentEnrollment.current_module_index || 0);
+      fetchProgress();
+      fetchQuizForModule();
+    }
+  }, [currentEnrollment, quizRefreshKey]);
 
   useEffect(() => {
-  if (currentEnrollment) {
-    const refreshInterval = setInterval(() => {
-      fetchEnrollmentData();
-    }, 3000);
-    return () => clearInterval(refreshInterval);
-  }
-}, [currentEnrollment]);
+    if (currentEnrollment) {
+      const refreshInterval = setInterval(() => {
+        fetchEnrollmentData();
+      }, 3000);
+      return () => clearInterval(refreshInterval);
+    }
+  }, [currentEnrollment]);
 
   const fetchEnrollmentData = async () => {
-    if (!enrollment) return;
+    if (!currentEnrollment) return;
     const { data } = await supabase
       .from("enrollments")
       .select("*, course:course_id(*)")
-      .eq("id", enrollment.id)
+      .eq("id", currentEnrollment.id)
       .single();
     if (data) {
-      setCurrentEnrollment(data as Enrollment);
+      setCurrentEnrollmentState(data as Enrollment);
       if (data.current_module_index !== selectedModuleIndex && !isAdvancing) {
         setSelectedModuleIndex(data.current_module_index);
         setTimeout(() => fetchQuizForModule(), 100);
@@ -4599,11 +4604,11 @@ useEffect(() => {
   };
 
   const fetchProgress = async () => {
-   if (!currentEnrollment) return;
+    if (!currentEnrollment) return;
     const { data } = await supabase
       .from("module_progress")
       .select("*")
-      .eq("enrollment_id", enrollment.id);
+      .eq("enrollment_id", currentEnrollment.id);
     if (data) setProgressData(data as ModuleProgress[]);
   };
 
@@ -4622,6 +4627,69 @@ useEffect(() => {
     setQuizAttempted(false);
     
     try {
+      const { data: quiz, error: quizError } = await supabase
+        .from("quizzes")
+        .select("*")
+        .eq("module_id", currentModule.id)
+        .maybeSingle();
+      
+      if (quizError) {
+        console.error("Error fetching quiz:", quizError);
+        setQuizData(null);
+        setQuizQuestions([]);
+        setLoadingQuiz(false);
+        return;
+      }
+      
+      if (quiz) {
+        setQuizData(quiz);
+        
+        const { data: questions, error: questionsError } = await supabase
+          .from("quiz_questions")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .order("order_index", { ascending: true });
+        
+        if (questionsError) {
+          console.error("Error fetching quiz questions:", questionsError);
+          setQuizQuestions([]);
+          setLoadingQuiz(false);
+          return;
+        } else if (questions && questions.length > 0) {
+          setQuizQuestions(questions);
+        } else {
+          setQuizQuestions([]);
+          setLoadingQuiz(false);
+          return;
+        }
+        
+        const { data: attempt, error: attemptError } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .eq("student_id", profile.id)
+          .eq("enrollment_id", currentEnrollment?.id)
+          .maybeSingle();
+        
+        if (attemptError) {
+          console.error("Error fetching quiz attempt:", attemptError);
+        } else if (attempt) {
+          setQuizAttempted(true);
+          setQuizSubmitted(true);
+          setQuizScore(attempt.score);
+        }
+      } else {
+        setQuizData(null);
+        setQuizQuestions([]);
+      }
+    } catch (error) {
+      console.error("Error in fetchQuizForModule:", error);
+      setQuizData(null);
+      setQuizQuestions([]);
+    }
+    setLoadingQuiz(false);
+  };
+ try {
       const { data: quiz, error: quizError } = await supabase
         .from("quizzes")
         .select("*")
