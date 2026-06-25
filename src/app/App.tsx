@@ -64,6 +64,119 @@ import {
   Phone,
   Download,
 } from "lucide-react";
+
+// ─── Console Protection ──────────────────────────────────────────────────────
+
+function protectConsole() {
+  // Store original console methods
+  const originalConsole = {
+    log: console.log,
+    warn: console.warn,
+    error: console.error,
+    info: console.info,
+    debug: console.debug,
+  };
+
+  // Override console methods to filter out sensitive info
+  console.log = function(...args: any[]) {
+    // Filter out Supabase URLs and keys
+    const filteredArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        // Remove Supabase URLs
+        let filtered = arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+        // Remove API keys
+        filtered = filtered.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+        // Remove email addresses
+        filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+        // Remove phone numbers
+        filtered = filtered.replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
+        return filtered;
+      }
+      return arg;
+    });
+    originalConsole.log.apply(console, filteredArgs);
+  };
+
+  console.warn = function(...args: any[]) {
+    const filteredArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        let filtered = arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+        filtered = filtered.replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
+        return filtered;
+      }
+      return arg;
+    });
+    originalConsole.warn.apply(console, filteredArgs);
+  };
+
+  console.error = function(...args: any[]) {
+    const filteredArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        let filtered = arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+        filtered = filtered.replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
+        return filtered;
+      }
+      return arg;
+    });
+    originalConsole.error.apply(console, filteredArgs);
+  };
+
+  console.info = function(...args: any[]) {
+    const filteredArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        let filtered = arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+        filtered = filtered.replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
+        return filtered;
+      }
+      return arg;
+    });
+    originalConsole.info.apply(console, filteredArgs);
+  };
+
+  // Prevent console.log from showing in production
+  if (process.env.NODE_ENV === 'production') {
+    console.log = function() {};
+    console.warn = function() {};
+    console.info = function() {};
+    console.debug = function() {};
+  }
+
+  // Return original console for debugging if needed
+  return originalConsole;
+}
+
+// ─── Supabase Client Protection ─────────────────────────────────────────────
+
+function protectSupabaseClient() {
+  // Override the supabase client's request/response logging
+  if (typeof window !== 'undefined') {
+    // Store original fetch
+    const originalFetch = window.fetch;
+    
+    window.fetch = function(...args: any[]) {
+      // Filter out Supabase URLs from being logged
+      const url = args[0];
+      if (typeof url === 'string' && url.includes('supabase.co')) {
+        // Still make the request but don't log it
+        return originalFetch.apply(this, args).catch((error) => {
+          // Filter error messages
+          if (error.message) {
+            error.message = error.message.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+          }
+          throw error;
+        });
+      }
+      return originalFetch.apply(this, args);
+    };
+  }
+}
+
 // ─── Anti-Inspection Protection ──────────────────────────────────────────────
 
 function ProtectionProvider({ children }: { children: React.ReactNode }) {
