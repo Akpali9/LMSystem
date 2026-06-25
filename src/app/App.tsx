@@ -2195,101 +2195,105 @@ useEffect(() => {
     window.removeEventListener('clearAdminCourseChatNotification', handleClearCourseChatNotification);
   };
 }, []);
-  // ─── MOBILE SIDEBAR ──────────────────────────────────────────────────────
-  if (isMobile) {
-    return (
-      <>
-        <button
-          onClick={toggleSidebar}
-          className="fixed top-4 left-4 z-50 w-10 h-10 rounded-lg shadow-lg hover:opacity-90 transition-colors flex items-center justify-center md:hidden"
-          style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+ // ─── MOBILE SIDEBAR ──────────────────────────────────────────────────────
+if (isMobile) {
+  return (
+    <>
+      <button
+        onClick={toggleSidebar}
+        onTouchStart={() => {}}
+        className="fixed top-4 left-4 z-50 w-10 h-10 rounded-lg shadow-lg hover:opacity-90 transition-colors flex items-center justify-center md:hidden active:scale-95 touch-manipulation"
+        style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+      >
+        <Menu className="w-5 h-5" />
+      </button>
 
-        {!collapsed && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden"
-            onClick={() => setCollapsed(true)}
-          />
+      {!collapsed && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden"
+          onClick={() => setCollapsed(true)}
+          onTouchStart={() => setCollapsed(true)}
+        />
+      )}
+      
+      <aside
+        className={cn(
+          "fixed top-0 left-0 h-full transition-transform duration-300 z-50 shadow-2xl md:hidden",
+          collapsed ? "-translate-x-full" : "translate-x-0",
+          "w-72"
         )}
-        
-        <aside
-          className={cn(
-            "fixed top-0 left-0 h-full transition-all duration-300 z-50 shadow-2xl md:hidden",
-            collapsed ? "-translate-x-full" : "translate-x-0",
-            "w-72"
+        style={{ backgroundColor: '#333333', borderRight: '1px solid #444444' }}
+      >
+        <div className="p-4 border-b flex items-center gap-3" style={{ borderBottomColor: '#444444' }}>
+          <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
+          {!collapsed && (
+            <span className="font-bold text-lg flex-1 text-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              Pruta Academy
+            </span>
           )}
-          style={{ backgroundColor: '#333333', borderRight: '1px solid #444444' }}
-        >
-          <div className="p-4 border-b flex items-center gap-3" style={{ borderBottomColor: '#444444' }}>
-            <img src="https://i.postimg.cc/NFQ2Z3RD/PRUTAICON.png" alt="Pruta Academy" className="h-8 w-8 rounded object-contain" />
-            {!collapsed && (
-              <span className="font-bold text-lg flex-1 text-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                Pruta Academy
-              </span>
-            )}
+          <button
+            onClick={toggleSidebar}
+            onTouchStart={() => {}}
+            className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors active:scale-95"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+        </div>
+
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto" style={{ height: 'calc(100vh - 180px)' }}>
+          {nav.map((item) => (
             <button
-              onClick={toggleSidebar}
-              className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
+              key={item.view}
+              onClick={() => handleNavigate(item.view, item.key)}
+              onTouchStart={() => {}}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all touch-manipulation active:scale-[0.98]",
+                currentView === item.view
+                  ? "text-white"
+                  : "text-gray-400 hover:bg-white/10 hover:text-white"
+              )}
+              style={currentView === item.view ? { backgroundColor: '#f7530b' } : {}}
             >
-              <X className="w-5 h-5 text-white" />
+              <item.icon className="w-5 h-5 shrink-0" style={currentView === item.view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
+              <span className="flex-1 text-left">{item.label}</span>
+              {item.badge && item.badge > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              )}
             </button>
-          </div>
+          ))}
+        </nav>
 
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto" style={{ height: 'calc(100vh - 180px)' }}>
-            {nav.map((item) => (
-              <button
-                key={item.view}
-                onClick={() => handleNavigate(item.view, item.key)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all",
-                  currentView === item.view
-                    ? "text-white"
-                    : "text-gray-400 hover:bg-white/10 hover:text-white"
-                )}
-                style={currentView === item.view ? { backgroundColor: '#f7530b' } : {}}
-              >
-                <item.icon className="w-5 h-5 shrink-0" style={currentView === item.view ? { color: '#ffffff' } : { color: '#fcba9d' }} />
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.badge && item.badge > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-
-          <div className="p-3 border-t absolute bottom-0 left-0 right-0" style={{ borderTopColor: '#444444', backgroundColor: '#333333' }}>
-            <div className="flex items-center gap-3 px-3 py-2.5">
-              <Avatar name={profile.full_name} size="sm" src={profile.avatar_url} />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white truncate">{profile.full_name}</p>
-                <p className="text-xs text-gray-400 truncate capitalize">{profile.role}</p>
-              </div>
+        <div className="p-3 border-t absolute bottom-0 left-0 right-0" style={{ borderTopColor: '#444444', backgroundColor: '#333333' }}>
+          <div className="flex items-center gap-3 px-3 py-2.5">
+            <Avatar name={profile.full_name} size="sm" src={profile.avatar_url} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white truncate">{profile.full_name}</p>
+              <p className="text-xs text-gray-400 truncate capitalize">{profile.role}</p>
             </div>
-            <button
-              onClick={() => {
-                showConfirm({
-                  title: "Sign Out",
-                  message: "Are you sure you want to sign out?",
-                  confirmLabel: "Sign Out",
-                  type: "warning",
-                  onConfirm: onLogout,
-                });
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-white/10 hover:text-white transition-all mt-1"
-            >
-              <LogOut className="w-4 h-4 shrink-0" style={{ color: '#fcba9d' }} />
-              <span>Sign Out</span>
-            </button>
           </div>
-        </aside>
-      </>
-    );
-  }
-
+          <button
+            onClick={() => {
+              showConfirm({
+                title: "Sign Out",
+                message: "Are you sure you want to sign out?",
+                confirmLabel: "Sign Out",
+                type: "warning",
+                onConfirm: onLogout,
+              });
+            }}
+            onTouchStart={() => {}}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-white/10 hover:text-white transition-all mt-1 active:scale-[0.98] touch-manipulation"
+          >
+            <LogOut className="w-4 h-4 shrink-0" style={{ color: '#fcba9d' }} />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
   // ─── DESKTOP SIDEBAR ────────────────────────────────────────────────────────
   return (
     <aside
