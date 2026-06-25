@@ -3924,40 +3924,44 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
           </div>
         </div>
 
-        {showCourseList ? (
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {enrolledCourses.length === 0 && (
-              <Card className="p-8 text-center">
-                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No active courses yet.</p>
-                <p className="text-xs text-gray-400 mt-1">Enroll in a course to join the chat.</p>
-              </Card>
-            )}
-            {enrolledCourses.map((course) => (
-              <Card
-                key={course.id}
-                className="p-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-                onClick={() => handleCourseSelect(course.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                    <img 
-                      src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
-                      alt="" 
-                      className="w-full h-full object-cover" 
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800 text-sm truncate">{course.title}</p>
-                    <p className="text-xs text-gray-500">Tap to join chat</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </div>
-              </Card>
-            ))}
+       {showCourseList ? (
+  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+    {enrolledCourses.length === 0 && (
+      <div className="bg-white rounded-xl border p-8 text-center" style={{ borderColor: '#e0e0e0' }}>
+        <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+        <p className="text-gray-500">No active courses yet.</p>
+        <p className="text-xs text-gray-400 mt-1">Enroll in a course to join the chat.</p>
+      </div>
+    )}
+    {enrolledCourses.map((course) => (
+      <div
+        key={course.id}
+        className="bg-white rounded-xl border p-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+        style={{ borderColor: '#e0e0e0' }}
+        onClick={() => handleCourseSelect(course.id)}
+        onTouchStart={() => {}} // This helps with touch events on mobile
+        role="button"
+        tabIndex={0}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+            <img 
+              src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
+              alt="" 
+              className="w-full h-full object-cover" 
+            />
           </div>
-        ) : (
-          <div className="flex-1 flex flex-col bg-white">
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-gray-800 text-sm truncate">{course.title}</p>
+            <p className="text-xs text-gray-500">Tap to join chat</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+        </div>
+      </div>
+    ))}
+  </div>
+) : (
+        <div className="flex-1 flex flex-col bg-white">
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {loading ? (
                 <div className="flex justify-center py-8">
