@@ -4933,7 +4933,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   return (
     <div className="flex flex-col md:flex-row h-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
       {/* CONTENT - Comes FIRST on mobile (order-1), SECOND on desktop (md:order-2) */}
-     <div className="flex-1 p-4 md:p-6 overflow-y-auto order-1 md:order-2 min-h-0" style={{ height: '100%' }}>
+       <div className="flex-1 p-4 md:p-6 overflow-y-auto order-1 md:order-2" style={{ minHeight: '100vh', height: '100%' }}>
        <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Badge variant="info">Module {selectedModuleIndex + 1} of {modules?.length || 0}</Badge>
