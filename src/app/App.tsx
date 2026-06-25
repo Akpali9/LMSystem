@@ -4497,7 +4497,6 @@ function StudentScholarship({ profile, courses }: { profile: Profile; courses: C
 }
 
 // ─── Student Module Viewer ──────────────────────────────────────────────────
-
 function StudentModuleViewer({ profile, enrollments, modules, moduleContents, onNavigate, onProgressUpdate }: { 
   profile: Profile;
   enrollments: Enrollment[];
@@ -4526,22 +4525,17 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
   const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
   const [manualCompleteLoading, setManualCompleteLoading] = useState(false);
-  
- 
 
   useEffect(() => {
     if (activeEnrollments.length > 0) {
-       if (!selectedEnrollmentId || !activeEnrollments.find(e => e.id === selectedEnrollmentId)) {
-      // Try to find the first enrollment that has progress
-      const enrollmentWithProgress = activeEnrollments.find(e => 
-       progressData.some(p => p.enrollment_id === e.id) 
-      );
-      setSelectedEnrollmentId(enrollmentWithProgress?.id || activeEnrollments[0].id);
+      if (!selectedEnrollmentId || !activeEnrollments.find(e => e.id === selectedEnrollmentId)) {
+        const enrollmentWithProgress = activeEnrollments.find(e => 
+          progressData.some(p => p.enrollment_id === e.id) 
+        );
+        setSelectedEnrollmentId(enrollmentWithProgress?.id || activeEnrollments[0].id);
+      }
     }
-  }
-},[enrollments, progressData]);
-  
-  
+  }, [enrollments, progressData]);
 
   const fetchStudentAssignments = async () => {
     if (!currentEnrollment) return;
@@ -4552,6 +4546,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       .eq("enrollment_id", currentEnrollment.id);
     if (data) setStudentAssignments(data as StudentAssignment[]);
   };
+
   useEffect(() => {
     if (currentEnrollment) {
       fetchStudentAssignments();
@@ -4615,7 +4610,45 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
     setQuizScore(0);
     setQuizAttempted(false);
     
-};
+    try {
+      const { data: quiz } = await supabase
+        .from("quizzes")
+        .select("*")
+        .eq("module_id", currentModule.id)
+        .maybeSingle();
+      
+      if (quiz) {
+        setQuizData(quiz);
+        const { data: questions } = await supabase
+          .from("quiz_questions")
+          .select("*")
+          .eq("quiz_id", quiz.id);
+        if (questions) setQuizQuestions(questions);
+        
+        const { data: attempt } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .eq("student_id", profile.id)
+          .eq("enrollment_id", currentEnrollment?.id)
+          .maybeSingle();
+        
+        if (attempt) {
+          setQuizAttempted(true);
+          setQuizScore(attempt.score);
+          setQuizSubmitted(true);
+        }
+      } else {
+        setQuizData(null);
+        setQuizQuestions([]);
+      }
+    } catch (error) {
+      console.error("Error fetching quiz:", error);
+    } finally {
+      setLoadingQuiz(false);
+    }
+  };
+
   const canPassModule = async (moduleId: string): Promise<{ canPass: boolean; score: number; reason: string }> => {
     const existingProgress = progressData.find(p => p.module_id === moduleId);
     if (existingProgress?.status === "passed") {
@@ -4637,12 +4670,12 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       
       if (questions && questions.length > 0) {
         const { data: attempt } = await supabase
-  .from("quiz_attempts")
-  .select("score, passed")
-  .eq("quiz_id", quiz.id)
-  .eq("student_id", profile.id)
-  .eq("enrollment_id", currentEnrollment?.id)
-  .maybeSingle();
+          .from("quiz_attempts")
+          .select("score, passed")
+          .eq("quiz_id", quiz.id)
+          .eq("student_id", profile.id)
+          .eq("enrollment_id", currentEnrollment?.id)
+          .maybeSingle();
         
         if (attempt && attempt.passed) {
           return { canPass: true, score: attempt.score, reason: "Quiz passed" };
@@ -4744,7 +4777,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       const { error: attemptError } = await supabase.from("quiz_attempts").insert({
         quiz_id: quizData.id,
         student_id: profile.id,
-        enrollment_id: enrollment?.id,
+        enrollment_id: currentEnrollment?.id,
         score: score,
         passed: score >= (quizData.pass_score || 70),
         answers: answers,
@@ -4776,7 +4809,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
         const { data: updatedEnrollment } = await supabase
           .from("enrollments")
           .select("*")
-          .eq("id", enrollment?.id)
+          .eq("id", currentEnrollment?.id)
           .single();
         
         if (updatedEnrollment) {
@@ -4840,10 +4873,10 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
         await fetchProgress();
         
         const { data: updatedEnrollment } = await supabase
-  .from("enrollments")
-  .select("*")
-  .eq("id", currentEnrollment?.id)
-  .single();
+          .from("enrollments")
+          .select("*")
+          .eq("id", currentEnrollment?.id)
+          .single();
         
         if (updatedEnrollment && updatedEnrollment.current_module_index > selectedModuleIndex) {
           toast({
@@ -4899,51 +4932,472 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
 
   return (
     <div className="flex flex-col md:flex-row h-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <div className="w-full md:w-64 bg-gray-100/30 border-b md:border-b-0 md:border-r p-4 shrink-0 overflow-y-auto max-h-[calc(100vh-80px)]" style={{ borderColor: '#e0e0e0' }}>
+      {/* Content - Rendered FIRST on mobile, side by side on desktop */}
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto order-1 md:order-2" style={{ height: 'calc(100vh - 80px)', maxHeight: 'calc(100vh - 80px)' }}>
+        <div className="mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <Badge variant="info">Module {selectedModuleIndex + 1} of {modules?.length || 0}</Badge>
+            {moduleProgress?.status === "passed" && <Badge variant="success">✅ Passed</Badge>}
+            {moduleProgress?.status === "failed" && <Badge variant="danger">❌ Failed</Badge>}
+            {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
+            {quizData && quizQuestions.length > 0 && <Badge variant="info">📝 Quiz: {quizData.title}</Badge>}
+            {hasGradedAssignment && moduleProgress?.status === "passed" && <Badge variant="success">📋 Assignment Passed</Badge>}
+            {!quizData && !hasGradedAssignment && moduleProgress?.status !== "passed" && (
+              <Badge variant="warning">⚠️ No Quiz - Complete Assignment</Badge>
+            )}
+          </div>
+          <h1 className="text-xl md:text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+            {currentModule.title}
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {quizData && quizQuestions.length > 0 
+              ? `Pass with ≥${currentModule.pass_score}% to unlock the next module.` 
+              : "Complete the assignment to unlock the next module."}
+          </p>
+          {hasGradedAssignment && (
+            <p className="text-sm text-green-600 mt-1">
+              ✅ You have a graded assignment for this module!
+            </p>
+          )}
+          {!quizData && !hasGradedAssignment && moduleProgress?.status !== "passed" && (
+            <p className="text-sm text-amber-600 mt-1">
+              ⚠️ This module has no quiz. You must complete and pass the assignment.
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-6 flex-wrap">
+          <button
+            onClick={() => setActiveTab("content")}
+            className={cn(
+              "px-4 md:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize flex items-center gap-2",
+              activeTab === "content" ? "bg-white shadow-sm text-gray-800" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            <Video className="w-4 h-4" /> Content
+          </button>
+          {quizData && quizQuestions.length > 0 && !isModuleLocked(selectedModuleIndex) && (
+            <button
+              onClick={() => setActiveTab("quiz")}
+              className={cn(
+                "px-4 md:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize flex items-center gap-2",
+                activeTab === "quiz" ? "bg-white shadow-sm text-gray-800" : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              <FileQuestion className="w-4 h-4" /> Quiz {quizAttempted && quizScore >= (quizData?.pass_score || 70) ? "✅" : quizAttempted ? "❌" : ""}
+            </button>
+          )}
+          <button
+            onClick={() => setActiveTab("exam")}
+            className={cn(
+              "px-4 md:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize flex items-center gap-2",
+              activeTab === "exam" ? "bg-white shadow-sm text-gray-800" : "text-gray-500 hover:text-gray-700",
+              isModuleLocked(selectedModuleIndex) && "opacity-50 cursor-not-allowed"
+            )}
+            disabled={isModuleLocked(selectedModuleIndex)}
+          >
+            <Award className="w-4 h-4" /> Exam
+          </button>
+          <button
+            onClick={() => {
+              setQuizRefreshKey(prev => prev + 1);
+              setActiveTab("quiz");
+              toast({
+                type: "info",
+                title: "Refreshing Quiz",
+                message: "Loading latest quiz data...",
+              });
+            }}
+            className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-500 hover:text-gray-700 hover:bg-white/50 flex items-center gap-1"
+            title="Refresh quiz data"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {activeTab === "content" && (
+          <div className="space-y-6">
+            {currentContent ? (
+              <>
+                {currentContent.content_type === "video" && currentContent.content_url && (
+                  <SecureVideoPlayer 
+                    url={currentContent.content_url} 
+                    title={currentContent.title}
+                    onProgress={setVideoProgress}
+                  />
+                )}
+                
+                {currentContent.content_type === "text" && currentContent.content_text && (
+                  <Card className="p-4 md:p-6">
+                    <h3 className="font-semibold text-gray-800 mb-3 text-lg">{currentContent.title}</h3>
+                    <div className="prose prose-sm max-w-none text-gray-500">
+                      <p className="whitespace-pre-wrap text-sm md:text-base">{currentContent.content_text}</p>
+                    </div>
+                  </Card>
+                )}
+              </>
+            ) : (
+              <Card className="p-4 md:p-6 text-center">
+                <div className="py-8">
+                  <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <h3 className="font-semibold text-gray-800 mb-2">No Content Available</h3>
+                  <p className="text-sm text-gray-500">
+                    The instructor hasn't added content for this module yet. Please check back later.
+                  </p>
+                </div>
+              </Card>
+            )}
+            
+            {!isModuleLocked(selectedModuleIndex) && currentContent && moduleProgress?.status !== "passed" && (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleManualComplete}
+                  disabled={!canCompleteModule || manualCompleteLoading}
+                  className={cn(
+                    "flex items-center gap-2 px-6 py-3 font-medium rounded-lg transition-colors text-sm",
+                    canCompleteModule 
+                      ? "text-white hover:opacity-90" 
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  )}
+                  style={canCompleteModule ? { backgroundColor: '#f7530b' } : {}}
+                >
+                  {manualCompleteLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                  {canCompleteModule 
+                    ? "Mark as Complete" 
+                    : quizData && quizQuestions.length > 0 
+                      ? "Take the quiz to complete" 
+                      : "Complete assignment to pass"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "quiz" && (
+          <div className="space-y-5">
+            {isModuleLocked(selectedModuleIndex) ? (
+              <Card className="p-8 text-center">
+                <Lock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="font-semibold text-gray-800 mb-2">Module Locked</h3>
+                <p className="text-sm text-gray-500">
+                  Complete the previous module to unlock this quiz.
+                </p>
+              </Card>
+            ) : loadingQuiz ? (
+              <Card className="p-8 text-center">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
+                <p className="text-gray-500 mt-4">Loading quiz...</p>
+              </Card>
+            ) : !quizData || quizQuestions.length === 0 ? (
+              <Card className="p-8 text-center">
+                <FileQuestion className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="font-semibold text-gray-800 mb-2">No Quiz Available</h3>
+                <p className="text-sm text-gray-500">
+                  This module doesn't have a quiz. Complete the assignment to pass.
+                </p>
+                {hasGradedAssignment && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800">✅ Your assignment has been graded and passed!</p>
+                    <button
+                      onClick={handleManualComplete}
+                      className="mt-2 px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
+                      style={{ backgroundColor: '#f7530b' }}
+                    >
+                      <CheckCircle className="w-4 h-4 inline mr-1" /> Mark Module Complete
+                    </button>
+                  </div>
+                )}
+                {!hasGradedAssignment && (
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">⏳ Complete the assignment to pass this module.</p>
+                  </div>
+                )}
+              </Card>
+            ) : (
+              <Card className="p-4 md:p-6">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-gray-800 text-lg">{quizData.title}</h3>
+                  {quizData.description && (
+                    <p className="text-sm text-gray-500 mt-1">{quizData.description}</p>
+                  )}
+                  <p className="text-sm text-gray-500 mt-2">
+                    Pass score: <span className="font-semibold" style={{ color: '#f7530b' }}>{quizData.pass_score}%</span>
+                    {quizQuestions.length > 0 && ` • ${quizQuestions.length} questions`}
+                  </p>
+                </div>
+                
+                {quizQuestions.map((q, qi) => (
+                  <div key={q.id} className="mb-6 last:mb-0 border-b pb-4 last:border-0 last:pb-0" style={{ borderColor: '#e0e0e0' }}>
+                    <p className="text-sm font-medium text-gray-800 mb-3">{qi + 1}. {q.question}</p>
+                    <div className="space-y-2">
+                      {q.options && q.options.map((opt: string, oi: number) => {
+                        const selected = quizAnswers[qi] === oi;
+                        const isCorrect = oi === q.correct_answer;
+                        const showCorrect = quizSubmitted && isCorrect;
+                        const showWrong = quizSubmitted && selected && !isCorrect;
+                        return (
+                          <button
+                            key={oi}
+                            onClick={() => !quizSubmitted && !quizAttempted && setQuizAnswers((p) => ({ ...p, [qi]: oi }))}
+                            disabled={quizSubmitted || quizAttempted || submittingQuiz}
+                            className={cn(
+                              "w-full text-left px-4 py-3 rounded-lg border text-sm transition-all",
+                              quizSubmitted || quizAttempted
+                                ? showCorrect ? "border-green-400 bg-green-50 text-green-800"
+                                  : showWrong ? "border-red-400 bg-red-50 text-red-800"
+                                  : "border-gray-200 text-gray-500 opacity-60"
+                                : selected
+                                ? "border-orange-400 text-gray-800"
+                                : "border-gray-200 hover:border-orange-300 text-gray-700"
+                            )}
+                            style={selected && !quizSubmitted && !quizAttempted ? { backgroundColor: '#fdddce' } : {}}
+                          >
+                            <span className="flex items-center gap-2">
+                              {(quizSubmitted || quizAttempted) && showCorrect && <CheckCircle className="w-4 h-4 text-green-600" />}
+                              {(quizSubmitted || quizAttempted) && showWrong && <XCircle className="w-4 h-4 text-red-600" />}
+                              {opt}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                
+                {quizAttempted || quizSubmitted ? (
+                  <div className={cn(
+                    "mt-6 p-5 rounded-lg flex flex-col md:flex-row items-center gap-4",
+                    quizScore >= (quizData.pass_score || 70) ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+                  )}>
+                    {quizScore >= (quizData.pass_score || 70)
+                      ? <CheckCircle className="w-8 h-8 text-green-600 shrink-0" />
+                      : <XCircle className="w-8 h-8 text-red-600 shrink-0" />}
+                    <div className="flex-1 text-center md:text-left">
+                      <p className={cn("font-bold text-lg", quizScore >= (quizData.pass_score || 70) ? "text-green-800" : "text-red-800")}>
+                        {quizScore}% — {quizScore >= (quizData.pass_score || 70) ? "Quiz Passed! 🎉" : "Not Passed"}
+                      </p>
+                      <p className={cn("text-sm mt-0.5", quizScore >= (quizData.pass_score || 70) ? "text-green-700" : "text-red-700")}>
+                        {quizScore >= (quizData.pass_score || 70)
+                          ? "The next module has been unlocked. Great work!"
+                          : `You need ${quizData.pass_score}% to pass. Review the content and try again.`}
+                      </p>
+                    </div>
+                    {quizScore < (quizData.pass_score || 70) && (
+                      <button
+                        onClick={async () => { 
+                          setQuizSubmitted(false); 
+                          setQuizAnswers({}); 
+                          setQuizScore(0);
+                          setQuizAttempted(false);
+                          await supabase
+                            .from("quiz_attempts")
+                            .delete()
+                            .eq("quiz_id", quizData.id)
+                            .eq("student_id", profile.id)
+                            .eq("enrollment_id", currentEnrollment?.id)
+                          const existingProgress = progressData.find(p => p.module_id === currentModule.id);
+                          if (existingProgress) {
+                            await supabase
+                              .from("module_progress")
+                              .update({ status: "in_progress", score: null })
+                              .eq("id", existingProgress.id);
+                          }
+                          await fetchProgress();
+                          await fetchEnrollmentData();
+                          setQuizRefreshKey(prev => prev + 1);
+                          toast({
+                            type: "info",
+                            title: "Quiz Reset",
+                            message: "You can retry the quiz now.",
+                          });
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 inline mr-1" /> Retry Quiz
+                      </button>
+                    )}
+                    {quizScore >= (quizData.pass_score || 70) && (
+                      <button
+                        onClick={() => {
+                          const nextIndex = selectedModuleIndex + 1;
+                          if (nextIndex < modules.length) {
+                            handleModuleSelect(nextIndex);
+                          } else {
+                            toast({
+                              type: "success",
+                              title: "🎉 Course Complete!",
+                              message: "You've completed all modules!",
+                            });
+                            onNavigate("student-courses");
+                          }
+                        }}
+                        className="px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
+                        style={{ backgroundColor: '#f7530b' }}
+                      >
+                        {selectedModuleIndex + 1 < modules.length ? "Next Module →" : "Back to Courses"}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleSubmitQuiz}
+                    disabled={Object.keys(quizAnswers).length < quizQuestions.length || submittingQuiz}
+                    className="mt-6 w-full py-3 font-semibold rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                  >
+                    {submittingQuiz ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Quiz"}
+                  </button>
+                )}
+              </Card>
+            )}
+          </div>
+        )}
+
+        {activeTab === "exam" && (
+          <div className="space-y-5">
+            {isModuleLocked(selectedModuleIndex) ? (
+              <Card className="p-8 text-center">
+                <Lock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="font-semibold text-gray-800 mb-2">Module Locked</h3>
+                <p className="text-sm text-gray-500">
+                  Complete the previous module to access the exam.
+                </p>
+              </Card>
+            ) : (
+              <Card className="p-4 md:p-6">
+                <div className="text-center py-8">
+                  <Award className="w-16 h-16 mx-auto mb-4" style={{ color: '#f7530b' }} />
+                  <h3 className="text-xl font-semibold text-gray-800">Module Exam</h3>
+                  <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
+                    {moduleProgress?.status === "passed" ? (
+                      "✅ You have already passed this module! Great job!"
+                    ) : (
+                      canCompleteModule 
+                        ? "🎉 You've passed the quiz or assignment! You can now complete this module."
+                        : "Complete the module quiz or assignment to unlock the exam."
+                    )}
+                  </p>
+                  <div className="mt-6 flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        <span className="text-sm text-gray-700">Content Completed</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {moduleProgress?.status === "passed" || canCompleteModule ? (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-yellow-500" />
+                        )}
+                        <span className="text-sm text-gray-700">
+                          {moduleProgress?.status === "passed" || canCompleteModule ? "Quiz/Assignment Passed" : "Quiz/Assignment Pending"}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {moduleProgress?.status === "passed" ? (
+                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg w-full">
+                        <p className="text-sm text-green-800 text-center">
+                          🎉 You have successfully completed this module!
+                          {selectedModuleIndex + 1 < modules.length && " Ready to move to the next module?"}
+                        </p>
+                        {selectedModuleIndex + 1 < modules.length && (
+                          <button
+                            onClick={() => handleModuleSelect(selectedModuleIndex + 1)}
+                            className="mt-3 w-full px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
+                            style={{ backgroundColor: '#f7530b' }}
+                          >
+                            Next Module →
+                          </button>
+                        )}
+                      </div>
+                    ) : canCompleteModule ? (
+                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg w-full">
+                        <p className="text-sm text-green-800 text-center">
+                          🎉 You've passed the quiz or assignment!
+                        </p>
+                        <button
+                          onClick={handleManualComplete}
+                          disabled={manualCompleteLoading}
+                          className="mt-3 w-full px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
+                          style={{ backgroundColor: '#f7530b' }}
+                        >
+                          {manualCompleteLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Complete Module →"}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg w-full">
+                        <p className="text-sm text-yellow-800 text-center">
+                          ⏳ Complete the module quiz or assignment to unlock the exam.
+                        </p>
+                        {quizData && quizQuestions.length > 0 && (
+                          <button
+                            onClick={() => setActiveTab("quiz")}
+                            className="mt-3 w-full px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
+                            style={{ backgroundColor: '#f7530b' }}
+                          >
+                            Take Quiz
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Module List (Sidebar) - Rendered SECOND on mobile, side by side on desktop */}
+      <div className="w-full md:w-64 bg-gray-100/30 border-b md:border-b-0 md:border-r p-4 shrink-0 overflow-y-auto order-2 md:order-1" style={{ maxHeight: 'calc(100vh - 80px)', borderColor: '#e0e0e0' }}>
         <h3 className="font-semibold text-gray-800 mb-3 text-sm">Course Modules</h3>
         <div className="p-4 border-b" style={{ borderColor: '#e0e0e0' }}>
-  <label className="block text-sm font-medium text-gray-700 mb-2">Select Course:</label>
-  <select
-    value={selectedEnrollmentId || activeEnrollments[0]?.id || ''}
-    onChange={(e) => {
-      const newEnrollmentId = e.target.value;
-      setSelectedEnrollmentId(newEnrollmentId);
-      setSelectedModuleIndex(0);
-      setActiveTab('content');
-      setQuizSubmitted(false);
-      setQuizAnswers({});
-      setQuizScore(0);
-      setQuizAttempted(false);
-      
-      // Check if the selected course has modules
-      const selectedEnrollment = activeEnrollments.find(en => en.id === newEnrollmentId);
-      if (selectedEnrollment) {
-        const courseModules = modules.filter(m => m.course_id === selectedEnrollment.course_id);
-        if (courseModules.length === 0) {
-          toast({
-            type: "warning",
-            title: "Course Content Coming Soon!",
-            message: `"${selectedEnrollment.course?.title || 'This course'}" doesn't have any modules uploaded yet. You've been added to the waiting list and will be notified when content is available.`,
-            duration: 6000,
-          });
-        }
-      }
-    }}
-    className="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
-    style={{ borderColor: '#e0e0e0' }}
-  >
-    {activeEnrollments.map((enrollment) => {
-      const courseModules = modules.filter(m => m.course_id === enrollment.course_id);
-      const hasModules = courseModules.length > 0;
-      return (
-        <option key={enrollment.id} value={enrollment.id}>
-          {enrollment.course?.title || 'Unknown Course'}
-          {!hasModules && ' ⏳ (Awaiting Content)'}
-        </option>
-      );
-    })}
-  </select>
-</div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Select Course:</label>
+          <select
+            value={selectedEnrollmentId || activeEnrollments[0]?.id || ''}
+            onChange={(e) => {
+              const newEnrollmentId = e.target.value;
+              setSelectedEnrollmentId(newEnrollmentId);
+              setSelectedModuleIndex(0);
+              setActiveTab('content');
+              setQuizSubmitted(false);
+              setQuizAnswers({});
+              setQuizScore(0);
+              setQuizAttempted(false);
+              
+              const selectedEnrollment = activeEnrollments.find(en => en.id === newEnrollmentId);
+              if (selectedEnrollment) {
+                const courseModules = modules.filter(m => m.course_id === selectedEnrollment.course_id);
+                if (courseModules.length === 0) {
+                  toast({
+                    type: "warning",
+                    title: "Course Content Coming Soon!",
+                    message: `"${selectedEnrollment.course?.title || 'This course'}" doesn't have any modules uploaded yet. You've been added to the waiting list and will be notified when content is available.`,
+                    duration: 6000,
+                  });
+                }
+              }
+            }}
+            className="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
+            style={{ borderColor: '#e0e0e0' }}
+          >
+            {activeEnrollments.map((enrollment) => {
+              const courseModules = modules.filter(m => m.course_id === enrollment.course_id);
+              const hasModules = courseModules.length > 0;
+              return (
+                <option key={enrollment.id} value={enrollment.id}>
+                  {enrollment.course?.title || 'Unknown Course'}
+                  {!hasModules && ' ⏳ (Awaiting Content)'}
+                </option>
+              );
+            })}
+          </select>
+        </div>
         <div className="space-y-1">
           {modules?.map((module, index) => {
             const isLocked = isModuleLocked(index);
@@ -4953,552 +5407,77 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
             const isNext = index === (currentEnrollment?.current_module_index || 0) + 1;
             
             return (
-  <div className="flex flex-col md:flex-row h-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
-    {/* Content - Rendered FIRST on mobile, side by side on desktop */}
-    <div className="flex-1 p-4 md:p-6 overflow-y-auto order-1 md:order-2" style={{ height: 'calc(100vh - 80px)', maxHeight: 'calc(100vh - 80px)' }}>
-      <div className="mb-4">
-        <div className="flex flex-wrap items-center gap-2 mb-1">
-          <Badge variant="info">Module {selectedModuleIndex + 1} of {modules?.length || 0}</Badge>
-          {moduleProgress?.status === "passed" && <Badge variant="success">✅ Passed</Badge>}
-          {moduleProgress?.status === "failed" && <Badge variant="danger">❌ Failed</Badge>}
-          {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
-          {quizData && quizQuestions.length > 0 && <Badge variant="info">📝 Quiz: {quizData.title}</Badge>}
-          {hasGradedAssignment && moduleProgress?.status === "passed" && <Badge variant="success">📋 Assignment Passed</Badge>}
-          {!quizData && !hasGradedAssignment && moduleProgress?.status !== "passed" && (
-            <Badge variant="warning">⚠️ No Quiz - Complete Assignment</Badge>
-          )}
-        </div>
-        <h1 className="text-xl md:text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-          {currentModule.title}
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {quizData && quizQuestions.length > 0 
-            ? `Pass with ≥${currentModule.pass_score}% to unlock the next module.` 
-            : "Complete the assignment to unlock the next module."}
-        </p>
-        {hasGradedAssignment && (
-          <p className="text-sm text-green-600 mt-1">
-            ✅ You have a graded assignment for this module!
-          </p>
-        )}
-        {!quizData && !hasGradedAssignment && moduleProgress?.status !== "passed" && (
-          <p className="text-sm text-amber-600 mt-1">
-            ⚠️ This module has no quiz. You must complete and pass the assignment.
-          </p>
-        )}
-      </div>
-
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-6 flex-wrap">
-        <button
-          onClick={() => setActiveTab("content")}
-          className={cn(
-            "px-4 md:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize flex items-center gap-2",
-            activeTab === "content" ? "bg-white shadow-sm text-gray-800" : "text-gray-500 hover:text-gray-700"
-          )}
-        >
-          <Video className="w-4 h-4" /> Content
-        </button>
-        {quizData && quizQuestions.length > 0 && !isModuleLocked(selectedModuleIndex) && (
-          <button
-            onClick={() => setActiveTab("quiz")}
-            className={cn(
-              "px-4 md:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize flex items-center gap-2",
-              activeTab === "quiz" ? "bg-white shadow-sm text-gray-800" : "text-gray-500 hover:text-gray-700"
-            )}
-          >
-            <FileQuestion className="w-4 h-4" /> Quiz {quizAttempted && quizScore >= (quizData?.pass_score || 70) ? "✅" : quizAttempted ? "❌" : ""}
-          </button>
-        )}
-        <button
-          onClick={() => setActiveTab("exam")}
-          className={cn(
-            "px-4 md:px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize flex items-center gap-2",
-            activeTab === "exam" ? "bg-white shadow-sm text-gray-800" : "text-gray-500 hover:text-gray-700",
-            isModuleLocked(selectedModuleIndex) && "opacity-50 cursor-not-allowed"
-          )}
-          disabled={isModuleLocked(selectedModuleIndex)}
-        >
-          <Award className="w-4 h-4" /> Exam
-        </button>
-        <button
-          onClick={() => {
-            setQuizRefreshKey(prev => prev + 1);
-            setActiveTab("quiz");
-            toast({
-              type: "info",
-              title: "Refreshing Quiz",
-              message: "Loading latest quiz data...",
-            });
-          }}
-          className="px-3 py-2 rounded-lg text-sm font-medium transition-all text-gray-500 hover:text-gray-700 hover:bg-white/50 flex items-center gap-1"
-          title="Refresh quiz data"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {activeTab === "content" && (
-        <div className="space-y-6">
-          {currentContent ? (
-            <>
-              {currentContent.content_type === "video" && currentContent.content_url && (
-                <SecureVideoPlayer 
-                  url={currentContent.content_url} 
-                  title={currentContent.title}
-                  onProgress={setVideoProgress}
-                />
-              )}
-              
-              {currentContent.content_type === "text" && currentContent.content_text && (
-                <Card className="p-4 md:p-6">
-                  <h3 className="font-semibold text-gray-800 mb-3 text-lg">{currentContent.title}</h3>
-                  <div className="prose prose-sm max-w-none text-gray-500">
-                    <p className="whitespace-pre-wrap text-sm md:text-base">{currentContent.content_text}</p>
-                  </div>
-                </Card>
-              )}
-            </>
-          ) : (
-            <Card className="p-4 md:p-6 text-center">
-              <div className="py-8">
-                <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <h3 className="font-semibold text-gray-800 mb-2">No Content Available</h3>
-                <p className="text-sm text-gray-500">
-                  The instructor hasn't added content for this module yet. Please check back later.
-                </p>
-              </div>
-            </Card>
-          )}
-          
-          {!isModuleLocked(selectedModuleIndex) && currentContent && moduleProgress?.status !== "passed" && (
-            <div className="flex justify-end">
               <button
-                onClick={handleManualComplete}
-                disabled={!canCompleteModule || manualCompleteLoading}
+                key={module.id}
+                onClick={() => handleModuleSelect(index)}
+                disabled={isLocked}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 font-medium rounded-lg transition-colors text-sm",
-                  canCompleteModule 
-                    ? "text-white hover:opacity-90" 
-                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  "w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all text-left",
+                  isActive ? "border font-medium" : "text-gray-600 hover:bg-gray-100",
+                  isLocked && "opacity-50 cursor-not-allowed",
+                  isCompleted && !isActive && "bg-green-50 text-green-700",
+                  isNext && !isActive && !isCompleted && !isLocked && "border-l-2 border-orange-300 bg-orange-50/30"
                 )}
-                style={canCompleteModule ? { backgroundColor: '#f7530b' } : {}}
+                style={isActive ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
               >
-                {manualCompleteLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="w-4 h-4" />
+                <span className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0",
+                  isCompleted ? "bg-green-100 text-green-600" : 
+                  isActive ? "text-orange-600" : 
+                  "bg-gray-200 text-gray-500"
                 )}
-                {canCompleteModule 
-                  ? "Mark as Complete" 
-                  : quizData && quizQuestions.length > 0 
-                    ? "Take the quiz to complete" 
-                    : "Complete assignment to pass"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "quiz" && (
-        <div className="space-y-5">
-          {isModuleLocked(selectedModuleIndex) ? (
-            <Card className="p-8 text-center">
-              <Lock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-800 mb-2">Module Locked</h3>
-              <p className="text-sm text-gray-500">
-                Complete the previous module to unlock this quiz.
-              </p>
-            </Card>
-          ) : loadingQuiz ? (
-            <Card className="p-8 text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
-              <p className="text-gray-500 mt-4">Loading quiz...</p>
-            </Card>
-          ) : !quizData || quizQuestions.length === 0 ? (
-            <Card className="p-8 text-center">
-              <FileQuestion className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-800 mb-2">No Quiz Available</h3>
-              <p className="text-sm text-gray-500">
-                This module doesn't have a quiz. Complete the assignment to pass.
-              </p>
-              {hasGradedAssignment && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-green-800">✅ Your assignment has been graded and passed!</p>
-                  <button
-                    onClick={handleManualComplete}
-                    className="mt-2 px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
-                    style={{ backgroundColor: '#f7530b' }}
-                  >
-                    <CheckCircle className="w-4 h-4 inline mr-1" /> Mark Module Complete
-                  </button>
-                </div>
-              )}
-              {!hasGradedAssignment && (
-                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-sm text-amber-800">⏳ Complete the assignment to pass this module.</p>
-                </div>
-              )}
-            </Card>
-          ) : (
-            <Card className="p-4 md:p-6">
-              <div className="mb-4">
-                <h3 className="font-semibold text-gray-800 text-lg">{quizData.title}</h3>
-                {quizData.description && (
-                  <p className="text-sm text-gray-500 mt-1">{quizData.description}</p>
-                )}
-                <p className="text-sm text-gray-500 mt-2">
-                  Pass score: <span className="font-semibold" style={{ color: '#f7530b' }}>{quizData.pass_score}%</span>
-                  {quizQuestions.length > 0 && ` • ${quizQuestions.length} questions`}
-                </p>
-              </div>
-              
-              {quizQuestions.map((q, qi) => (
-                <div key={q.id} className="mb-6 last:mb-0 border-b pb-4 last:border-0 last:pb-0" style={{ borderColor: '#e0e0e0' }}>
-                  <p className="text-sm font-medium text-gray-800 mb-3">{qi + 1}. {q.question}</p>
-                  <div className="space-y-2">
-                    {q.options && q.options.map((opt: string, oi: number) => {
-                      const selected = quizAnswers[qi] === oi;
-                      const isCorrect = oi === q.correct_answer;
-                      const showCorrect = quizSubmitted && isCorrect;
-                      const showWrong = quizSubmitted && selected && !isCorrect;
-                      return (
-                        <button
-                          key={oi}
-                          onClick={() => !quizSubmitted && !quizAttempted && setQuizAnswers((p) => ({ ...p, [qi]: oi }))}
-                          disabled={quizSubmitted || quizAttempted || submittingQuiz}
-                          className={cn(
-                            "w-full text-left px-4 py-3 rounded-lg border text-sm transition-all",
-                            quizSubmitted || quizAttempted
-                              ? showCorrect ? "border-green-400 bg-green-50 text-green-800"
-                                : showWrong ? "border-red-400 bg-red-50 text-red-800"
-                                : "border-gray-200 text-gray-500 opacity-60"
-                              : selected
-                              ? "border-orange-400 text-gray-800"
-                              : "border-gray-200 hover:border-orange-300 text-gray-700"
-                          )}
-                          style={selected && !quizSubmitted && !quizAttempted ? { backgroundColor: '#fdddce' } : {}}
-                        >
-                          <span className="flex items-center gap-2">
-                            {(quizSubmitted || quizAttempted) && showCorrect && <CheckCircle className="w-4 h-4 text-green-600" />}
-                            {(quizSubmitted || quizAttempted) && showWrong && <XCircle className="w-4 h-4 text-red-600" />}
-                            {opt}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-              
-              {quizAttempted || quizSubmitted ? (
-                <div className={cn(
-                  "mt-6 p-5 rounded-lg flex flex-col md:flex-row items-center gap-4",
-                  quizScore >= (quizData.pass_score || 70) ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
-                )}>
-                  {quizScore >= (quizData.pass_score || 70)
-                    ? <CheckCircle className="w-8 h-8 text-green-600 shrink-0" />
-                    : <XCircle className="w-8 h-8 text-red-600 shrink-0" />}
-                  <div className="flex-1 text-center md:text-left">
-                    <p className={cn("font-bold text-lg", quizScore >= (quizData.pass_score || 70) ? "text-green-800" : "text-red-800")}>
-                      {quizScore}% — {quizScore >= (quizData.pass_score || 70) ? "Quiz Passed! 🎉" : "Not Passed"}
-                    </p>
-                    <p className={cn("text-sm mt-0.5", quizScore >= (quizData.pass_score || 70) ? "text-green-700" : "text-red-700")}>
-                      {quizScore >= (quizData.pass_score || 70)
-                        ? "The next module has been unlocked. Great work!"
-                        : `You need ${quizData.pass_score}% to pass. Review the content and try again.`}
-                    </p>
-                  </div>
-                  {quizScore < (quizData.pass_score || 70) && (
-                    <button
-                      onClick={async () => { 
-                        setQuizSubmitted(false); 
-                        setQuizAnswers({}); 
-                        setQuizScore(0);
-                        setQuizAttempted(false);
-                        await supabase
-                          .from("quiz_attempts")
-                          .delete()
-                          .eq("quiz_id", quizData.id)
-                          .eq("student_id", profile.id)
-                          .eq("enrollment_id", currentEnrollment?.id)
-                        const existingProgress = progressData.find(p => p.module_id === currentModule.id);
-                        if (existingProgress) {
-                          await supabase
-                            .from("module_progress")
-                            .update({ status: "in_progress", score: null })
-                            .eq("id", existingProgress.id);
-                        }
-                        await fetchProgress();
-                        await fetchEnrollmentData();
-                        setQuizRefreshKey(prev => prev + 1);
-                        toast({
-                          type: "info",
-                          title: "Quiz Reset",
-                          message: "You can retry the quiz now.",
-                        });
-                      }}
-                      className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 inline mr-1" /> Retry Quiz
-                    </button>
-                  )}
-                  {quizScore >= (quizData.pass_score || 70) && (
-                    <button
-                      onClick={() => {
-                        const nextIndex = selectedModuleIndex + 1;
-                        if (nextIndex < modules.length) {
-                          handleModuleSelect(nextIndex);
-                        } else {
-                          toast({
-                            type: "success",
-                            title: "🎉 Course Complete!",
-                            message: "You've completed all modules!",
-                          });
-                          onNavigate("student-courses");
-                        }
-                      }}
-                      className="px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
-                      style={{ backgroundColor: '#f7530b' }}
-                    >
-                      {selectedModuleIndex + 1 < modules.length ? "Next Module →" : "Back to Courses"}
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={handleSubmitQuiz}
-                  disabled={Object.keys(quizAnswers).length < quizQuestions.length || submittingQuiz}
-                  className="mt-6 w-full py-3 font-semibold rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
-                  style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                style={isActive ? { backgroundColor: '#fcba9d' } : {}}
                 >
-                  {submittingQuiz ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Quiz"}
-                </button>
-              )}
-            </Card>
-          )}
-        </div>
-      )}
-
-      {activeTab === "exam" && (
-        <div className="space-y-5">
-          {isModuleLocked(selectedModuleIndex) ? (
-            <Card className="p-8 text-center">
-              <Lock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-800 mb-2">Module Locked</h3>
-              <p className="text-sm text-gray-500">
-                Complete the previous module to access the exam.
-              </p>
-            </Card>
-          ) : (
-            <Card className="p-4 md:p-6">
-              <div className="text-center py-8">
-                <Award className="w-16 h-16 mx-auto mb-4" style={{ color: '#f7530b' }} />
-                <h3 className="text-xl font-semibold text-gray-800">Module Exam</h3>
-                <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
-                  {moduleProgress?.status === "passed" ? (
-                    "✅ You have already passed this module! Great job!"
+                  {isCompleted ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : isLocked ? (
+                    <Lock className="w-3 h-3" />
                   ) : (
-                    canCompleteModule 
-                      ? "🎉 You've passed the quiz or assignment! You can now complete this module."
-                      : "Complete the module quiz or assignment to unlock the exam."
+                    index + 1
                   )}
-                </p>
-                <div className="mt-6 flex flex-col items-center gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="text-sm text-gray-700">Content Completed</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {moduleProgress?.status === "passed" || canCompleteModule ? (
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-yellow-500" />
-                      )}
-                      <span className="text-sm text-gray-700">
-                        {moduleProgress?.status === "passed" || canCompleteModule ? "Quiz/Assignment Passed" : "Quiz/Assignment Pending"}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {moduleProgress?.status === "passed" ? (
-                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg w-full">
-                      <p className="text-sm text-green-800 text-center">
-                        🎉 You have successfully completed this module!
-                        {selectedModuleIndex + 1 < modules.length && " Ready to move to the next module?"}
-                      </p>
-                      {selectedModuleIndex + 1 < modules.length && (
-                        <button
-                          onClick={() => handleModuleSelect(selectedModuleIndex + 1)}
-                          className="mt-3 w-full px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
-                          style={{ backgroundColor: '#f7530b' }}
-                        >
-                          Next Module →
-                        </button>
-                      )}
-                    </div>
-                  ) : canCompleteModule ? (
-                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg w-full">
-                      <p className="text-sm text-green-800 text-center">
-                        🎉 You've passed the quiz or assignment!
-                      </p>
-                      <button
-                        onClick={handleManualComplete}
-                        disabled={manualCompleteLoading}
-                        className="mt-3 w-full px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
-                        style={{ backgroundColor: '#f7530b' }}
-                      >
-                        {manualCompleteLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Complete Module →"}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg w-full">
-                      <p className="text-sm text-yellow-800 text-center">
-                        ⏳ Complete the module quiz or assignment to unlock the exam.
-                      </p>
-                      {quizData && quizQuestions.length > 0 && (
-                        <button
-                          onClick={() => setActiveTab("quiz")}
-                          className="mt-3 w-full px-4 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
-                          style={{ backgroundColor: '#f7530b' }}
-                        >
-                          Take Quiz
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
-    </div>
-
-    {/* Module List (Sidebar) - Rendered SECOND on mobile, side by side on desktop */}
-    <div className="w-full md:w-64 bg-gray-100/30 border-b md:border-b-0 md:border-r p-4 shrink-0 overflow-y-auto order-2 md:order-1" style={{ maxHeight: 'calc(100vh - 80px)', borderColor: '#e0e0e0' }}>
-      <h3 className="font-semibold text-gray-800 mb-3 text-sm">Course Modules</h3>
-      <div className="p-4 border-b" style={{ borderColor: '#e0e0e0' }}>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Select Course:</label>
-        <select
-          value={selectedEnrollmentId || activeEnrollments[0]?.id || ''}
-          onChange={(e) => {
-            const newEnrollmentId = e.target.value;
-            setSelectedEnrollmentId(newEnrollmentId);
-            setSelectedModuleIndex(0);
-            setActiveTab('content');
-            setQuizSubmitted(false);
-            setQuizAnswers({});
-            setQuizScore(0);
-            setQuizAttempted(false);
-            
-            const selectedEnrollment = activeEnrollments.find(en => en.id === newEnrollmentId);
-            if (selectedEnrollment) {
-              const courseModules = modules.filter(m => m.course_id === selectedEnrollment.course_id);
-              if (courseModules.length === 0) {
-                toast({
-                  type: "warning",
-                  title: "Course Content Coming Soon!",
-                  message: `"${selectedEnrollment.course?.title || 'This course'}" doesn't have any modules uploaded yet. You've been added to the waiting list and will be notified when content is available.`,
-                  duration: 6000,
-                });
-              }
-            }
-          }}
-          className="w-full px-3.5 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
-          style={{ borderColor: '#e0e0e0' }}
-        >
-          {activeEnrollments.map((enrollment) => {
-            const courseModules = modules.filter(m => m.course_id === enrollment.course_id);
-            const hasModules = courseModules.length > 0;
-            return (
-              <option key={enrollment.id} value={enrollment.id}>
-                {enrollment.course?.title || 'Unknown Course'}
-                {!hasModules && ' ⏳ (Awaiting Content)'}
-              </option>
+                </span>
+                <span className="truncate flex-1">{module.title}</span>
+                {isCompleted && (
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">✓</Badge>
+                )}
+                {isNext && !isCompleted && !isLocked && (
+                  <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">Next</Badge>
+                )}
+                {prog?.status === "failed" && (
+                  <Badge variant="danger" className="text-[10px] px-1.5 py-0.5">✗</Badge>
+                )}
+                {!isLocked && quizData && quizQuestions.length > 0 && (
+                  <Badge variant="info" className="text-[10px] px-1.5 py-0.5">📝</Badge>
+                )}
+                {hasGradedAssignment && isCompleted && (
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">📋</Badge>
+                )}
+              </button>
             );
           })}
-        </select>
-      </div>
-      <div className="space-y-1">
-        {modules?.map((module, index) => {
-          const isLocked = isModuleLocked(index);
-          const isActive = index === selectedModuleIndex;
-          const isCompleted = isModuleCompleted(module.id);
-          const prog = progressData.find(p => p.module_id === module.id);
-          const isNext = index === (currentEnrollment?.current_module_index || 0) + 1;
-          
-          return (
-            <button
-              key={module.id}
-              onClick={() => handleModuleSelect(index)}
-              disabled={isLocked}
-              className={cn(
-                "w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all text-left",
-                isActive ? "border font-medium" : "text-gray-600 hover:bg-gray-100",
-                isLocked && "opacity-50 cursor-not-allowed",
-                isCompleted && !isActive && "bg-green-50 text-green-700",
-                isNext && !isActive && !isCompleted && !isLocked && "border-l-2 border-orange-300 bg-orange-50/30"
-              )}
-              style={isActive ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
-            >
-              <span className={cn(
-                "w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0",
-                isCompleted ? "bg-green-100 text-green-600" : 
-                isActive ? "text-orange-600" : 
-                "bg-gray-200 text-gray-500"
-              )}
-              style={isActive ? { backgroundColor: '#fcba9d' } : {}}
-              >
-                {isCompleted ? (
-                  <Check className="w-3.5 h-3.5" />
-                ) : isLocked ? (
-                  <Lock className="w-3 h-3" />
-                ) : (
-                  index + 1
-                )}
-              </span>
-              <span className="truncate flex-1">{module.title}</span>
-              {isCompleted && (
-                <Badge variant="success" className="text-[10px] px-1.5 py-0.5">✓</Badge>
-              )}
-              {isNext && !isCompleted && !isLocked && (
-                <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">Next</Badge>
-              )}
-              {prog?.status === "failed" && (
-                <Badge variant="danger" className="text-[10px] px-1.5 py-0.5">✗</Badge>
-              )}
-              {!isLocked && quizData && quizQuestions.length > 0 && (
-                <Badge variant="info" className="text-[10px] px-1.5 py-0.5">📝</Badge>
-              )}
-              {hasGradedAssignment && isCompleted && (
-                <Badge variant="success" className="text-[10px] px-1.5 py-0.5">📋</Badge>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      
-      <div className="mt-4 pt-4 border-t" style={{ borderColor: '#e0e0e0' }}>
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>Progress</span>
-          <span>{progressData.filter(p => p.status === "passed").length}/{modules?.length || 0}</span>
         </div>
-        <ProgressBar 
-          value={progressData.filter(p => p.status === "passed").length} 
-          max={modules?.length || 1} 
-          className="mt-1" 
-        />
-      </div>
-      
-      <div className="mt-3 text-xs text-gray-500 border-t pt-3 space-y-1" style={{ borderColor: '#e0e0e0' }}>
-        <p>Module {selectedModuleIndex + 1} of {modules?.length || 0}</p>
-        <p style={{ color: '#f7530b' }}>✓ Pass quiz OR complete assignment</p>
+        
+        <div className="mt-4 pt-4 border-t" style={{ borderColor: '#e0e0e0' }}>
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>Progress</span>
+            <span>{progressData.filter(p => p.status === "passed").length}/{modules?.length || 0}</span>
+          </div>
+          <ProgressBar 
+            value={progressData.filter(p => p.status === "passed").length} 
+            max={modules?.length || 1} 
+            className="mt-1" 
+          />
+        </div>
+        
+        <div className="mt-3 text-xs text-gray-500 border-t pt-3 space-y-1" style={{ borderColor: '#e0e0e0' }}>
+          <p>Module {selectedModuleIndex + 1} of {modules?.length || 0}</p>
+          <p style={{ color: '#f7530b' }}>✓ Pass quiz OR complete assignment</p>
+        </div>
       </div>
     </div>
-  </div>
-);
-      
+  );
+}
+
 // ─── Student Payments ─────────────────────────────────────────────────────────
 
 function StudentPayments({ profile }: { profile: Profile }) {
