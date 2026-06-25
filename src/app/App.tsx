@@ -5354,7 +5354,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       </div>
 
       {/* MODULE LIST (SIDEBAR) - Comes SECOND on mobile (order-2), FIRST on desktop (md:order-1) */}
-      <div className="w-full md:w-64 bg-gray-100/30 border-b md:border-b-0 md:border-r p-4 shrink-0 overflow-y-auto order-2 md:order-1" style={{ maxHeight: 'calc(100vh - 80px)', borderColor: '#e0e0e0' }}>
+      <div className="w-full mt-22 md:w-64 bg-gray-100/30 border-b md:border-b-0 md:border-r p-4 shrink-0 overflow-y-auto order-2 md:order-1" style={{ maxHeight: 'calc(100vh - 80px)', borderColor: '#e0e0e0' }}>
         <h3 className="font-semibold text-gray-800 mb-3 text-sm">Course Modules</h3>
         <div className="p-4 border-b" style={{ borderColor: '#e0e0e0' }}>
           <label className="block text-sm font-medium text-gray-700 mb-2">Select Course:</label>
