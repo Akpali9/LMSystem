@@ -4953,7 +4953,6 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
             const isNext = index === (currentEnrollment?.current_module_index || 0) + 1;
             
             return (
-return (
   <div className="flex flex-col md:flex-row h-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
     {/* Content - Rendered FIRST on mobile, side by side on desktop */}
     <div className="flex-1 p-4 md:p-6 overflow-y-auto order-1 md:order-2" style={{ height: 'calc(100vh - 80px)', maxHeight: 'calc(100vh - 80px)' }}>
