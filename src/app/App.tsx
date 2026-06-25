@@ -4944,64 +4944,96 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
     })}
   </select>
 </div>
-       <div className="space-y-1">
-  {modules?.map((module, index) => {
-    const isLocked = isModuleLocked(index);
-    const isActive = index === selectedModuleIndex;
-    const isCompleted = isModuleCompleted(module.id);
-    const prog = progressData.find(p => p.module_id === module.id);
-    const isNext = index === (currentEnrollment?.current_module_index || 0) + 1;
-    
-    return (
-      <button
-        key={module.id}  // ✅ key is correctly placed on the button
-        onClick={() => handleModuleSelect(index)}
-        disabled={isLocked}
-        className={cn(
-          "w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all text-left",
-          isActive ? "border font-medium" : "text-gray-600 hover:bg-gray-100",
-          isLocked && "opacity-50 cursor-not-allowed",
-          isCompleted && !isActive && "bg-green-50 text-green-700",
-          isNext && !isActive && !isCompleted && !isLocked && "border-l-2 border-orange-300 bg-orange-50/30"
-        )}
-        style={isActive ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
-      >
-        <span className={cn(
-          "w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0",
-          isCompleted ? "bg-green-100 text-green-600" : 
-          isActive ? "text-orange-600" : 
-          "bg-gray-200 text-gray-500"
-        )}
-        style={isActive ? { backgroundColor: '#fcba9d' } : {}}
-        >
-          {isCompleted ? (
-            <Check className="w-3.5 h-3.5" />
-          ) : isLocked ? (
-            <Lock className="w-3 h-3" />
-          ) : (
-            index + 1
-          )}
-        </span>
-        <span className="truncate flex-1">{module.title}</span>
-        {isCompleted && (
-          <Badge variant="success" className="text-[10px] px-1.5 py-0.5">✓</Badge>
-        )}
-        {isNext && !isCompleted && !isLocked && (
-          <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">Next</Badge>
-        )}
-        {prog?.status === "failed" && (
-          <Badge variant="danger" className="text-[10px] px-1.5 py-0.5">✗</Badge>
-        )}
-        {!isLocked && quizData && quizQuestions.length > 0 && (
-          <Badge variant="info" className="text-[10px] px-1.5 py-0.5">📝</Badge>
-        )}
-        {hasGradedAssignment && isCompleted && (
-          <Badge variant="success" className="text-[10px] px-1.5 py-0.5">📋</Badge>
-        )}
-      </button>
-    );
-  })}
-</div>
+        <div className="space-y-1">
+          {modules?.map((module, index) => {
+            const isLocked = isModuleLocked(index);
+            const isActive = index === selectedModuleIndex;
+            const isCompleted = isModuleCompleted(module.id);
+            const prog = progressData.find(p => p.module_id === module.id);
+            const isNext = index === (currentEnrollment?.current_module_index || 0) + 1;
+            
+            return (
+              <button
+                key={module.id}
+                onClick={() => handleModuleSelect(index)}
+                disabled={isLocked}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all text-left",
+                  isActive ? "border font-medium" : "text-gray-600 hover:bg-gray-100",
+                  isLocked && "opacity-50 cursor-not-allowed",
+                  isCompleted && !isActive && "bg-green-50 text-green-700",
+                  isNext && !isActive && !isCompleted && !isLocked && "border-l-2 border-orange-300 bg-orange-50/30"
+                )}
+                style={isActive ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
+              >
+                <span className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0",
+                  isCompleted ? "bg-green-100 text-green-600" : 
+                  isActive ? "text-orange-600" : 
+                  "bg-gray-200 text-gray-500"
+                )}
+                style={isActive ? { backgroundColor: '#fcba9d' } : {}}
+                >
+                  {isCompleted ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : isLocked ? (
+                    <Lock className="w-3 h-3" />
+                  ) : (
+                    index + 1
+                  )}
+                </span>
+                <span className="truncate flex-1">{module.title}</span>
+                {isCompleted && (
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">✓</Badge>
+                )}
+                {isNext && !isCompleted && !isLocked && (
+                  <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">Next</Badge>
+                )}
+                {prog?.status === "failed" && (
+                  <Badge variant="danger" className="text-[10px] px-1.5 py-0.5">✗</Badge>
+                )}
+                {!isLocked && quizData && quizQuestions.length > 0 && (
+                  <Badge variant="info" className="text-[10px] px-1.5 py-0.5">📝</Badge>
+                )}
+                {hasGradedAssignment && isCompleted && (
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">📋</Badge>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        
+        <div className="mt-4 pt-4 border-t" style={{ borderColor: '#e0e0e0' }}>
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>Progress</span>
+            <span>{progressData.filter(p => p.status === "passed").length}/{modules?.length || 0}</span>
+          </div>
+          <ProgressBar 
+            value={progressData.filter(p => p.status === "passed").length} 
+            max={modules?.length || 1} 
+            className="mt-1" 
+          />
+        </div>
+        
+        <div className="mt-3 text-xs text-gray-500 border-t pt-3 space-y-1" style={{ borderColor: '#e0e0e0' }}>
+          <p>Module {selectedModuleIndex + 1} of {modules?.length || 0}</p>
+          <p style={{ color: '#f7530b' }}>✓ Pass quiz OR complete assignment</p>
+        </div>
+      </div>
+
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto h-full max-h-[calc(100vh-80px)]">
+        <div className="mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <Badge variant="info">Module {selectedModuleIndex + 1} of {modules?.length || 0}</Badge>
+            {moduleProgress?.status === "passed" && <Badge variant="success">✅ Passed</Badge>}
+            {moduleProgress?.status === "failed" && <Badge variant="danger">❌ Failed</Badge>}
+            {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
+            {quizData && quizQuestions.length > 0 && <Badge variant="info">📝 Quiz: {quizData.title}</Badge>}
+            {hasGradedAssignment && moduleProgress?.status === "passed" && <Badge variant="success">📋 Assignment Passed</Badge>}
+            {!quizData && !hasGradedAssignment && moduleProgress?.status !== "passed" && (
+              <Badge variant="warning">⚠️ No Quiz - Complete Assignment</Badge>
+            )}
+          </div>
           <h1 className="text-xl md:text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
             {currentModule.title}
           </h1>
@@ -5404,73 +5436,6 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
                   </div>
                 </div>
               </Card>
-              <button
-                key={module.id}
-                onClick={() => handleModuleSelect(index)}
-                disabled={isLocked}
-                className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all text-left",
-                  isActive ? "border font-medium" : "text-gray-600 hover:bg-gray-100",
-                  isLocked && "opacity-50 cursor-not-allowed",
-                  isCompleted && !isActive && "bg-green-50 text-green-700",
-                  isNext && !isActive && !isCompleted && !isLocked && "border-l-2 border-orange-300 bg-orange-50/30"
-                )}
-                style={isActive ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
-              >
-                <span className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0",
-                  isCompleted ? "bg-green-100 text-green-600" : 
-                  isActive ? "text-orange-600" : 
-                  "bg-gray-200 text-gray-500"
-                )}
-                style={isActive ? { backgroundColor: '#fcba9d' } : {}}
-                >
-                  {isCompleted ? (
-                    <Check className="w-3.5 h-3.5" />
-                  ) : isLocked ? (
-                    <Lock className="w-3 h-3" />
-                  ) : (
-                    index + 1
-                  )}
-                </span>
-                <span className="truncate flex-1">{module.title}</span>
-                {isCompleted && (
-                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">✓</Badge>
-                )}
-                {isNext && !isCompleted && !isLocked && (
-                  <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">Next</Badge>
-                )}
-                {prog?.status === "failed" && (
-                  <Badge variant="danger" className="text-[10px] px-1.5 py-0.5">✗</Badge>
-                )}
-                {!isLocked && quizData && quizQuestions.length > 0 && (
-                  <Badge variant="info" className="text-[10px] px-1.5 py-0.5">📝</Badge>
-                )}
-                {hasGradedAssignment && isCompleted && (
-                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">📋</Badge>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        
-        <div className="mt-4 pt-4 border-t" style={{ borderColor: '#e0e0e0' }}>
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Progress</span>
-            <span>{progressData.filter(p => p.status === "passed").length}/{modules?.length || 0}</span>
-          </div>
-          <ProgressBar 
-            value={progressData.filter(p => p.status === "passed").length} 
-            max={modules?.length || 1} 
-            className="mt-1" 
-          />
-        </div>
-        
-        <div className="mt-3 text-xs text-gray-500 border-t pt-3 space-y-1" style={{ borderColor: '#e0e0e0' }}>
-          <p>Module {selectedModuleIndex + 1} of {modules?.length || 0}</p>
-          <p style={{ color: '#f7530b' }}>✓ Pass quiz OR complete assignment</p>
-        </div>
-      </div>
             )}
           </div>
         )}
