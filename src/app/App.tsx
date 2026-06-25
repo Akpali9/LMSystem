@@ -5081,6 +5081,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       </div>
     );
   }
+}
 
  
 // ─── Student Payments ─────────────────────────────────────────────────────────
