@@ -2596,76 +2596,66 @@ function StudentAssignments({ profile }: { profile: Profile }) {
   };
 
   const renderFileInput = (assignment: StudentAssignment) => {
-    const isUploading = uploading[assignment.id];
-    const progress = uploadProgress[assignment.id] || 0;
+  const isUploading = uploading[assignment.id];
+  const progress = uploadProgress[assignment.id] || 0;
 
-    if (assignment.status === 'graded') {
-      return (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm font-semibold text-green-800">
-            ✅ Grade: {assignment.score}/{assignment.assignment?.max_score || 100}
-          </p>
-          {assignment.feedback && (
-            <div className="mt-2">
-              <p className="text-sm font-medium text-gray-700">Feedback:</p>
-              <p className="text-sm text-gray-600 mt-0.5">{assignment.feedback}</p>
-            </div>
-          )}
+  if (assignment.status === 'graded') {
+    return (
+      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+        <p className="text-sm font-semibold text-green-800">
+          ✅ Grade: {assignment.score}/{assignment.assignment?.max_score || 100}
+        </p>
+        {assignment.feedback && (
+          <div className="mt-2">
+            <p className="text-sm font-medium text-gray-700">Feedback:</p>
+            <p className="text-sm text-gray-600 mt-0.5">{assignment.feedback}</p>
+          </div>
+        )}
+        {assignment.submission_url && assignment.submission_url.startsWith('http') && (
+  <a 
+    href={assignment.submission_url} 
+    download
+    className="inline-block mt-2 text-sm text-blue-600 hover:underline flex items-center gap-1"
+    onClick={(e) => {
+      toast({
+        type: "info",
+        title: "Downloading...",
+        message: "Your file is being downloaded.",
+      });
+    }}
+  >
+    <Download className="w-3.5 h-3.5" /> Download Submission
+  </a>
+)}
+      </div>
+    );
+  }
+
+  if (assignment.status === 'submitted') {
+    return (
+      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <p className="text-sm text-yellow-800">⏳ Submitted - Awaiting grading</p>
           {assignment.submission_url && assignment.submission_url.startsWith('http') && (
             <a 
               href={assignment.submission_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              download 
-              className="inline-block mt-2 text-sm text-blue-600 hover:underline flex items-center gap-1"
+              download
+              className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+              onClick={(e) => {
+                toast({
+                  type: "info",
+                  title: "Downloading...",
+                  message: "Your submission is being downloaded.",
+                });
+              }}
             >
-              <Eye className="w-3.5 h-3.5" /> View Your Submission
-               onClick={(e) => {
-      // Optional: show a toast notification
-      toast({
-        type: "info",
-        title: "Downloading...",
-        message: "Your file is being downloaded.",
-      });
-    }}
-  >
-    <Download className="w-3.5 h-3.5" /> Download Submission
+              <Download className="w-3.5 h-3.5" /> Download Submission
             </a>
           )}
         </div>
-      );
-    }
-
-    if (assignment.status === 'submitted') {
-      return (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <p className="text-sm text-yellow-800">⏳ Submitted - Awaiting grading</p>
-            {assignment.submission_url && assignment.submission_url.startsWith('http') && (
-              <a 
-                href={assignment.submission_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                download
-                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-              >
-                <Eye className="w-3.5 h-3.5" /> View Submission
-                 onClick={(e) => {
-      // Optional: show a toast notification
-      toast({
-        type: "info",
-        title: "Downloading...",
-        message: "Your file is being downloaded.",
-      });
-    }}
-  >
-    <Download className="w-3.5 h-3.5" /> Download Submission
-              </a>
-            )}
-          </div>
-        </div>
-      );
-    }
+      </div>
+    );
+  }
 
     return (
       <div className="mt-4">
@@ -5741,18 +5731,13 @@ function StudentPayments({ profile }: { profile: Profile }) {
                       Admin note: {p.admin_notes}
                     </div>
                   )}
-                  {p.receipt_url && (
-                    <a 
-                      href={p.receipt_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      download
-                      className="mt-2 inline-flex items-center gap-1 text-xs hover:underline"
-                      style={{ color: '#f7530b' }}
-                    >
-                      <Eye className="w-3 h-3" /> View Receipt
-                       onClick={(e) => {
-      // Optional: show a toast notification
+                 {p.receipt_url && (
+  <a 
+    href={p.receipt_url} 
+    download
+    className="mt-2 inline-flex items-center gap-1 text-xs hover:underline"
+    style={{ color: '#f7530b' }}
+    onClick={(e) => {
       toast({
         type: "info",
         title: "Downloading...",
@@ -5760,9 +5745,9 @@ function StudentPayments({ profile }: { profile: Profile }) {
       });
     }}
   >
-    <Download className="w-3.5 h-3.5" /> Download Submission
-                    </a>
-                  )}
+    <Download className="w-3 h-3" /> Download Receipt
+  </a>
+)}
                 </div>
               </div>
             </Card>
@@ -7147,18 +7132,14 @@ function AdminPayments() {
             
             <div className="bg-gray-100 rounded-lg p-6 text-center">
               <FileText className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-              {viewReceipt.receipt_url ? (
-                <a 
-                  href={viewReceipt.receipt_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  download
-                  className="text-sm hover:underline flex items-center gap-1 mx-auto justify-center"
-                  style={{ color: '#f7530b' }}
-                >
-                  <Eye className="w-4 h-4" /> View Receipt Document
-                   onClick={(e) => {
-      // Optional: show a toast notification
+             // In AdminPayments component:
+{viewReceipt.receipt_url ? (
+  <a 
+    href={viewReceipt.receipt_url} 
+    download
+    className="text-sm hover:underline flex items-center gap-1 mx-auto justify-center"
+    style={{ color: '#f7530b' }}
+    onClick={(e) => {
       toast({
         type: "info",
         title: "Downloading...",
@@ -7166,10 +7147,10 @@ function AdminPayments() {
       });
     }}
   >
-    <Download className="w-3.5 h-3.5" /> Download Submission
-                </a>
-              ) : (
-                <p className="text-sm text-gray-500">No receipt file attached</p>
+    <Download className="w-4 h-4" /> Download Receipt
+  </a>
+) : (
+  <p className="text-sm text-gray-500">No receipt file attached</p>
               )}
             </div>
             
@@ -7615,17 +7596,12 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
                     </button>
                   )}
                   
-                  {sa.submission_url && sa.submission_url.startsWith('http') && (
-                    <a 
-                      href={sa.submission_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      download
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> View Submission
-                       onClick={(e) => {
-      // Optional: show a toast notification
+              {sa.submission_url && sa.submission_url.startsWith('http') && (
+  <a 
+    href={sa.submission_url} 
+    download
+    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1"
+    onClick={(e) => {
       toast({
         type: "info",
         title: "Downloading...",
@@ -7634,8 +7610,8 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
     }}
   >
     <Download className="w-3.5 h-3.5" /> Download Submission
-                    </a>
-                  )}
+  </a>
+)}
                 </div>
               </div>
               
