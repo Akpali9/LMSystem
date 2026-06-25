@@ -62,6 +62,7 @@ import {
   Gift,
   Unlock,
   Phone,
+  Download,
 } from "lucide-react";
 
 // ─── Toast System ──────────────────────────────────────────────────────────────
@@ -2615,9 +2616,20 @@ function StudentAssignments({ profile }: { profile: Profile }) {
               href={assignment.submission_url} 
               target="_blank" 
               rel="noopener noreferrer"
+              download 
               className="inline-block mt-2 text-sm text-blue-600 hover:underline flex items-center gap-1"
             >
               <Eye className="w-3.5 h-3.5" /> View Your Submission
+               onClick={(e) => {
+      // Optional: show a toast notification
+      toast({
+        type: "info",
+        title: "Downloading...",
+        message: "Your file is being downloaded.",
+      });
+    }}
+  >
+    <Download className="w-3.5 h-3.5" /> Download Submission
             </a>
           )}
         </div>
@@ -2634,9 +2646,20 @@ function StudentAssignments({ profile }: { profile: Profile }) {
                 href={assignment.submission_url} 
                 target="_blank" 
                 rel="noopener noreferrer"
+                download
                 className="text-sm text-blue-600 hover:underline flex items-center gap-1"
               >
                 <Eye className="w-3.5 h-3.5" /> View Submission
+                 onClick={(e) => {
+      // Optional: show a toast notification
+      toast({
+        type: "info",
+        title: "Downloading...",
+        message: "Your file is being downloaded.",
+      });
+    }}
+  >
+    <Download className="w-3.5 h-3.5" /> Download Submission
               </a>
             )}
           </div>
@@ -5723,10 +5746,21 @@ function StudentPayments({ profile }: { profile: Profile }) {
                       href={p.receipt_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
+                      download
                       className="mt-2 inline-flex items-center gap-1 text-xs hover:underline"
                       style={{ color: '#f7530b' }}
                     >
                       <Eye className="w-3 h-3" /> View Receipt
+                       onClick={(e) => {
+      // Optional: show a toast notification
+      toast({
+        type: "info",
+        title: "Downloading...",
+        message: "Your file is being downloaded.",
+      });
+    }}
+  >
+    <Download className="w-3.5 h-3.5" /> Download Submission
                     </a>
                   )}
                 </div>
@@ -7118,10 +7152,21 @@ function AdminPayments() {
                   href={viewReceipt.receipt_url} 
                   target="_blank" 
                   rel="noopener noreferrer" 
+                  download
                   className="text-sm hover:underline flex items-center gap-1 mx-auto justify-center"
                   style={{ color: '#f7530b' }}
                 >
                   <Eye className="w-4 h-4" /> View Receipt Document
+                   onClick={(e) => {
+      // Optional: show a toast notification
+      toast({
+        type: "info",
+        title: "Downloading...",
+        message: "Your file is being downloaded.",
+      });
+    }}
+  >
+    <Download className="w-3.5 h-3.5" /> Download Submission
                 </a>
               ) : (
                 <p className="text-sm text-gray-500">No receipt file attached</p>
@@ -7575,9 +7620,20 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
                       href={sa.submission_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
+                      download
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center gap-1"
                     >
                       <Eye className="w-3.5 h-3.5" /> View Submission
+                       onClick={(e) => {
+      // Optional: show a toast notification
+      toast({
+        type: "info",
+        title: "Downloading...",
+        message: "Your file is being downloaded.",
+      });
+    }}
+  >
+    <Download className="w-3.5 h-3.5" /> Download Submission
                     </a>
                   )}
                 </div>
