@@ -469,7 +469,7 @@ function ConfirmDialog() {
         return {
           bg: "bg-red-50 border-red-200",
           icon: <AlertCircle className="w-6 h-6 text-red-600" />,
-          button: "bg-red-600 hover:bg-red-700 text-white",
+          button: "hover:bg-red-700 text-white",
         };
       case "warning":
         return {
@@ -487,6 +487,18 @@ function ConfirmDialog() {
   };
 
   const styles = getTypeStyles();
+
+  // Get the background color based on type
+  const getButtonBgColor = () => {
+    switch (dialog.type) {
+      case "danger":
+        return '#dc2626';
+      case "warning":
+        return '#f7530b';
+      default:
+        return '#2563eb';
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
@@ -515,7 +527,7 @@ function ConfirmDialog() {
               "flex-1 py-2.5 font-medium rounded-lg transition-colors",
               styles.button
             )}
-            style={dialog.type === "warning" ? { backgroundColor: '#f7530b' } : {}}
+            style={{ backgroundColor: getButtonBgColor() }}
           >
             {dialog.confirmLabel}
           </button>
