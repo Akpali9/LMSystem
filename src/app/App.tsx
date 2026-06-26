@@ -3628,7 +3628,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
               </p>
               {/* FIXED: Removed extra /> and fixed the ProgressBar props */}
               <ProgressBar 
-                value={passedModules.length} 
+                value={enrollment.current_module_index + 1} 
                 max={courseModules.length || 1} 
                 className="mt-2" 
               />
