@@ -3624,7 +3624,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                       Expires {formatDate(enrollment.expires_at || "")}
                     </p>
                     <p className="text-sm text-gray-600 mt-1">
-                      Progress: {passedModules.length}/{courseModules.length} modules completed
+                     © Pruta Academy
                     </p>
                     <ProgressBar value={passedModules.length} max={courseModules.length || 1} className="mt-2" />
                   </div>
