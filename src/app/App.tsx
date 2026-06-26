@@ -4352,6 +4352,7 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (profile) {
@@ -4373,71 +4374,133 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
       
       markAsRead();
       fetchMessages();
+      
+      // Subscribe to new messages
+      const subscription = supabase
+        .channel('student-personal-messages')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `receiver_id=eq.${profile.id}` },
+          () => {
+            fetchMessages();
+          }
+        )
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'personal_messages', filter: `sender_id=eq.${profile.id}` },
+          () => {
+            fetchMessages();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
     }
   }, [profile?.id]);
   
   const fetchMessages = async () => {
     if (!profile) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("personal_messages")
-      .select("*")
-      .or(`sender_id.eq.${profile.id},receiver_id.eq.${profile.id}`)
-      .order("created_at", { ascending: true });
-    if (data) {
-      setMessages(data);
-      await supabase
+    try {
+      const { data, error } = await supabase
         .from("personal_messages")
-        .update({ read: true })
-        .eq('receiver_id', profile.id);
+        .select("*")
+        .or(`sender_id.eq.${profile.id},receiver_id.eq.${profile.id}`)
+        .order("created_at", { ascending: true }); // Oldest first for chronological order
+      
+      if (error) {
+        console.error("Error fetching messages:", error);
+        toast({
+          type: "error",
+          title: "Failed to Load",
+          message: "Could not load messages.",
+        });
+      } else if (data) {
+        setMessages(data);
+        // Mark as read after fetching
+        await supabase
+          .from("personal_messages")
+          .update({ read: true })
+          .eq('receiver_id', profile.id)
+          .eq('read', false);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || sending || !profile) return;
     setSending(true);
     
-    const { data: admin } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('role', 'admin')
-      .limit(1)
-      .single();
+    try {
+      const { data: admin } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'admin')
+        .limit(1)
+        .single();
 
-    if (!admin) {
-      toast({
-        type: "error",
-        title: "No Admin Found",
-        message: "Unable to send message. No admin available.",
-      });
-      setSending(false);
-      return;
-    }
+      if (!admin) {
+        toast({
+          type: "error",
+          title: "No Admin Found",
+          message: "Unable to send message. No admin available.",
+        });
+        setSending(false);
+        return;
+      }
 
-    const { error } = await supabase.from("personal_messages").insert({
-      sender_id: profile.id,
-      receiver_id: admin.id,
-      message: newMessage.trim(),
-    });
-    
-    if (!error) {
-      setNewMessage("");
-      fetchMessages();
-      toast({
-        type: "success",
-        title: "Message Sent",
-        message: "Your message has been sent to the admin.",
+      const { error } = await supabase.from("personal_messages").insert({
+        sender_id: profile.id,
+        receiver_id: admin.id,
+        message: newMessage.trim(),
+        read: false,
+        created_at: new Date().toISOString(),
       });
-    } else {
+      
+      if (error) {
+        console.error("Error sending message:", error);
+        toast({
+          type: "error",
+          title: "Failed to Send",
+          message: "Could not send message. Please try again.",
+        });
+      } else {
+        setNewMessage("");
+        await fetchMessages();
+        // Scroll to bottom after sending
+        setTimeout(scrollToBottom, 100);
+        toast({
+          type: "success",
+          title: "Message Sent",
+          message: "Your message has been sent to the admin.",
+        });
+      }
+    } catch (error) {
+      console.error("Error:", error);
       toast({
         type: "error",
         title: "Failed to Send",
         message: "Could not send message. Please try again.",
       });
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   };
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto h-[calc(100vh-100px)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -4461,27 +4524,47 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
               <p className="text-xs mt-1">Send a message to the admin for support.</p>
             </div>
           ) : (
-            messages.map((msg) => (
-  <div
-    className={cn(
-      "flex items-start gap-3 max-w-[80%]",
-      msg.sender_id === profile?.id ? "ml-auto flex-row-reverse" : ""
-    )}
-  >
-    <Avatar name={msg.sender_id === profile?.id ? profile?.full_name || "You" : "Admin"} size="sm" />
-    <div className={cn(
-      "p-3 rounded-lg text-sm",
-      msg.sender_id === profile?.id ? "text-white" : "bg-gray-100 text-gray-800"
-    )}>
-      <p className="text-xs font-medium opacity-70">
-        {msg.sender_id === profile?.id ? "You" : "Admin"}
-      </p>
-      <p className="mt-0.5">{msg.message}</p>
-      <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-    </div>
-  </div>
-))
-    )}
+            messages.map((msg) => {
+              const isOwnMessage = msg.sender_id === profile?.id;
+              const senderName = isOwnMessage ? profile?.full_name || "You" : "Admin";
+              
+              return (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    "flex items-start gap-3 max-w-[80%]",
+                    isOwnMessage ? "ml-auto flex-row-reverse" : ""
+                  )}
+                >
+                  <Avatar 
+                    name={senderName} 
+                    size="sm" 
+                    src={isOwnMessage ? profile?.avatar_url : undefined} 
+                  />
+                  <div className={cn(
+                    "p-3 rounded-lg text-sm",
+                    isOwnMessage
+                      ? "text-white"
+                      : "bg-gray-100 text-gray-800"
+                  )}
+                  style={isOwnMessage ? { backgroundColor: '#f7530b' } : {}}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium">
+                        {isOwnMessage ? "You" : "👑 Admin"}
+                      </span>
+                      {!isOwnMessage && (
+                        <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+                      )}
+                    </div>
+                    <p className="mt-0.5 break-words">{msg.message}</p>
+                    <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+                  </div>
+                </div>
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
         </div>
 
         <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
@@ -4490,15 +4573,17 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Message admin..."
-            className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" style={{ borderColor: '#e0e0e0' }}
+            className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" 
+            style={{ borderColor: '#e0e0e0' }}
           />
           <button
             onClick={sendMessage}
             disabled={!newMessage.trim() || sending}
-            className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+            className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
             style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Send
           </button>
         </div>
       </div>
