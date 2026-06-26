@@ -9431,38 +9431,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
   );
 };
 
-  const renderCourseMessage = (msg: ChatMessage) => {
-  const isAdmin = msg.user_id === "admin";
-  const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
 
-  return (
-    <div className={cn(
-      "flex items-start gap-3 max-w-[80%]",
-      isAdmin ? "ml-auto flex-row-reverse" : ""
-    )}>
-      <Avatar 
-  name={senderName} 
-  size="sm" 
-  src={isAdmin ? undefined : selectedStudent?.avatar_url} 
-/>
-      <div className={cn(
-        "p-3 rounded-lg text-sm",
-        isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
-      )}>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-medium">
-            {isAdmin ? "👑 Admin" : senderName}
-          </span>
-          {isAdmin && <Badge variant="default">Admin</Badge>}
-          {!isAdmin && <Badge variant="muted">Student</Badge>}
-        </div>
-        <p className="break-words">{msg.message}</p>
-        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-      </div>
-    </div>
-  );
-};
-  
   // Get the latest message preview for a student
   const getStudentPreview = (studentId: string) => {
     const latest = latestMessages[studentId];
