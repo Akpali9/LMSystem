@@ -9390,46 +9390,46 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
 
   // Render functions
   const renderCourseMessage = (msg: ChatMessage) => {
-    const isAdmin = msg.user_id === "admin";
-    const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
-    const student = students.find(s => s.id === msg.user_id);
+  const isAdmin = msg.user_id === "admin";
+  const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
+  const student = students.find(s => s.id === msg.user_id);
 
-    return (
-      <div
-        key={msg.id}
-        className={cn(
-          "flex items-start gap-3 max-w-[80%]",
-          isAdmin ? "ml-auto flex-row-reverse" : ""
-        )}
+  return (
+    <div
+      key={msg.id}
+      className={cn(
+        "flex items-start gap-3 max-w-[80%]",
+        isAdmin ? "ml-auto flex-row-reverse" : ""
+      )}
+    >
+      <Avatar 
+        name={senderName} 
+        size="sm" 
+        src={isAdmin ? undefined : student?.avatar_url || msg.user_avatar} 
+      />
+      <div className={cn(
+        "p-3 rounded-lg text-sm",
+        isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
+      )}
+      style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
       >
-        <Avatar 
-          name={senderName} 
-          size="sm" 
-          src={isAdmin ? undefined : student?.avatar_url || msg.user_avatar} 
-        />
-        <div className={cn(
-          "p-3 rounded-lg text-sm",
-          isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
-        )}
-        style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium">
-              {isAdmin ? "👑 Admin" : senderName}
-            </span>
-            {isAdmin && (
-              <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
-            )}
-            {!isAdmin && (
-              <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
-            )}
-          </div>
-          <p className="break-words">{msg.message}</p>
-          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs font-medium">
+            {isAdmin ? "👑 Admin" : senderName}
+          </span>
+          {isAdmin && (
+            <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+          )}
+          {!isAdmin && (
+            <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
+          )}
         </div>
+        <p className="break-words">{msg.message}</p>
+        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const renderCourseMessage = (msg: ChatMessage) => {
   const isAdmin = msg.user_id === "admin";
