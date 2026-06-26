@@ -3571,13 +3571,12 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
         />
         
         {/* FIXED: Assignments Due now shows actual count */}
-        <StatCard 
-          icon={ClipboardList} 
-          label="Assignments Due" 
-          value={pendingAssignmentsCount} 
-          onClick={() => pendingAssignmentsCount > 0 && onNavigate("student-assignments")}
-        />
-        
+       <StatCard 
+    icon={ClipboardList} 
+    label="Assignments Due" 
+    value={pendingAssignmentsCount}
+    onClick={() => onNavigate("student-assignments")}
+  />
         <StatCard icon={Award} label="Certificates Earned" value={completedEnrollments.length} />
       </div>
 
