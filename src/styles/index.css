@@ -44,3 +44,138 @@
   .animate-fade-up {
     animation: fade-up 0.8s ease-out forwards;
   }
+
+
+    /* --- continuous typing container --- */
+    .typing-wrapper {
+      display: inline-block;
+      max-width: 100%;
+      /* ensure the cursor stays inline */
+    }
+
+    .typing-text {
+      display: inline;
+      font-size: inherit;
+      line-height: inherit;
+      color: inherit;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      background: transparent;
+
+      /* core typing effect: width from 0 to 100% with steps */
+      overflow: hidden;
+      white-space: nowrap;          /* keep everything on one line */
+      border-right: 3px solid #4b5563;  /* blinking cursor */
+      padding-right: 2px;           /* space after cursor */
+
+      width: 0;
+      display: inline-block;        /* required for width animation */
+      vertical-align: bottom;       /* align with baseline */
+
+      /* animation: 
+         typingContinuous – 6s cycle: type out (4s), pause (2s), reset instantly
+         blinkCursor – independent blinking
+      */
+      animation: 
+        typingContinuous 6s steps(40, end) infinite,
+        blinkCursor 0.7s step-end infinite;
+    }
+
+    /* keyframes: continuous typing with pause */
+    @keyframes typingContinuous {
+      0% {
+        width: 0;
+      }
+      /* typing phase: from 0% to ~66% (4s out of 6s) we type out the text */
+      66% {
+        width: 100%;   /* full width => all text visible */
+      }
+      /* hold (pause) from 66% to 100% (2s) */
+      100% {
+        width: 100%;   /* keep full width, then reset at next cycle */
+      }
+    }
+
+    /* blinking cursor */
+    @keyframes blinkCursor {
+      0%, 100% {
+        border-color: #4b5563;
+      }
+      50% {
+        border-color: transparent;
+      }
+    }
+
+    /* cursor style */
+    .typing-text {
+      border-right-style: solid;
+    }
+
+    /* small screen adjustment: reduce font size, but keep nowrap */
+    @media (max-width: 480px) {
+      .card {
+        padding: 1.8rem 1.2rem;
+      }
+      .text-lg {
+        font-size: 1rem;
+      }
+      .typing-wrapper {
+        max-width: 100%;
+        overflow: hidden;
+        display: inline-block;
+      }
+      .typing-text {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: clip;
+        white-space: nowrap;
+      }
+    }
+
+    /* reduce motion preference */
+    @media (prefers-reduced-motion: reduce) {
+      .typing-text {
+        animation: none;
+        width: 100%;
+        border-right: none;
+        white-space: normal;
+      }
+    }
+
+    /* extra polish: subtle note */
+    .note {
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: #9ca3af;
+      text-align: center;
+      border-top: 1px solid rgba(156, 163, 175, 0.2);
+      padding-top: 1.2rem;
+      letter-spacing: 0.3px;
+      opacity: 0.7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #6b7280;
+      border-radius: 50%;
+      animation: pulseDot 1.8s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 0.3; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    /* reset paragraph margin */
+    p {
+      margin: 0;
+    }
+
+    /* Ensure the wrapper doesn't break layout */
+    .typing-wrapper {
+      vertical-align: bottom;
+    }
