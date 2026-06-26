@@ -7185,12 +7185,15 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
 
 // ─── Admin Student Profile View ──────────────────────────────────────────────
 
+// ─── Admin Student Profile View ──────────────────────────────────────────────
+
 function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: () => void }) {
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [progress, setProgress] = useState<ModuleProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [modules, setModules] = useState<Module[]>([]);
+  const [graduating, setGraduating] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStudentDetails();
@@ -7199,28 +7202,32 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
   const fetchStudentDetails = async () => {
     setLoading(true);
     
-    const [profileRes, enrollmentsRes, modulesRes] = await Promise.all([
-      supabase.from("student_profiles").select("*").eq("user_id", student.id).single(),
-      supabase.from("enrollments").select("*, course:course_id(*)").eq("student_id", student.id),
-      supabase.from("modules").select("*"),
-    ]);
-    
-    if (profileRes.data) setStudentProfile(profileRes.data);
-    if (enrollmentsRes.data) setEnrollments(enrollmentsRes.data as Enrollment[]);
-    if (modulesRes.data) setModules(modulesRes.data as Module[]);
+    try {
+      const [profileRes, enrollmentsRes, modulesRes] = await Promise.all([
+        supabase.from("student_profiles").select("*").eq("user_id", student.id).single(),
+        supabase.from("enrollments").select("*, course:course_id(*)").eq("student_id", student.id),
+        supabase.from("modules").select("*"),
+      ]);
+      
+      if (profileRes.data) setStudentProfile(profileRes.data);
+      if (enrollmentsRes.data) setEnrollments(enrollmentsRes.data as Enrollment[]);
+      if (modulesRes.data) setModules(modulesRes.data as Module[]);
 
-    if (enrollmentsRes.data) {
-      const enrollmentIds = (enrollmentsRes.data as Enrollment[]).map(e => e.id);
-      if (enrollmentIds.length > 0) {
-        const { data: progressData } = await supabase
-          .from("module_progress")
-          .select("*")
-          .in("enrollment_id", enrollmentIds);
-        if (progressData) setProgress(progressData as ModuleProgress[]);
+      if (enrollmentsRes.data) {
+        const enrollmentIds = (enrollmentsRes.data as Enrollment[]).map(e => e.id);
+        if (enrollmentIds.length > 0) {
+          const { data: progressData } = await supabase
+            .from("module_progress")
+            .select("*")
+            .in("enrollment_id", enrollmentIds);
+          if (progressData) setProgress(progressData as ModuleProgress[]);
+        }
       }
+    } catch (error) {
+      console.error("Error fetching student details:", error);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const getModuleCountForCourse = (courseId: string) => {
@@ -7229,6 +7236,81 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
 
   const getPassedModules = (enrollmentId: string) => {
     return progress.filter(p => p.enrollment_id === enrollmentId && p.status === "passed").length;
+  };
+
+  // ─── GRADUATE COURSE FUNCTION ──────────────────────────────────────────────
+  const graduateCourse = async (enrollmentId: string, courseId: string, courseTitle: string) => {
+    setGraduating(enrollmentId);
+    try {
+      // Get all modules for this course
+      const courseModules = modules.filter(m => m.course_id === courseId);
+      
+      if (courseModules.length === 0) {
+        toast({
+          type: "warning",
+          title: "No Modules",
+          message: "This course has no modules to graduate.",
+        });
+        setGraduating(null);
+        return;
+      }
+
+      // For each module, create or update module_progress with status "passed"
+      for (const module of courseModules) {
+        const existing = progress.find(p => p.enrollment_id === enrollmentId && p.module_id === module.id);
+        if (!existing) {
+          await supabase
+            .from("module_progress")
+            .insert({
+              enrollment_id: enrollmentId,
+              module_id: module.id,
+              status: "passed",
+              score: 100,
+              completed_at: new Date().toISOString(),
+            });
+        } else if (existing.status !== "passed") {
+          await supabase
+            .from("module_progress")
+            .update({
+              status: "passed",
+              score: 100,
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", existing.id);
+        }
+      }
+      
+      // Update enrollment status to completed
+      const { error: updateError } = await supabase
+        .from("enrollments")
+        .update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          current_module_index: courseModules.length - 1,
+        })
+        .eq("id", enrollmentId);
+      
+      if (updateError) throw updateError;
+      
+      toast({
+        type: "success",
+        title: "🎓 Course Graduated!",
+        message: `${student.full_name} has been graduated from "${courseTitle}".`,
+        duration: 5000,
+      });
+      
+      // Refresh data
+      await fetchStudentDetails();
+    } catch (error) {
+      console.error("Error graduating course:", error);
+      toast({
+        type: "error",
+        title: "Graduation Failed",
+        message: "Could not graduate the course. Please try again.",
+      });
+    } finally {
+      setGraduating(null);
+    }
   };
 
   if (loading) {
@@ -7243,8 +7325,9 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
   }
 
   return (
-    <Modal open={true} onClose={onClose} title={`Student Profile: ${student.full_name}`}>
+    <Modal open={true} onClose={onClose} title={`Student Profile: ${student.full_name}`} maxWidth="max-w-2xl">
       <div className="space-y-6">
+        {/* Student Header */}
         <div className="flex items-center gap-4 pb-4 border-b" style={{ borderColor: '#e0e0e0' }}>
           <Avatar name={student.full_name} size="lg" src={student.avatar_url} />
           <div>
@@ -7254,6 +7337,7 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
           </div>
         </div>
         
+        {/* Personal Information */}
         {studentProfile && (
           <div className="space-y-3">
             <h4 className="font-semibold text-gray-800 text-sm">Personal Information</h4>
@@ -7278,41 +7362,98 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
           </div>
         )}
         
+        {/* Enrolled Courses & Progress */}
         <div>
           <h4 className="font-semibold text-gray-800 text-sm mb-3">Enrolled Courses & Progress</h4>
           <div className="space-y-4">
             {enrollments.map((e) => {
               const totalModules = getModuleCountForCourse(e.course_id);
               const passed = getPassedModules(e.id);
+              const isCompleted = e.status === "completed";
+              const progressPercentage = totalModules > 0 ? Math.round((passed / totalModules) * 100) : 0;
               
               return (
                 <div key={e.id} className="p-4 bg-gray-100 rounded-lg">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 gap-2">
-                    <span className="font-semibold text-gray-800">{e.course?.title}</span>
-                    <StatusBadge status={e.status} />
+                    <div>
+                      <span className="font-semibold text-gray-800">{e.course?.title}</span>
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({passed}/{totalModules} modules)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={e.status} />
+                      {!isCompleted && e.status === "active" && (
+                        <button
+                          onClick={() => {
+                            showConfirm({
+                              title: "Graduate Course",
+                              message: `Are you sure you want to mark "${e.course?.title}" as completed for ${student.full_name}?\n\nAll ${totalModules} modules will be marked as passed with 100% scores.`,
+                              confirmLabel: "Graduate",
+                              cancelLabel: "Cancel",
+                              type: "info",
+                              onConfirm: () => graduateCourse(e.id, e.course_id, e.course?.title || "Course"),
+                            });
+                          }}
+                          disabled={graduating === e.id}
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg hover:opacity-90 transition-colors flex items-center gap-1"
+                          style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                        >
+                          {graduating === e.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>
+                              <Award className="w-3 h-3" />
+                              Graduate
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>📚 {passed}/{totalModules} modules passed</span>
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <span>Progress</span>
+                        <span>{progressPercentage}%</span>
                       </div>
-                      <ProgressBar value={passed} max={totalModules || 1} className="mt-2" />
+                      <ProgressBar value={passed} max={totalModules || 1} className="mt-1" />
                     </div>
                     <CircularProgress 
                       value={passed} 
                       max={totalModules || 1} 
-                      size={60} 
+                      size={50} 
                       strokeWidth={4}
-                      showPercentage={false}
+                      showPercentage={true}
                     />
                   </div>
+                  {isCompleted && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg text-center">
+                      <p className="text-sm text-green-800 flex items-center justify-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        Course Completed on {formatDate(e.completed_at || e.updated_at)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}
             {enrollments.length === 0 && (
-              <p className="text-sm text-gray-500">No enrolled courses</p>
+              <div className="p-8 text-center bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-500">No enrolled courses</p>
+              </div>
             )}
           </div>
+        </div>
+
+        {/* Quick Actions Footer */}
+        <div className="border-t pt-4 flex justify-end" style={{ borderColor: '#e0e0e0' }}>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </Modal>
