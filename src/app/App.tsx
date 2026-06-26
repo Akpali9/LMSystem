@@ -4915,6 +4915,34 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
   const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
   const [manualCompleteLoading, setManualCompleteLoading] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+
+  // Get the current module
+  const currentModule = modules?.[selectedModuleIndex] || modules?.[0] || null;
+  const currentContent = moduleContents?.find(c => c.module_id === currentModule?.id) || null;
+  const moduleProgress = progressData.find(p => p.module_id === currentModule?.id);
+
+  // Check if module is completed
+  const isModuleCompleted = (moduleId: string) => {
+    const prog = progressData.find(p => p.module_id === moduleId);
+    return prog?.status === "passed";
+  };
+
+  // Check if module is locked
+  const isModuleLocked = (index: number) => {
+    if (!currentEnrollment) return true;
+    const currentIndex = currentEnrollment.current_module_index || 0;
+    if (index === 0) return false;
+    if (index > currentIndex + 1) return true;
+    if (index === currentIndex + 1) {
+      const prevModule = modules?.[index - 1];
+      if (prevModule) {
+        const prevProgress = progressData.find(p => p.module_id === prevModule.id);
+        if (prevProgress?.status !== "passed") return true;
+      }
+    }
+    return false;
+  };
 
   useEffect(() => {
     if (activeEnrollments.length > 0) {
@@ -5045,6 +5073,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       return { canPass: true, score: existingProgress.score || 100, reason: "Already passed" };
     }
 
+    // Check if there's a quiz for this module
     const { data: quiz } = await supabase
       .from("quizzes")
       .select("id")
@@ -5070,10 +5099,11 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
         if (attempt && attempt.passed) {
           return { canPass: true, score: attempt.score, reason: "Quiz passed" };
         }
-        return { canPass: false, score: 0, reason: "Quiz not passed yet" };
+        return { canPass: false, score: 0, reason: "Complete the quiz to pass this module" };
       }
     }
 
+    // Check if there are assignments for this module
     const moduleAssignments = studentAssignments.filter(
       sa => sa.assignment?.module_id === moduleId
     );
@@ -5092,65 +5122,63 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       return { canPass: false, score: 0, reason: "Assignment submitted, awaiting grading" };
     }
 
+    // If no quiz and no assignments, allow completion
+    if (!quiz && moduleAssignments.length === 0) {
+      return { canPass: true, score: 100, reason: "No assessment required" };
+    }
+
     return { canPass: false, score: 0, reason: "Complete the quiz or assignment to pass this module" };
   };
 
   const handleModuleSelect = (index: number) => {
-    const currentIndex = currentEnrollment?.current_module_index || 0;
-    if (index <= currentIndex + 1) {
-      if (index === currentIndex + 1) {
-        const prevModule = modules?.[index - 1];
-        if (prevModule) {
-          const prevProgress = progressData.find(p => p.module_id === prevModule.id);
-          if (prevProgress?.status !== "passed") {
-            toast({
-              type: "warning",
-              title: "Module Locked",
-              message: "Complete the previous module first!",
-            });
-            return;
-          }
-        }
-      }
-      
-      setIsAdvancing(true);
-      setSelectedModuleIndex(index);
-      setActiveTab("content");
-      setQuizSubmitted(false);
-      setQuizAnswers({});
-      setQuizScore(0);
-      setQuizAttempted(false);
-      setTimeout(() => {
-        fetchQuizForModule();
-        setIsAdvancing(false);
-      }, 200);
+    if (isModuleLocked(index)) {
+      toast({
+        type: "warning",
+        title: "Module Locked",
+        message: "Complete the previous module first!",
+      });
+      return;
     }
-  };
-
-  const isModuleLocked = (index: number) => {
-    const currentIndex = currentEnrollment?.current_module_index || 0;
-    if (index === 0) return false;
-    const prevModule = modules?.[index - 1];
-    if (!prevModule) return false;
-    const prevProgress = progressData.find(p => p.module_id === prevModule.id);
-    if (prevProgress && prevProgress.status !== "passed") return true;
-    if (!prevProgress) return true;
-    if (index > currentIndex + 1) return true;
-    return false;
-  };
-
-  const isModuleCompleted = (moduleId: string) => {
-    const prog = progressData.find(p => p.module_id === moduleId);
-    return prog?.status === "passed";
+    
+    setIsAdvancing(true);
+    setSelectedModuleIndex(index);
+    setActiveTab("content");
+    setQuizSubmitted(false);
+    setQuizAnswers({});
+    setQuizScore(0);
+    setQuizAttempted(false);
+    setTimeout(() => {
+      fetchQuizForModule();
+      setIsAdvancing(false);
+    }, 200);
   };
 
   const handleSubmitQuiz = async () => {
-    if (!quizData || quizQuestions.length === 0) return;
+    if (!quizData || quizQuestions.length === 0 || !currentEnrollment || !currentModule) {
+      toast({
+        type: "warning",
+        title: "No Quiz Available",
+        message: "There's no quiz to submit for this module.",
+      });
+      return;
+    }
+    
     setSubmittingQuiz(true);
     
     try {
       let correct = 0;
       const answers: Record<number, number> = {};
+      
+      // Check if all questions are answered
+      if (Object.keys(quizAnswers).length < quizQuestions.length) {
+        toast({
+          type: "warning",
+          title: "Incomplete Quiz",
+          message: "Please answer all questions before submitting.",
+        });
+        setSubmittingQuiz(false);
+        return;
+      }
       
       quizQuestions.forEach((q, index) => {
         const userAnswer = quizAnswers[index];
@@ -5164,10 +5192,11 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       setQuizScore(score);
       setQuizSubmitted(true);
       
+      // Save the quiz attempt
       const { error: attemptError } = await supabase.from("quiz_attempts").insert({
         quiz_id: quizData.id,
         student_id: profile.id,
-        enrollment_id: currentEnrollment?.id,
+        enrollment_id: currentEnrollment.id,
         score: score,
         passed: score >= (quizData.pass_score || 70),
         answers: answers,
@@ -5185,44 +5214,52 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
         return;
       }
       
-      if (score >= (quizData.pass_score || 70)) {
+      const passed = score >= (quizData.pass_score || 70);
+      
+      if (passed) {
         toast({
           type: "success",
           title: "🎉 Quiz Passed!",
           message: `You scored ${score}%! Module unlocked.`,
         });
+        
+        // Update module progress
         await onProgressUpdate(currentModule.id, "passed", score);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        await fetchEnrollmentData();
-        await fetchProgress();
         
-        const { data: updatedEnrollment } = await supabase
-          .from("enrollments")
-          .select("*")
-          .eq("id", currentEnrollment?.id)
-          .single();
+        // Refresh data
+        await Promise.all([
+          fetchProgress(),
+          fetchEnrollmentData()
+        ]);
         
-        if (updatedEnrollment) {
-          const newIndex = updatedEnrollment.current_module_index;
-          if (newIndex > selectedModuleIndex && newIndex < modules.length) {
-            toast({
-              type: "info",
-              title: "Next Module Unlocked!",
-              message: `Moving to "${modules[newIndex]?.title}"...`,
-            });
-            setTimeout(() => {
-              setIsAdvancing(true);
-              setSelectedModuleIndex(newIndex);
-              setActiveTab("content");
-              setQuizSubmitted(false);
-              setQuizAnswers({});
-              setQuizScore(0);
-              setQuizAttempted(false);
-              fetchQuizForModule();
-              setTimeout(() => setIsAdvancing(false), 300);
-            }, 2000);
-          }
+        // Check if there's a next module
+        const nextIndex = selectedModuleIndex + 1;
+        if (nextIndex < modules.length) {
+          toast({
+            type: "info",
+            title: "Next Module Unlocked!",
+            message: `Moving to "${modules[nextIndex]?.title}"...`,
+          });
+          
+          setTimeout(() => {
+            setIsAdvancing(true);
+            setSelectedModuleIndex(nextIndex);
+            setActiveTab("content");
+            setQuizSubmitted(false);
+            setQuizAnswers({});
+            setQuizScore(0);
+            setQuizAttempted(false);
+            fetchQuizForModule();
+            setTimeout(() => setIsAdvancing(false), 300);
+          }, 1500);
+        } else {
+          toast({
+            type: "success",
+            title: "🎉 Course Complete!",
+            message: "You've completed all modules in this course!",
+          });
         }
+        
         setQuizAttempted(true);
       } else {
         toast({
@@ -5230,6 +5267,8 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
           title: "Quiz Failed",
           message: `You scored ${score}%. Need ${quizData.pass_score}% to pass. Try again!`,
         });
+        
+        // Update module progress as failed
         await onProgressUpdate(currentModule.id, "failed", score);
         await fetchProgress();
         setQuizAttempted(true);
@@ -5246,7 +5285,15 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   };
 
   const handleManualComplete = async () => {
-    if (!currentModule) return;
+    if (!currentModule || !currentEnrollment) {
+      toast({
+        type: "error",
+        title: "Error",
+        message: "Unable to complete module. Please refresh and try again.",
+      });
+      return;
+    }
+    
     setManualCompleteLoading(true);
     
     try {
@@ -5258,28 +5305,34 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
           title: "Module Complete!",
           message: `You scored ${result.score}% on this module.`,
         });
+        
         await onProgressUpdate(currentModule.id, "passed", result.score);
-        await fetchEnrollmentData();
-        await fetchProgress();
+        await Promise.all([
+          fetchProgress(),
+          fetchEnrollmentData()
+        ]);
         
-        const { data: updatedEnrollment } = await supabase
-          .from("enrollments")
-          .select("*")
-          .eq("id", currentEnrollment?.id)
-          .single();
-        
-        if (updatedEnrollment && updatedEnrollment.current_module_index > selectedModuleIndex) {
+        // Check if there's a next module
+        const nextIndex = selectedModuleIndex + 1;
+        if (nextIndex < modules.length) {
           toast({
             type: "info",
             title: "Next Module Unlocked!",
-            message: `Moving to "${modules[updatedEnrollment.current_module_index]?.title}"...`,
+            message: `Moving to "${modules[nextIndex]?.title}"...`,
           });
+          
           setTimeout(() => {
             setIsAdvancing(true);
-            setSelectedModuleIndex(updatedEnrollment.current_module_index);
+            setSelectedModuleIndex(nextIndex);
             setActiveTab("content");
             setTimeout(() => setIsAdvancing(false), 300);
           }, 500);
+        } else {
+          toast({
+            type: "success",
+            title: "🎉 Course Complete!",
+            message: "You've completed all modules in this course!",
+          });
         }
       } else {
         toast({
@@ -5299,17 +5352,15 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
     setManualCompleteLoading(false);
   };
 
-  const currentModule = modules?.[selectedModuleIndex] || modules?.[0] || null;
-  const currentContent = moduleContents?.find(c => c.module_id === currentModule?.id) || null;
-  const moduleProgress = progressData.find(p => p.module_id === currentModule?.id);
-
+  // Check if module can be completed
   const hasGradedAssignment = studentAssignments.some(
-    sa => sa.assignment?.module_id === currentModule?.id && sa.status === "graded"
+    sa => sa.assignment?.module_id === currentModule?.id && sa.status === "graded" && sa.score >= 50
   );
 
   const hasPassedQuiz = quizAttempted && quizScore >= (quizData?.pass_score || 70);
+  const hasNoRequirements = !quizData || quizQuestions.length === 0;
 
-  const canCompleteModule = hasPassedQuiz || hasGradedAssignment;
+  const canCompleteModule = hasPassedQuiz || hasGradedAssignment || hasNoRequirements;
 
   if (!currentEnrollment || !currentModule) {
     return (
@@ -5319,7 +5370,6 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
       </div>
     );
   }
-
   return (
     <div className="flex flex-col md:flex-row h-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
       {/* CONTENT - Comes FIRST on mobile (order-1), SECOND on desktop (md:order-2) */}
