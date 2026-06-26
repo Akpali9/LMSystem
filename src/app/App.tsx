@@ -938,7 +938,75 @@ function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
     </>
   );
 }
+// ─── Animated Number Counter ──────────────────────────────────────────────────
 
+function AnimatedNumber({ target, duration = 2000, suffix = "", prefix = "" }: { 
+  target: number; 
+  duration?: number; 
+  suffix?: string; 
+  prefix?: string;
+}) {
+  const [count, setCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const elementRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Intersection Observer to start animation when visible
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (elementRef.current) {
+      observer.observe(elementRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    let startTime: number | null = null;
+    let animationFrame: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      
+      // Ease out cubic for smooth animation
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const currentCount = Math.round(easeOut * target);
+      
+      setCount(currentCount);
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      } else {
+        setCount(target);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [isVisible, target, duration]);
+
+  return (
+    <div ref={elementRef} className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+      {prefix}{count.toLocaleString()}{suffix}
+    </div>
+  );
+}
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
   return (
