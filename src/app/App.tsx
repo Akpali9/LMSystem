@@ -3624,7 +3624,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                 Expires {formatDate(enrollment.expires_at || "")}
               </p>
               <p className="text-sm text-gray-600 mt-1">
-                Progress: {passedModules.length}/{courseModules.length} modules completed
+              © Pruta Academy
               </p>
               {/* FIXED: Removed extra /> and fixed the ProgressBar props */}
               <ProgressBar 
