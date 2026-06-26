@@ -3626,10 +3626,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
                     <p className="text-sm text-gray-600 mt-1">
                      © Pruta Academy
                     </p>
-                     <ProgressBar 
-                      value={passedModules.length} 
-                      max={courseModules.length || 1} 
-                      className="mt-2" 
+                    <ProgressBar value={enrollment.current_module_index + 1}  className="mt-4" />
                     />
                   </div>
                 </div>
