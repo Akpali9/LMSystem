@@ -3382,7 +3382,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   // Get ALL active enrollments
   const activeEnrollments = safeEnrollments.filter(e => e?.status === "active") || [];
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
-  const completedEnrollments = safeEnrollments.filter(e => e?.status === "completed") || [];
+
   
     // FIXED: Count completed enrollments (status === "completed")
   const completedEnrollments = safeEnrollments.filter(e => e?.status === "completed") || [];
