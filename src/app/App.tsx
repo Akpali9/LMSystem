@@ -3561,9 +3561,7 @@ const fetchStudentAssignments = async () => {
                       Module {enrollment.current_module_index + 1 || 1} of {courseModules.length} • 
                       Expires {formatDate(enrollment.expires_at || "")}
                     </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Progress: {passedModules.length}/{courseModules.length} modules completed
-                    </p>
+                   
                      <ProgressBar value={enrollment.current_module_index + 1} max={5} className="mt-4" />
                   </div>
                 </div>
