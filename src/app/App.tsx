@@ -940,7 +940,6 @@ function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
 }
 
 // ─── Landing Page ─────────────────────────────────────────────────────────────
-
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
@@ -994,11 +993,17 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               Browse Courses
             </button>
           </div>
+          
+          {/* ─── Animated Statistics ──────────────────────────────────────── */}
           <div className="flex items-center gap-8 pt-2">
-            {[["1,200+", "Students Enrolled"], ["96%", "Completion Rate"], ["4.9★", "Avg. Rating"]].map(([v, l]) => (
-              <div key={l}>
-                <p className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>{v}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{l}</p>
+            {[
+              { value: 1200, suffix: "+", label: "Students Enrolled" },
+              { value: 96, suffix: "%", label: "Completion Rate" },
+              { value: 49, suffix: "★", label: "Avg. Rating", prefix: "4." },
+            ].map(({ value, suffix, label, prefix }) => (
+              <div key={label}>
+                <AnimatedNumber target={value} suffix={suffix} prefix={prefix || ""} />
+                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
               </div>
             ))}
           </div>
@@ -1026,6 +1031,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </div>
         </div>
       </section>
+
 
       <section id="courses" className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
@@ -9954,20 +9960,7 @@ function AdminScholarship() {
     </div>
   );
 }
-// ─── Protection Provider ──────────────────────────────────────────────────────
 
-function ProtectionProvider({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    // Apply protection on mount
-    const cleanup = applyProtection();
-    
-    return () => {
-      if (cleanup) cleanup();
-    };
-  }, []);
-
-  return <>{children}</>;
-}
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
