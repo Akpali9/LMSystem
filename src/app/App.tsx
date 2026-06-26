@@ -1219,7 +1219,17 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             >
               Browse Courses
             </button>
-            <div className="relative">
+          </div>
+          <div className="flex items-center gap-8 pt-2">
+            {[["1,200+", "Students Enrolled"], ["96%", "Completion Rate"], ["4.9★", "Avg. Rating"]].map(([v, l]) => (
+              <div key={l}>
+                <p className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>{v}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="relative">
           <div className="rounded-2xl overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
             <img
               src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format"
@@ -1241,18 +1251,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <p className="text-white/70 text-xs">Duration</p>
           </div>
         </div>
-
-          </div>
-          <div className="flex items-center gap-8 pt-2">
-            {[["1,200+", "Students Enrolled"], ["96%", "Completion Rate"], ["4.9★", "Avg. Rating"]].map(([v, l]) => (
-              <div key={l}>
-                <p className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>{v}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{l}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-              </section>
+      </section>
 
       <section id="courses" className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
