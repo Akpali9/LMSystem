@@ -1008,6 +1008,7 @@ function AnimatedNumber({ target, duration = 2000, suffix = "", prefix = "" }: {
   );
 }
 // ─── Landing Page ─────────────────────────────────────────────────────────────
+
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
@@ -1034,19 +1035,17 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
 
       <section className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 grid lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-8">
-          <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5 animate-pulse-glow animate-fade-up" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
-  <Star className="w-3.5 h-3.5 fill-current animate-spin-slow" style={{ color: '#f7530b' }} />
-  <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: '#f7530b' }}>Globally Certified Programs</span>
-</div>
+          <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
+            <Star className="w-3.5 h-3.5 fill-current" style={{ color: '#f7530b' }} />
+            <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: '#f7530b' }}>Globally Certified Programs</span>
+          </div>
           <h1 className="text-5xl lg:text-6xl font-bold leading-[1.1]" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
             Learn Without
             <span className="block italic" style={{ color: '#f7530b' }}>Limits.</span>
           </h1>
-      
           <p className="text-lg text-gray-600 leading-relaxed max-w-md typing-text">
             Structured 3-month courses taught by industry experts. Progress at your own pace, earn verified certificates, and transform your career.
           </p>
-          
           <div className="flex flex-wrap gap-4">
             <button
               onClick={onAuth}
@@ -1063,7 +1062,6 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               Browse Courses
             </button>
           </div>
-          
           {/* ─── Animated Statistics ──────────────────────────────────────── */}
           <div className="flex items-center gap-8 pt-2">
             {[
