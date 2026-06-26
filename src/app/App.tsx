@@ -7240,79 +7240,100 @@ function AdminStudentProfile({ student, onClose }: { student: Profile; onClose: 
 
   // ─── GRADUATE COURSE FUNCTION ──────────────────────────────────────────────
   const graduateCourse = async (enrollmentId: string, courseId: string, courseTitle: string) => {
-    setGraduating(enrollmentId);
-    try {
-      // Get all modules for this course
-      const courseModules = modules.filter(m => m.course_id === courseId);
-      
-      if (courseModules.length === 0) {
-        toast({
-          type: "warning",
-          title: "No Modules",
-          message: "This course has no modules to graduate.",
-        });
-        setGraduating(null);
-        return;
-      }
+  setGraduating(enrollmentId);
+  try {
+    // Get all modules for this course
+    const courseModules = modules.filter(m => m.course_id === courseId);
+    
+    if (courseModules.length === 0) {
+      toast({
+        type: "warning",
+        title: "No Modules",
+        message: "This course has no modules to graduate.",
+      });
+      setGraduating(null);
+      return;
+    }
 
-      // For each module, create or update module_progress with status "passed"
-      for (const module of courseModules) {
-        const existing = progress.find(p => p.enrollment_id === enrollmentId && p.module_id === module.id);
-        if (!existing) {
-          await supabase
-            .from("module_progress")
-            .insert({
-              enrollment_id: enrollmentId,
-              module_id: module.id,
-              status: "passed",
-              score: 100,
-              completed_at: new Date().toISOString(),
-            });
-        } else if (existing.status !== "passed") {
-          await supabase
-            .from("module_progress")
-            .update({
-              status: "passed",
-              score: 100,
-              completed_at: new Date().toISOString(),
-            })
-            .eq("id", existing.id);
+    console.log(`[Graduation] Starting for student ${student.id}, enrollment ${enrollmentId}, course: ${courseTitle}`);
+    console.log(`[Graduation] Found ${courseModules.length} modules.`);
+
+    // For each module, create or update module_progress with status "passed"
+    for (const module of courseModules) {
+      const existing = progress.find(p => p.enrollment_id === enrollmentId && p.module_id === module.id);
+      if (!existing) {
+        console.log(`[Graduation] Creating progress for module ${module.id}`);
+        const { error: insertError } = await supabase
+          .from("module_progress")
+          .insert({
+            enrollment_id: enrollmentId,
+            module_id: module.id,
+            status: "passed",
+            score: 100,
+            completed_at: new Date().toISOString(),
+          });
+        if (insertError) {
+          console.error("[Graduation] Insert error:", insertError);
+          throw new Error(`Failed to create progress for module ${module.id}: ${insertError.message}`);
+        }
+      } else if (existing.status !== "passed") {
+        console.log(`[Graduation] Updating progress for module ${module.id}`);
+        const { error: updateError } = await supabase
+          .from("module_progress")
+          .update({
+            status: "passed",
+            score: 100,
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+        if (updateError) {
+          console.error("[Graduation] Update error:", updateError);
+          throw new Error(`Failed to update progress for module ${module.id}: ${updateError.message}`);
         }
       }
-      
-      // Update enrollment status to completed
-      const { error: updateError } = await supabase
-        .from("enrollments")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          current_module_index: courseModules.length - 1,
-        })
-        .eq("id", enrollmentId);
-      
-      if (updateError) throw updateError;
-      
-      toast({
-        type: "success",
-        title: "🎓 Course Graduated!",
-        message: `${student.full_name} has been graduated from "${courseTitle}".`,
-        duration: 5000,
-      });
-      
-      // Refresh data
-      await fetchStudentDetails();
-    } catch (error) {
-      console.error("Error graduating course:", error);
-      toast({
-        type: "error",
-        title: "Graduation Failed",
-        message: "Could not graduate the course. Please try again.",
-      });
-    } finally {
-      setGraduating(null);
     }
-  };
-
+    
+    // Update enrollment status to completed
+    console.log(`[Graduation] Updating enrollment ${enrollmentId} to completed`);
+    const updateData: any = {
+      status: "completed",
+      current_module_index: courseModules.length - 1,
+    };
+    // Only set completed_at if the column exists (most schemas have it)
+    if (enrollments.some(e => e.id === enrollmentId && 'completed_at' in e)) {
+      updateData.completed_at = new Date().toISOString();
+    }
+    
+    const { error: updateError } = await supabase
+      .from("enrollments")
+      .update(updateData)
+      .eq("id", enrollmentId);
+    
+    if (updateError) {
+      console.error("[Graduation] Enrollment update error:", updateError);
+      throw new Error(`Failed to update enrollment: ${updateError.message}`);
+    }
+    
+    toast({
+      type: "success",
+      title: "🎓 Course Graduated!",
+      message: `${student.full_name} has been graduated from "${courseTitle}".`,
+      duration: 5000,
+    });
+    
+    // Refresh data
+    await fetchStudentDetails();
+  } catch (error: any) {
+    console.error("[Graduation] Error:", error);
+    toast({
+      type: "error",
+      title: "Graduation Failed",
+      message: error.message || "Could not graduate the course. Please try again.",
+    });
+  } finally {
+    setGraduating(null);
+  }
+};
   if (loading) {
     return (
       <Modal open={true} onClose={onClose} title={`Student Profile: ${student.full_name}`}>
