@@ -1,3 +1,4 @@
+how do i add it
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -69,240 +70,94 @@
       }
     </script>
 
-    <!-- ─── ANTI-INSPECTION PROTECTION ────────────────────────────────────── -->
-    <!-- Add this section right here -->
-    <script>
-      // ─── Anti-Inspection Protection ──────────────────────────────────────
-      
-      // 1. Disable right click
-      document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      });
-
-      // 2. Disable keyboard shortcuts for dev tools
-      document.addEventListener('keydown', function(e) {
-        // F12
-        if (e.key === 'F12') {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Pruta Academy",
+        "url": "https://prutaacademy.com",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://prutaacademy.com/search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
         }
-        
-        // Ctrl+Shift+I (Inspect), Ctrl+Shift+J (Console), Ctrl+Shift+C (Inspect Element)
-        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-        
-        // Ctrl+U (View Source)
-        if (e.ctrlKey && e.key === 'u') {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-        
-        // Ctrl+S (Save Page)
-        if (e.ctrlKey && e.key === 's') {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-        
-        // Ctrl+P (Print)
-        if (e.ctrlKey && e.key === 'p') {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-        
-        // Ctrl+Shift+K (Console in Firefox)
-        if (e.ctrlKey && e.shiftKey && e.key === 'K') {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-        
-        // Ctrl+Shift+E (Network in Firefox)
-        if (e.ctrlKey && e.shiftKey && e.key === 'E') {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-        
-        // PrintScreen
-        if (e.key === 'PrintScreen') {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-        
-        // Ctrl+Shift+P (Command Palette in Chrome)
-        if (e.ctrlKey && e.shiftKey && e.key === 'P') {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-      });
-
-      // 3. Disable drag and drop
-      document.addEventListener('dragstart', function(e) {
-        e.preventDefault();
-        return false;
-      });
-      
-      document.addEventListener('drop', function(e) {
-        e.preventDefault();
-        return false;
-      });
-
-      // 4. Disable text selection (allow in input fields)
-      document.addEventListener('selectstart', function(e) {
-        const target = e.target;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-          return true;
-        }
-        e.preventDefault();
-        return false;
-      });
-
-      // 5. Prevent image dragging
-      document.addEventListener('drag', function(e) {
-        if (e.target.tagName === 'IMG') {
-          e.preventDefault();
-          return false;
-        }
-      });
-
-      // 6. Block media context menu
-      document.addEventListener('mousedown', function(e) {
-        if (e.target.tagName === 'IMG' || e.target.tagName === 'VIDEO') {
-          e.preventDefault();
-          return false;
-        }
-      });
-
-      // 7. Disable console in production
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        console.log = function() {};
-        console.warn = function() {};
-        console.error = function() {};
-        console.info = function() {};
-        console.debug = function() {};
-        console.trace = function() {};
-        console.dir = function() {};
-        console.dirxml = function() {};
-        console.group = function() {};
-        console.groupEnd = function() {};
-        console.table = function() {};
-        console.assert = function() {};
-        console.count = function() {};
-        console.time = function() {};
-        console.timeEnd = function() {};
-        console.clear();
-      } else {
-        // In development, redact sensitive info
-        const originalLog = console.log;
-        console.log = function(...args) {
-          const filtered = args.map(arg => {
-            if (typeof arg === 'string') {
-              return arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co[^\s"]*/g, '[REDACTED]')
-                        .replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
-            }
-            return arg;
-          });
-          originalLog.apply(console, filtered);
-        };
       }
-
-      // 8. Clear console on load
-      console.clear();
-
-      // 9. Detect DevTools opening
-      let devtoolsOpen = false;
-      setInterval(function() {
-        const threshold = 160;
-        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-        
-        if (widthThreshold || heightThreshold) {
-          if (!devtoolsOpen) {
-            devtoolsOpen = true;
-            // Optional: Show a warning or redirect
-            // alert('Please close developer tools for optimal experience.');
-          }
-        } else {
-          devtoolsOpen = false;
-        }
-      }, 2000);
-
-      // 10. Prevent window.open for dev tools
-      const originalOpen = window.open;
-      window.open = function(url) {
-        if (typeof url === 'string' && (url.includes('devtools') || url.includes('about:blank'))) {
-          return null;
-        }
-        return originalOpen.apply(window, arguments);
-      };
-
-      // 11. Prevent view-source
-      const originalLocation = Object.getOwnPropertyDescriptor(window, 'location');
-      if (originalLocation) {
-        Object.defineProperty(window, 'location', {
-          ...originalLocation,
-          set: function(value) {
-            if (typeof value === 'string' && value.includes('view-source:')) {
-              return;
-            }
-            originalLocation.set.call(this, value);
-          }
-        });
-      }
-
-      console.log('🔒 Content protection enabled.');
     </script>
 
-    <!-- ─── CSS Protection Styles ──────────────────────────────────────────── -->
-    <style>
-      /* ... existing styles ... */
-      
-      /* ─── Protection Styles ─────────────────────────────────────────────── */
-      /* Prevent selection and copying */
-      * {
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        user-select: none;
-      }
-      
-      img, video {
-        -webkit-user-drag: none;
-        user-drag: none;
-        pointer-events: none;
-      }
-      
-      input, textarea {
-        -webkit-user-select: text !important;
-        user-select: text !important;
-      }
-      
-      /* Hide content when printing */
-      @media print {
-        body * {
-          visibility: hidden !important;
-        }
-        body:after {
-          content: "Printing is disabled for this content.";
-          visibility: visible !important;
-          display: block;
-          text-align: center;
-          font-size: 24px;
-          margin-top: 50vh;
-          color: red;
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Full-Stack Web Development",
+        "description": "Master full-stack web development with our comprehensive 3-month program. Learn frontend, backend, databases, and deployment.",
+        "provider": {
+          "@type": "EducationalOrganization",
+          "name": "Pruta Academy"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "50000",
+          "priceCurrency": "NGN"
         }
       }
-    </style>
+    </script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "AI & Machine Learning",
+        "description": "Learn artificial intelligence and machine learning from the ground up with our 3-month intensive program.",
+        "provider": {
+          "@type": "EducationalOrganization",
+          "name": "Pruta Academy"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "75000",
+          "priceCurrency": "NGN"
+        }
+      }
+    </script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "Frontend Development",
+        "description": "Master HTML, CSS, JavaScript, React, and modern frontend frameworks in our 3-month frontend program.",
+        "provider": {
+          "@type": "EducationalOrganization",
+          "name": "Pruta Academy"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "45000",
+          "priceCurrency": "NGN"
+        }
+      }
+    </script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://prutaacademy.com"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Courses",
+            "item": "https://prutaacademy.com/courses"
+          }
+        ]
+      }
+    </script>
 
     <!-- ─── Geo & Language ─────────────────────────────────────────────────── -->
     <meta name="geo.country" content="NG" />
