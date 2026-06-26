@@ -65,6 +65,232 @@ import {
   Download,
 } from "lucide-react";
 
+// ─── Console Protection ──────────────────────────────────────────────────────
+
+function protectConsole() {
+  // Store original console methods
+  const originalConsole = {
+    log: console.log,
+    warn: console.warn,
+    error: console.error,
+    info: console.info,
+    debug: console.debug,
+  };
+
+  // Override console methods to filter out sensitive info
+  console.log = function(...args: any[]) {
+    // Filter out Supabase URLs and keys
+    const filteredArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        // Remove Supabase URLs
+        let filtered = arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+        // Remove API keys
+        filtered = filtered.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+        // Remove email addresses
+        filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+        // Remove phone numbers
+        filtered = filtered.replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
+        return filtered;
+      }
+      return arg;
+    });
+    originalConsole.log.apply(console, filteredArgs);
+  };
+
+  console.warn = function(...args: any[]) {
+    const filteredArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        let filtered = arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+        filtered = filtered.replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
+        return filtered;
+      }
+      return arg;
+    });
+    originalConsole.warn.apply(console, filteredArgs);
+  };
+
+  console.error = function(...args: any[]) {
+    const filteredArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        let filtered = arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+        filtered = filtered.replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
+        return filtered;
+      }
+      return arg;
+    });
+    originalConsole.error.apply(console, filteredArgs);
+  };
+
+  console.info = function(...args: any[]) {
+    const filteredArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        let filtered = arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+        filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+        filtered = filtered.replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
+        return filtered;
+      }
+      return arg;
+    });
+    originalConsole.info.apply(console, filteredArgs);
+  };
+
+  // Prevent console.log from showing in production
+  if (process.env.NODE_ENV === 'production') {
+    console.log = function() {};
+    console.warn = function() {};
+    console.info = function() {};
+    console.debug = function() {};
+  }
+
+  // Return original console for debugging if needed
+  return originalConsole;
+}
+
+// ─── Supabase Client Protection ─────────────────────────────────────────────
+
+function protectSupabaseClient() {
+  // Override the supabase client's request/response logging
+  if (typeof window !== 'undefined') {
+    // Store original fetch
+    const originalFetch = window.fetch;
+    
+    window.fetch = function(...args: any[]) {
+      // Filter out Supabase URLs from being logged
+      const url = args[0];
+      if (typeof url === 'string' && url.includes('supabase.co')) {
+        // Still make the request but don't log it
+        return originalFetch.apply(this, args).catch((error) => {
+          // Filter error messages
+          if (error.message) {
+            error.message = error.message.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
+          }
+          throw error;
+        });
+      }
+      return originalFetch.apply(this, args);
+    };
+  }
+}
+
+// ─── Anti-Inspection Protection ──────────────────────────────────────────────
+
+function ProtectionProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    // Disable right-click
+    const disableRightClick = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable keyboard shortcuts for dev tools
+    const disableKeyboardShortcuts = (e: KeyboardEvent) => {
+      // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && e.key === 'u') ||
+        (e.ctrlKey && e.key === 's') ||
+        (e.metaKey && e.key === 's') ||
+        (e.ctrlKey && e.shiftKey && e.key === 'K') ||
+        (e.ctrlKey && e.shiftKey && e.key === 'E') ||
+        (e.ctrlKey && e.key === 'p') ||
+        (e.ctrlKey && e.shiftKey && e.key === 'P') ||
+        e.key === 'PrintScreen'
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+
+    // Disable context menu
+    document.addEventListener('contextmenu', disableRightClick);
+    document.addEventListener('keydown', disableKeyboardShortcuts);
+
+    // Disable drag events
+    const disableDrag = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
+    };
+    document.addEventListener('dragstart', disableDrag);
+    document.addEventListener('drop', disableDrag);
+
+    // Disable text selection globally
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+    document.body.style.msUserSelect = 'none';
+    document.body.style.mozUserSelect = 'none';
+
+    // Add CSS to prevent selection and copying
+    const style = document.createElement('style');
+    style.textContent = `
+      * {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      img, video, audio {
+        -webkit-touch-callout: none;
+        pointer-events: none;
+      }
+      input, textarea, [contenteditable="true"] {
+        -webkit-user-select: text !important;
+        user-select: text !important;
+      }
+      /* Prevent image dragging */
+      img {
+        -webkit-user-drag: none;
+        user-drag: none;
+      }
+      /* Hide dev tools indicator */
+      [data-devtools] {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Detect DevTools opening (optional)
+    let devtoolsOpen = false;
+    const checkDevTools = () => {
+      const threshold = 160;
+      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+      if (widthThreshold || heightThreshold) {
+        if (!devtoolsOpen) {
+          devtoolsOpen = true;
+          // Optional: redirect or show warning
+          // window.location.href = '/';
+        }
+      } else {
+        devtoolsOpen = false;
+      }
+    };
+
+    const devtoolsInterval = setInterval(checkDevTools, 1000);
+
+    return () => {
+      document.removeEventListener('contextmenu', disableRightClick);
+      document.removeEventListener('keydown', disableKeyboardShortcuts);
+      document.removeEventListener('dragstart', disableDrag);
+      document.removeEventListener('drop', disableDrag);
+      document.head.removeChild(style);
+      clearInterval(devtoolsInterval);
+      
+      // Reset body styles
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
+      document.body.style.msUserSelect = '';
+      document.body.style.mozUserSelect = '';
+    };
+  }, []);
+
+  return <>{children}</>;
+}
 
 // ─── Toast System ──────────────────────────────────────────────────────────────
 
@@ -938,75 +1164,7 @@ function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
     </>
   );
 }
-// ─── Animated Number Counter ──────────────────────────────────────────────────
 
-function AnimatedNumber({ target, duration = 2000, suffix = "", prefix = "" }: { 
-  target: number; 
-  duration?: number; 
-  suffix?: string; 
-  prefix?: string;
-}) {
-  const [count, setCount] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-  const elementRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Intersection Observer to start animation when visible
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.3 }
-    );
-
-    if (elementRef.current) {
-      observer.observe(elementRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible) return;
-
-    let startTime: number | null = null;
-    let animationFrame: number;
-
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      
-      // Ease out cubic for smooth animation
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const currentCount = Math.round(easeOut * target);
-      
-      setCount(currentCount);
-
-      if (progress < 1) {
-        animationFrame = requestAnimationFrame(animate);
-      } else {
-        setCount(target);
-      }
-    };
-
-    animationFrame = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [isVisible, target, duration]);
-
-  return (
-    <div ref={elementRef} className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-      {prefix}{count.toLocaleString()}{suffix}
-    </div>
-  );
-}
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
@@ -1043,7 +1201,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             Learn Without
             <span className="block italic" style={{ color: '#f7530b' }}>Limits.</span>
           </h1>
-          <p className="text-lg text-gray-600 leading-relaxed max-w-md typing-text">
+          <p className="text-lg text-gray-600 leading-relaxed max-w-md">
             Structured 3-month courses taught by industry experts. Progress at your own pace, earn verified certificates, and transform your career.
           </p>
           <div className="flex flex-wrap gap-4">
@@ -1062,16 +1220,11 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               Browse Courses
             </button>
           </div>
-          {/* ─── Animated Statistics ──────────────────────────────────────── */}
           <div className="flex items-center gap-8 pt-2">
-            {[
-              { value: 1200, suffix: "+", label: "Students Enrolled" },
-              { value: 96, suffix: "%", label: "Completion Rate" },
-              { value: 49, suffix: "★", label: "Avg. Rating", prefix: "4." },
-            ].map(({ value, suffix, label, prefix }) => (
-              <div key={label}>
-                <AnimatedNumber target={value} suffix={suffix} prefix={prefix || ""} />
-                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+            {[["1,200+", "Students Enrolled"], ["96%", "Completion Rate"], ["4.9★", "Avg. Rating"]].map(([v, l]) => (
+              <div key={l}>
+                <p className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>{v}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{l}</p>
               </div>
             ))}
           </div>
@@ -1099,7 +1252,6 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </div>
         </div>
       </section>
-
 
       <section id="courses" className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
@@ -10787,7 +10939,6 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
   };
 
   return (
-     
     <ToastAndConfirmProvider>
       <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
         <Sidebar profile={profile} currentView={view} onNavigate={setView} onLogout={handleLogout} />
@@ -10802,6 +10953,5 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
         )}
       </div>
     </ToastAndConfirmProvider>
-  
   );
 }
