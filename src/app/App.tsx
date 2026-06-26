@@ -473,9 +473,9 @@ function ConfirmDialog() {
         };
       case "warning":
         return {
-          bg: "bg-yellow-50 border-yellow-200",
-          icon: <AlertCircle className="w-6 h-6 text-yellow-600" />,
-          button: "bg-yellow-600 hover:bg-yellow-700 text-white",
+          bg: "bg-amber-50 border-amber-200",
+          icon: <AlertCircle className="w-6 h-6 text-amber-600" />,
+          button: "hover:opacity-90 text-white",
         };
       default:
         return {
@@ -495,14 +495,14 @@ function ConfirmDialog() {
         <div className="flex items-start gap-4">
           <div className="shrink-0">{styles.icon}</div>
           <div className="flex-1">
-            <h3 className="font-bold text-foreground text-lg">{dialog.title}</h3>
-            <p className="text-sm text-muted-foreground mt-1">{dialog.message}</p>
+            <h3 className="font-bold text-gray-900 text-lg">{dialog.title}</h3>
+            <p className="text-sm text-gray-600 mt-1">{dialog.message}</p>
           </div>
         </div>
         <div className="flex gap-3 mt-6">
           <button
             onClick={closeConfirm}
-            className="flex-1 py-2.5 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 transition-colors"
+            className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
           >
             {dialog.cancelLabel}
           </button>
@@ -511,7 +511,11 @@ function ConfirmDialog() {
               dialog.onConfirm();
               closeConfirm();
             }}
-            className={cn("flex-1 py-2.5 font-medium rounded-lg transition-colors", styles.button)}
+            className={cn(
+              "flex-1 py-2.5 font-medium rounded-lg transition-colors",
+              styles.button
+            )}
+            style={dialog.type === "warning" ? { backgroundColor: '#f7530b' } : {}}
           >
             {dialog.confirmLabel}
           </button>
