@@ -11035,7 +11035,7 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
   };
 
   return (
-     <ProtectionProvider>
+     
     <ToastAndConfirmProvider>
       <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
         <Sidebar profile={profile} currentView={view} onNavigate={setView} onLogout={handleLogout} />
@@ -11050,6 +11050,6 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
         )}
       </div>
     </ToastAndConfirmProvider>
-    </ProtectionProvider>
+  
   );
 }
