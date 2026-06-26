@@ -4116,7 +4116,11 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
       "flex items-start gap-2 max-w-[85%]",
       isOwnMessage ? "ml-auto flex-row-reverse" : ""
     )}>
-      <Avatar name={senderName} size="sm" src={...} />
+   <Avatar 
+  name={senderName} 
+  size="sm" 
+  src={isOwnMessage ? profile.avatar_url : msg.user_avatar} 
+/>
       <div className={cn(
         "p-3 rounded-lg text-sm",
         isOwnMessage ? "text-white" : isAdmin ? "bg-orange-100" : "bg-gray-100"
@@ -9436,7 +9440,11 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       "flex items-start gap-3 max-w-[80%]",
       isAdmin ? "ml-auto flex-row-reverse" : ""
     )}>
-      <Avatar name={senderName} size="sm" src={...} />
+      <Avatar 
+  name={senderName} 
+  size="sm" 
+  src={isAdmin ? undefined : selectedStudent?.avatar_url} 
+/>
       <div className={cn(
         "p-3 rounded-lg text-sm",
         isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
