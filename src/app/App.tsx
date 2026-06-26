@@ -4106,51 +4106,34 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
   const selectedCourse = courses.find(c => c.id === selectedCourseId);
 
   // Render message with proper sender identification
-  const renderMessage = (msg: ChatMessage) => {
-    const isOwnMessage = msg.user_id === profile.id;
-    const senderName = isOwnMessage ? "You" : msg.user_name || "Unknown Student";
-    const isAdmin = msg.user_id === "admin";
+ const renderMessage = (msg: ChatMessage) => {
+  const isOwnMessage = msg.user_id === profile.id;
+  const senderName = isOwnMessage ? "You" : msg.user_name || "Unknown Student";
+  const isAdmin = msg.user_id === "admin";
 
-    return (
-      <div
-        key={msg.id}
-        className={cn(
-          "flex items-start gap-2 max-w-[85%]",
-          isOwnMessage ? "ml-auto flex-row-reverse" : ""
-        )}
-      >
-        <Avatar 
-          name={senderName} 
-          size="sm" 
-          src={isOwnMessage ? profile.avatar_url : msg.user_avatar} 
-        />
-        <div className={cn(
-          "p-3 rounded-lg text-sm",
-          isOwnMessage
-            ? "text-white"
-            : isAdmin 
-              ? "bg-orange-100 text-gray-800" 
-              : "bg-gray-100 text-gray-800"
-        )}
-        style={isOwnMessage ? { backgroundColor: '#f7530b' } : {}}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium">
-              {isAdmin ? "👑 Admin" : senderName}
-            </span>
-            {isAdmin && (
-              <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
-            )}
-            {!isOwnMessage && !isAdmin && (
-              <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
-            )}
-          </div>
-          <p className="break-words">{msg.message}</p>
-          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+  return (
+    <div className={cn(
+      "flex items-start gap-2 max-w-[85%]",
+      isOwnMessage ? "ml-auto flex-row-reverse" : ""
+    )}>
+      <Avatar name={senderName} size="sm" src={...} />
+      <div className={cn(
+        "p-3 rounded-lg text-sm",
+        isOwnMessage ? "text-white" : isAdmin ? "bg-orange-100" : "bg-gray-100"
+      )}>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs font-medium">
+            {isAdmin ? "👑 Admin" : senderName}
+          </span>
+          {isAdmin && <Badge variant="default">Admin</Badge>}
+          {!isOwnMessage && !isAdmin && <Badge variant="muted">Student</Badge>}
         </div>
+        <p className="break-words">{msg.message}</p>
+        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   // Mobile chat view
   if (isMobile) {
@@ -4475,34 +4458,26 @@ function StudentPersonalMessages({ profile }: { profile: Profile }) {
             </div>
           ) : (
             messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  "flex items-start gap-3 max-w-[80%]",
-                  msg.sender_id === profile?.id ? "ml-auto flex-row-reverse" : ""
-                )}
-              >
-                <Avatar 
-                  name={msg.sender_id === profile?.id ? profile?.full_name || "You" : "Admin"} 
-                  size="sm" 
-                />
-                <div className={cn(
-                  "p-3 rounded-lg text-sm",
-                  msg.sender_id === profile?.id
-                    ? "text-white"
-                    : "bg-gray-100 text-gray-800"
-                )}
-                style={msg.sender_id === profile?.id ? { backgroundColor: '#f7530b' } : {}}
-                >
-                  <p className="text-xs font-medium opacity-70">
-                    {msg.sender_id === profile?.id ? "You" : "Admin"}
-                  </p>
-                  <p className="mt-0.5">{msg.message}</p>
-                  <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
-                </div>
-              </div>
-            ))
-          )}
+  <div
+    className={cn(
+      "flex items-start gap-3 max-w-[80%]",
+      msg.sender_id === profile?.id ? "ml-auto flex-row-reverse" : ""
+    )}
+  >
+    <Avatar name={msg.sender_id === profile?.id ? profile?.full_name || "You" : "Admin"} size="sm" />
+    <div className={cn(
+      "p-3 rounded-lg text-sm",
+      msg.sender_id === profile?.id ? "text-white" : "bg-gray-100 text-gray-800"
+    )}>
+      <p className="text-xs font-medium opacity-70">
+        {msg.sender_id === profile?.id ? "You" : "Admin"}
+      </p>
+      <p className="mt-0.5">{msg.message}</p>
+      <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+    </div>
+  </div>
+))
+    )}
         </div>
 
         <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
@@ -9452,44 +9427,34 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     );
   };
 
-  const renderPersonalMessage = (msg: any) => {
-    const isAdmin = msg.sender_id === profile?.id;
-    const senderName = isAdmin ? "Admin" : selectedStudent?.full_name || "Student";
-    const senderAvatar = isAdmin ? undefined : selectedStudent?.avatar_url;
+  const renderCourseMessage = (msg: ChatMessage) => {
+  const isAdmin = msg.user_id === "admin";
+  const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
 
-    return (
-      <div
-        key={msg.id}
-        className={cn(
-          "flex items-start gap-3 max-w-[80%]",
-          isAdmin ? "ml-auto flex-row-reverse" : ""
-        )}
-      >
-        <Avatar name={senderName} size="sm" src={senderAvatar} />
-        <div className={cn(
-          "p-3 rounded-lg text-sm",
-          isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
-        )}
-        style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium">
-              {isAdmin ? "👑 Admin" : senderName}
-            </span>
-            {isAdmin && (
-              <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
-            )}
-            {!isAdmin && (
-              <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
-            )}
-          </div>
-          <p className="break-words">{msg.message}</p>
-          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+  return (
+    <div className={cn(
+      "flex items-start gap-3 max-w-[80%]",
+      isAdmin ? "ml-auto flex-row-reverse" : ""
+    )}>
+      <Avatar name={senderName} size="sm" src={...} />
+      <div className={cn(
+        "p-3 rounded-lg text-sm",
+        isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
+      )}>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs font-medium">
+            {isAdmin ? "👑 Admin" : senderName}
+          </span>
+          {isAdmin && <Badge variant="default">Admin</Badge>}
+          {!isAdmin && <Badge variant="muted">Student</Badge>}
         </div>
+        <p className="break-words">{msg.message}</p>
+        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
       </div>
-    );
-  };
-
+    </div>
+  );
+};
+  
   // Get the latest message preview for a student
   const getStudentPreview = (studentId: string) => {
     const latest = latestMessages[studentId];
