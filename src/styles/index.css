@@ -48,8 +48,7 @@
 
     /* --- continuous typing container --- */
     .typing-wrapper {
-      display: inline-block;
-      max-width: 100%;
+      display: inline;
       /* ensure the cursor stays inline */
     }
 
@@ -120,12 +119,12 @@
         font-size: 1rem;
       }
       .typing-wrapper {
-        max-width: 100%;
+        
         overflow: hidden;
         display: inline-block;
       }
       .typing-text {
-        max-width: 100%;
+        
         overflow: hidden;
         text-overflow: clip;
         white-space: nowrap;
@@ -136,7 +135,7 @@
     @media (prefers-reduced-motion: reduce) {
       .typing-text {
         animation: none;
-        width: 100%;
+        
         border-right: none;
         white-space: normal;
       }
@@ -170,11 +169,7 @@
       50% { opacity: 1; transform: scale(1.1); }
     }
 
-    /* reset paragraph margin */
-    p {
-      margin: 0;
-    }
-
+   
     /* Ensure the wrapper doesn't break layout */
     .typing-wrapper {
       vertical-align: bottom;
