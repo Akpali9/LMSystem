@@ -3383,21 +3383,65 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   const activeEnrollments = safeEnrollments.filter(e => e?.status === "active") || [];
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
   const completedEnrollments = safeEnrollments.filter(e => e?.status === "completed") || [];
+  
+  // State for assignments
   const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
-  // Fetch assignments in useEffect
-useEffect(() => {
-  fetchStudentAssignments();
-}, [profile.id]);
+  const [pendingAssignmentsCount, setPendingAssignmentsCount] = useState(0);
+  
+  // Fetch assignments
+  useEffect(() => {
+    fetchStudentAssignments();
+  }, [profile.id]);
 
-const fetchStudentAssignments = async () => {
-  const { data } = await supabase
-    .from("student_assignments")
-    .select("*")
-    .eq("student_id", profile.id)
-    .in("status", ["pending", "submitted"]);
-  if (data) setStudentAssignments(data);
-};
-  // ✅ Calculate TOTAL progress across ALL active enrollments - ONLY ONCE
+  const fetchStudentAssignments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("student_assignments")
+        .select("*")
+        .eq("student_id", profile.id)
+        .in("status", ["pending", "submitted"]);
+      
+      if (error) {
+        console.error("Error fetching assignments:", error);
+        return;
+      }
+      
+      if (data) {
+        setStudentAssignments(data);
+        // Count pending assignments (status is 'pending' meaning not submitted yet)
+        const pending = data.filter(a => a.status === "pending").length;
+        setPendingAssignmentsCount(pending);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  // Subscribe to assignment changes
+  useEffect(() => {
+    if (!profile) return;
+
+    const subscription = supabase
+      .channel('student-assignments-dashboard')
+      .on('postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'student_assignments',
+          filter: `student_id=eq.${profile.id}`
+        },
+        () => {
+          fetchStudentAssignments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [profile.id]);
+
+  // Calculate TOTAL progress across ALL active enrollments
   let passedCount = 0;
   let totalModulesForActiveCourse = 0;
 
@@ -3526,7 +3570,14 @@ const fetchStudentAssignments = async () => {
           onClick={() => activeEnrollments.length > 0 && onNavigate("student-module")}
         />
         
-        <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
+        {/* FIXED: Assignments Due now shows actual count */}
+        <StatCard 
+          icon={ClipboardList} 
+          label="Assignments Due" 
+          value={pendingAssignmentsCount} 
+          onClick={() => pendingAssignmentsCount > 0 && onNavigate("student-assignments")}
+        />
+        
         <StatCard icon={Award} label="Certificates Earned" value={completedEnrollments.length} />
       </div>
 
@@ -3561,8 +3612,10 @@ const fetchStudentAssignments = async () => {
                       Module {enrollment.current_module_index + 1 || 1} of {courseModules.length} • 
                       Expires {formatDate(enrollment.expires_at || "")}
                     </p>
-                   
-                     <ProgressBar value={enrollment.current_module_index + 1} max={5} className="mt-4" />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Progress: {passedModules.length}/{courseModules.length} modules completed
+                    </p>
+                    <ProgressBar value={passedModules.length} max={courseModules.length || 1} className="mt-2" />
                   </div>
                 </div>
                 <button
