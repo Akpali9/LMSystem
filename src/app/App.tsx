@@ -64,7 +64,316 @@ import {
   Phone,
   Download,
 } from "lucide-react";
+// ─── Complete Protection ──────────────────────────────────────────────────────
 
+function applyProtection() {
+  // 1. Disable Right Click
+  const disableRightClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Show a friendly message (optional)
+    toast({
+      type: "warning",
+      title: "Content Protected",
+      message: "Right-click is disabled to protect our content.",
+      duration: 2000,
+    });
+    return false;
+  };
+
+  // 2. Disable all Developer Tools Keyboard Shortcuts
+  const disableDevTools = (e: KeyboardEvent) => {
+    // F12
+    if (e.key === 'F12') {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    
+    // Ctrl+Shift+I (Inspect), Ctrl+Shift+J (Console), Ctrl+Shift+C (Inspect Element)
+    if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    
+    // Ctrl+U (View Source)
+    if (e.ctrlKey && e.key === 'u') {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    
+    // Ctrl+S (Save Page)
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    
+    // Ctrl+P (Print)
+    if (e.ctrlKey && e.key === 'p') {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    
+    // Ctrl+Shift+K (Console in Firefox)
+    if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    
+    // Ctrl+Shift+E (Network in Firefox)
+    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    
+    // PrintScreen
+    if (e.key === 'PrintScreen') {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    
+    // Ctrl+Shift+P (Command Palette in Chrome)
+    if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  };
+
+  // 3. Disable Drag and Drop
+  const disableDragDrop = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  };
+
+  // 4. Disable Text Selection
+  const disableSelection = (e: Event) => {
+    const target = e.target as HTMLElement;
+    // Allow selection in input fields and textareas
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+      return true;
+    }
+    e.preventDefault();
+    return false;
+  };
+
+  // 5. Prevent Image Dragging
+  const preventImageDrag = (e: DragEvent) => {
+    if (e.target instanceof HTMLImageElement) {
+      e.preventDefault();
+      return false;
+    }
+  };
+
+  // 6. Block Media Context Menu
+  const blockMediaContext = (e: MouseEvent) => {
+    if (e.target instanceof HTMLImageElement || e.target instanceof HTMLVideoElement) {
+      e.preventDefault();
+      return false;
+    }
+  };
+
+  // 7. Disable Console in Production
+  if (process.env.NODE_ENV === 'production') {
+    // Completely disable console
+    console.log = function() {};
+    console.warn = function() {};
+    console.error = function() {};
+    console.info = function() {};
+    console.debug = function() {};
+    console.trace = function() {};
+    console.dir = function() {};
+    console.dirxml = function() {};
+    console.group = function() {};
+    console.groupEnd = function() {};
+    console.table = function() {};
+    console.assert = function() {};
+    console.count = function() {};
+    console.time = function() {};
+    console.timeEnd = function() {};
+    
+    // Clear console
+    console.clear();
+  } else {
+    // In development, redact sensitive info
+    const originalLog = console.log;
+    console.log = function(...args: any[]) {
+      const filtered = args.map(arg => {
+        if (typeof arg === 'string') {
+          return arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co[^\s"]*/g, '[REDACTED]')
+                    .replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]')
+                    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]')
+                    .replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
+        }
+        return arg;
+      });
+      originalLog.apply(console, filtered);
+    };
+    
+    // Override error to redact sensitive info
+    const originalError = console.error;
+    console.error = function(...args: any[]) {
+      const filtered = args.map(arg => {
+        if (typeof arg === 'string') {
+          return arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co[^\s"]*/g, '[REDACTED]')
+                    .replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+        }
+        return arg;
+      });
+      originalError.apply(console, filtered);
+    };
+  }
+
+  // 8. Add CSS to prevent selection and copying
+  const style = document.createElement('style');
+  style.id = 'protection-styles';
+  style.textContent = `
+    * {
+      -webkit-touch-callout: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+    }
+    
+    img, video, audio {
+      -webkit-user-drag: none !important;
+      user-drag: none !important;
+      pointer-events: none !important;
+    }
+    
+    input, textarea, [contenteditable="true"] {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+    }
+    
+    /* Prevent image context menu */
+    img {
+      -webkit-touch-callout: none !important;
+    }
+    
+    /* Hide content when printing */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      body:after {
+        content: "Printing is disabled for this content.";
+        visibility: visible !important;
+        display: block;
+        text-align: center;
+        font-size: 24px;
+        margin-top: 50vh;
+        color: red;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // 9. Detect DevTools Opening
+  let devtoolsOpen = false;
+  const checkDevTools = () => {
+    const threshold = 160;
+    const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+    const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+    
+    if (widthThreshold || heightThreshold) {
+      if (!devtoolsOpen) {
+        devtoolsOpen = true;
+        // Option: Redirect or show a warning
+        // Uncomment to redirect when devtools is opened
+        // window.location.href = '/';
+        
+        toast({
+          type: "warning",
+          title: "⚠️ Developer Tools Detected",
+          message: "Please close developer tools for optimal experience.",
+          duration: 5000,
+        });
+      }
+    } else {
+      devtoolsOpen = false;
+    }
+  };
+
+  const devtoolsInterval = setInterval(checkDevTools, 2000);
+
+  // 10. Prevent browser's built-in developer tools menu (hack)
+  const originalOpen = window.open;
+  window.open = function(...args: any[]) {
+    const url = args[0];
+    if (typeof url === 'string' && (url.includes('devtools') || url.includes('about:blank'))) {
+      return null;
+    }
+    return originalOpen.apply(window, args);
+  };
+
+  // 11. Prevent viewing source via about:blank
+  const originalLocation = Object.getOwnPropertyDescriptor(window, 'location');
+  if (originalLocation) {
+    Object.defineProperty(window, 'location', {
+      ...originalLocation,
+      set: function(value) {
+        if (typeof value === 'string' && (value.includes('view-source:') || value.includes('about:blank'))) {
+          return;
+        }
+        originalLocation.set.call(this, value);
+      }
+    });
+  }
+
+  // 12. Clear console on load
+  console.clear();
+
+  // Add all event listeners
+  document.addEventListener('contextmenu', disableRightClick);
+  document.addEventListener('keydown', disableDevTools);
+  document.addEventListener('dragstart', disableDragDrop);
+  document.addEventListener('drop', disableDragDrop);
+  document.addEventListener('selectstart', disableSelection);
+  document.addEventListener('drag', preventImageDrag);
+  document.addEventListener('mousedown', blockMediaContext);
+
+  // Also prevent context menu on the window level
+  window.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    return false;
+  });
+
+  // Return cleanup function
+  return () => {
+    document.removeEventListener('contextmenu', disableRightClick);
+    document.removeEventListener('keydown', disableDevTools);
+    document.removeEventListener('dragstart', disableDragDrop);
+    document.removeEventListener('drop', disableDragDrop);
+    document.removeEventListener('selectstart', disableSelection);
+    document.removeEventListener('drag', preventImageDrag);
+    document.removeEventListener('mousedown', blockMediaContext);
+    window.removeEventListener('contextmenu', () => {});
+    
+    const styleEl = document.getElementById('protection-styles');
+    if (styleEl) styleEl.remove();
+    
+    clearInterval(devtoolsInterval);
+    
+    // Restore window.open
+    window.open = originalOpen;
+  };
+}
+
+// ─── Apply protection immediately ────────────────────────────────────────────
+
+// Apply protection as soon as the script loads
+if (typeof window !== 'undefined') {
+  applyProtection();
+}
 
 // ─── Toast System ──────────────────────────────────────────────────────────────
 
@@ -9954,7 +10263,20 @@ function AdminScholarship() {
     </div>
   );
 }
+// ─── Protection Provider ──────────────────────────────────────────────────────
 
+function ProtectionProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    // Apply protection on mount
+    const cleanup = applyProtection();
+    
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, []);
+
+  return <>{children}</>;
+}
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -10713,6 +11035,7 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
   };
 
   return (
+     <ProtectionProvider>
     <ToastAndConfirmProvider>
       <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
         <Sidebar profile={profile} currentView={view} onNavigate={setView} onLogout={handleLogout} />
@@ -10727,5 +11050,6 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
         )}
       </div>
     </ToastAndConfirmProvider>
+    </ProtectionProvider>
   );
 }
