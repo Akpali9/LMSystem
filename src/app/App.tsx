@@ -4000,6 +4000,7 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
       
       markAsRead();
       
+      // Subscribe to new messages for this course
       const subscription = supabase
         .channel(`chat-${selectedCourseId}`)
         .on("postgres_changes", 
@@ -4035,7 +4036,7 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
         .from("chat_messages")
         .select("*")
         .eq("course_id", selectedCourseId)
-        .order("created_at", { ascending: true }); // Oldest first, newest at bottom
+        .order("created_at", { ascending: true }); // Oldest first for chronological order
       
       if (error) {
         console.error("Error fetching messages:", error);
@@ -4045,6 +4046,7 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
           message: "Could not load messages.",
         });
       } else if (data) {
+        console.log("Fetched messages:", data); // Debug log
         setMessages(data as ChatMessage[]);
       }
     } catch (error) {
@@ -4065,6 +4067,8 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
         user_name: profile.full_name,
         user_avatar: profile.avatar_url,
         message: newMessage.trim(),
+        created_at: new Date().toISOString(),
+        read: false,
       });
       
       if (error) {
@@ -4079,6 +4083,11 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
         await fetchMessages();
         // Scroll to bottom after sending
         setTimeout(() => scrollToBottom(), 100);
+        toast({
+          type: "success",
+          title: "Message Sent",
+          message: "Your message has been sent.",
+        });
       }
     } catch (error) {
       console.error("Error:", error);
@@ -4106,38 +4115,51 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
   const selectedCourse = courses.find(c => c.id === selectedCourseId);
 
   // Render message with proper sender identification
- const renderMessage = (msg: ChatMessage) => {
-  const isOwnMessage = msg.user_id === profile.id;
-  const senderName = isOwnMessage ? "You" : msg.user_name || "Unknown Student";
-  const isAdmin = msg.user_id === "admin";
+  const renderMessage = (msg: ChatMessage) => {
+    const isOwnMessage = msg.user_id === profile.id;
+    const senderName = isOwnMessage ? "You" : msg.user_name || "Unknown Student";
+    const isAdmin = msg.user_id === "admin";
 
-  return (
-    <div className={cn(
-      "flex items-start gap-2 max-w-[85%]",
-      isOwnMessage ? "ml-auto flex-row-reverse" : ""
-    )}>
-   <Avatar 
-  name={senderName} 
-  size="sm" 
-  src={isOwnMessage ? profile.avatar_url : msg.user_avatar} 
-/>
-      <div className={cn(
-        "p-3 rounded-lg text-sm",
-        isOwnMessage ? "text-white" : isAdmin ? "bg-orange-100" : "bg-gray-100"
-      )}>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-medium">
-            {isAdmin ? "👑 Admin" : senderName}
-          </span>
-          {isAdmin && <Badge variant="default">Admin</Badge>}
-          {!isOwnMessage && !isAdmin && <Badge variant="muted">Student</Badge>}
+    return (
+      <div
+        key={msg.id}
+        className={cn(
+          "flex items-start gap-2 max-w-[85%]",
+          isOwnMessage ? "ml-auto flex-row-reverse" : ""
+        )}
+      >
+        <Avatar 
+          name={senderName} 
+          size="sm" 
+          src={isOwnMessage ? profile.avatar_url : msg.user_avatar} 
+        />
+        <div className={cn(
+          "p-3 rounded-lg text-sm",
+          isOwnMessage
+            ? "text-white"
+            : isAdmin 
+              ? "bg-orange-100 text-gray-800" 
+              : "bg-gray-100 text-gray-800"
+        )}
+        style={isOwnMessage ? { backgroundColor: '#f7530b' } : {}}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium">
+              {isAdmin ? "👑 Admin" : senderName}
+            </span>
+            {isAdmin && (
+              <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+            )}
+            {!isOwnMessage && !isAdmin && (
+              <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
+            )}
+          </div>
+          <p className="break-words">{msg.message}</p>
+          <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
         </div>
-        <p className="break-words">{msg.message}</p>
-        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   // Mobile chat view
   if (isMobile) {
@@ -4169,44 +4191,44 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
           </div>
         </div>
 
-       {showCourseList ? (
-  <div className="flex-1 overflow-y-auto p-4 space-y-3">
-    {enrolledCourses.length === 0 && (
-      <div className="bg-white rounded-xl border p-8 text-center" style={{ borderColor: '#e0e0e0' }}>
-        <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-500">No active courses yet.</p>
-        <p className="text-xs text-gray-400 mt-1">Enroll in a course to join the chat.</p>
-      </div>
-    )}
-    {enrolledCourses.map((course) => (
-      <div
-        key={course.id}
-        className="bg-white rounded-xl border p-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-        style={{ borderColor: '#e0e0e0' }}
-        onClick={() => handleCourseSelect(course.id)}
-        onTouchStart={() => {}} // This helps with touch events on mobile
-        role="button"
-        tabIndex={0}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-            <img 
-              src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
-              alt="" 
-              className="w-full h-full object-cover" 
-            />
+        {showCourseList ? (
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {enrolledCourses.length === 0 && (
+              <div className="bg-white rounded-xl border p-8 text-center" style={{ borderColor: '#e0e0e0' }}>
+                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No active courses yet.</p>
+                <p className="text-xs text-gray-400 mt-1">Enroll in a course to join the chat.</p>
+              </div>
+            )}
+            {enrolledCourses.map((course) => (
+              <div
+                key={course.id}
+                className="bg-white rounded-xl border p-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+                style={{ borderColor: '#e0e0e0' }}
+                onClick={() => handleCourseSelect(course.id)}
+                onTouchStart={() => {}}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                    <img 
+                      src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"} 
+                      alt="" 
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 text-sm truncate">{course.title}</p>
+                    <p className="text-xs text-gray-500">Tap to join chat</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-800 text-sm truncate">{course.title}</p>
-            <p className="text-xs text-gray-500">Tap to join chat</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-        </div>
-      </div>
-    ))}
-  </div>
-) : (
-        <div className="flex-1 flex flex-col bg-white">
+        ) : (
+          <div className="flex-1 flex flex-col bg-white">
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {loading ? (
                 <div className="flex justify-center py-8">
@@ -4325,7 +4347,8 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" style={{ borderColor: '#e0e0e0' }}
+                  className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" 
+                  style={{ borderColor: '#e0e0e0' }}
                 />
                 <button
                   onClick={sendMessage}
