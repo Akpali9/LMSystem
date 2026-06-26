@@ -6978,21 +6978,33 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   const [loading, setLoading] = useState(false);
   const [studentProgress, setStudentProgress] = useState<Record<string, { passed: number; total: number; enrollments: any[] }>>({});
 
+  // Fetch courses, modules, and progress together
   useEffect(() => {
-    fetchCoursesAndModules();
-    fetchAllStudentProgress();
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [coursesRes, modulesRes] = await Promise.all([
+          supabase.from("courses").select("*"),
+          supabase.from("modules").select("*"),
+        ]);
+        
+        if (coursesRes.data) setCourses(coursesRes.data);
+        if (modulesRes.data) {
+          setModules(modulesRes.data);
+          // Now that modules are loaded, fetch progress with the modules data
+          await fetchAllStudentProgress(modulesRes.data);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  const fetchCoursesAndModules = async () => {
-    const [coursesRes, modulesRes] = await Promise.all([
-      supabase.from("courses").select("*"),
-      supabase.from("modules").select("*"),
-    ]);
-    if (coursesRes.data) setCourses(coursesRes.data);
-    if (modulesRes.data) setModules(modulesRes.data);
-  };
-
-  const fetchAllStudentProgress = async () => {
+  // Modified to accept modulesData parameter
+  const fetchAllStudentProgress = async (modulesData: Module[]) => {
     const { data: enrollments } = await supabase
       .from("enrollments")
       .select("id, student_id, course_id, status, course:course_id(*)")
@@ -7012,7 +7024,8 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
     
     enrollments.forEach((enrollment) => {
       const studentId = enrollment.student_id;
-      const studentModules = modules.filter(m => m.course_id === enrollment.course_id);
+      // Use the modulesData passed in, not the state variable
+      const studentModules = modulesData.filter(m => m.course_id === enrollment.course_id);
       const total = studentModules.length;
       const passed = progressData.filter(p => p.enrollment_id === enrollment.id && p.status === "passed").length;
       
