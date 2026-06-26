@@ -3384,6 +3384,10 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
   const completedEnrollments = safeEnrollments.filter(e => e?.status === "completed") || [];
   
+    // FIXED: Count completed enrollments (status === "completed")
+  const completedEnrollments = safeEnrollments.filter(e => e?.status === "completed") || [];
+  const certificatesCount = completedEnrollments.length;
+  
   // State for assignments
   const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
   const [pendingAssignmentsCount, setPendingAssignmentsCount] = useState(0);
@@ -3580,7 +3584,12 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
     onNavigate("student-assignments");
   }}
 />
-        <StatCard icon={Award} label="Certificates Earned" value={completedEnrollments.length} />
+        <StatCard 
+          icon={Award} 
+          label="Certificates Earned" 
+          value={certificatesCount}
+          onClick={() => certificatesCount > 0 && onNavigate("student-profile")}
+        />
       </div>
 
       {activeEnrollments.length > 0 ? (
