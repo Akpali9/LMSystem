@@ -3342,7 +3342,20 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   const activeEnrollments = safeEnrollments.filter(e => e?.status === "active") || [];
   const pendingEnrollments = safeEnrollments.filter(e => e?.status === "pending_payment" || e?.status === "payment_submitted") || [];
   const completedEnrollments = safeEnrollments.filter(e => e?.status === "completed") || [];
-  
+  const [studentAssignments, setStudentAssignments] = useState<StudentAssignment[]>([]);
+  // Fetch assignments in useEffect
+useEffect(() => {
+  fetchStudentAssignments();
+}, [profile.id]);
+
+const fetchStudentAssignments = async () => {
+  const { data } = await supabase
+    .from("student_assignments")
+    .select("*")
+    .eq("student_id", profile.id)
+    .in("status", ["pending", "submitted"]);
+  if (data) setStudentAssignments(data);
+};
   // ✅ Calculate TOTAL progress across ALL active enrollments - ONLY ONCE
   let passedCount = 0;
   let totalModulesForActiveCourse = 0;
@@ -3471,6 +3484,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
           value={passedCount} 
           onClick={() => activeEnrollments.length > 0 && onNavigate("student-module")}
         />
+        
         <StatCard icon={ClipboardList} label="Assignments Due" value={0} />
         <StatCard icon={Award} label="Certificates Earned" value={completedEnrollments.length} />
       </div>
