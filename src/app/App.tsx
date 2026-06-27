@@ -7922,6 +7922,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   const [activeTab, setActiveTab] = useState<"pending" | "graded" | "all">("pending");
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
   useEffect(() => {
     fetchSubmissions();
@@ -8344,7 +8345,7 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
       </div>
 
       {/* Create Assignment Modal */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create New Assignment">
+     <Modal open={showCreate} onClose={() => { setShowCreate(false); setAttachmentFile(null); }} title="Create New Assignment">
         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-gray-700">Assign to</label>
