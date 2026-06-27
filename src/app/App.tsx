@@ -3080,6 +3080,26 @@ function StudentAssignments({ profile }: { profile: Profile }) {
                     )}
                     <span>Max score: {sa.assignment?.max_score || 100}</span>
                   </div>
+                  {/* Attachment link – add here */}
+{sa.assignment?.attachment_url && (
+  <a 
+    href={sa.assignment.attachment_url} 
+    download
+    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-2"
+    onClick={(e) => {
+      toast({
+        type: "info",
+        title: "Downloading...",
+        message: "Your assignment file is being downloaded.",
+      });
+    }}
+  >
+    <Download className="w-3 h-3" /> Download Assignment Material
+  </a>
+)}
+
+{/* File input / status display */}
+{renderFileInput(sa)}
 
                   {renderFileInput(sa)}
                 </div>
@@ -8004,36 +8024,61 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
   const counts = getStatusCounts();
 
   const handleCreateAssignment = async () => {
-    setLoading(true);
-    try {
-      await onCreateAssignment(newAssignment);
-      toast({
-        type: "success",
-        title: "Assignment Created",
-        message: `"${newAssignment.title}" has been assigned.`,
-      });
-      setShowCreate(false);
-      setNewAssignment({ 
-        course_id: "", 
-        module_id: "", 
-        title: "", 
-        description: "", 
-        max_score: "100", 
-        due_days: "7", 
-        assign_to_all: true, 
-        student_id: "" 
-      });
-      await fetchSubmissions();
-    } catch (error) {
-      toast({
-        type: "error",
-        title: "Failed",
-        message: "Failed to create assignment. Please try again.",
-      });
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    let attachmentUrl = null;
+    if (attachmentFile) {
+      const fileExt = attachmentFile.name.split('.').pop();
+      const fileName = `assignment-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('assignment-files')
+        .upload(fileName, attachmentFile);
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('assignment-files')
+          .getPublicUrl(fileName);
+        attachmentUrl = publicUrl;
+      } else {
+        toast({
+          type: "error",
+          title: "Upload Failed",
+          message: "Failed to upload attachment. Please try again.",
+        });
+        setLoading(false);
+        return;
+      }
     }
-  };
+
+    // Pass attachment_url to onCreateAssignment
+    await onCreateAssignment({ ...newAssignment, attachment_url: attachmentUrl });
+    toast({
+      type: "success",
+      title: "Assignment Created",
+      message: `"${newAssignment.title}" has been assigned.`,
+    });
+    setShowCreate(false);
+    setNewAssignment({ 
+      course_id: "", 
+      module_id: "", 
+      title: "", 
+      description: "", 
+      max_score: "100", 
+      due_days: "7", 
+      assign_to_all: true, 
+      student_id: "" 
+    });
+    setAttachmentFile(null);
+    await fetchSubmissions();
+  } catch (error) {
+    toast({
+      type: "error",
+      title: "Failed",
+      message: "Failed to create assignment. Please try again.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleGrade = async () => {
     if (!gradeModal) return;
@@ -8388,7 +8433,40 @@ function AdminAssignments({ courses, modules, onCreateAssignment, onGradeAssignm
               required 
             />
           </div>
-          
+          <div className="space-y-1.5">
+  <label className="block text-sm font-medium text-gray-700">Attachment (optional)</label>
+  <div 
+    className="border-2 border-dashed rounded-lg p-4 text-center hover:border-orange-400 transition-colors cursor-pointer"
+    style={{ borderColor: '#e0e0e0' }}
+    onClick={() => document.getElementById("assignment-attachment")?.click()}
+  >
+    {attachmentFile ? (
+      <div className="flex items-center justify-center gap-2">
+        <CheckCircle className="w-5 h-5 text-green-500" />
+        <span className="text-sm text-gray-700">{attachmentFile.name}</span>
+        <button 
+          onClick={(e) => { e.stopPropagation(); setAttachmentFile(null); }}
+          className="text-red-500 hover:text-red-700"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    ) : (
+      <>
+        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+        <p className="text-sm text-gray-500">Click to upload assignment files</p>
+        <p className="text-xs text-gray-400">PDF, DOC, DOCX, ZIP, images • Max 10MB</p>
+      </>
+    )}
+    <input
+      id="assignment-attachment"
+      type="file"
+      className="hidden"
+      accept=".pdf,.doc,.docx,.zip,.txt,.jpg,.jpeg,.png"
+      onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+    />
+  </div>
+</div>
           <button
             onClick={handleCreateAssignment}
             disabled={loading || !newAssignment.course_id || !newAssignment.module_id || !newAssignment.title}
@@ -11020,6 +11098,7 @@ export default function App() {
         description: assignmentData.description,
         due_days: parseInt(assignmentData.due_days),
         max_score: parseInt(assignmentData.max_score),
+         attachment_url: assignmentData.attachment_url || null, 
       })
       .select()
       .single();
