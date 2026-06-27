@@ -3101,7 +3101,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
 {/* File input / status display */}
 {renderFileInput(sa)}
 
-                  {renderFileInput(sa)}
+              
                 </div>
               </div>
             </Card>
