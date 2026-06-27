@@ -477,8 +477,8 @@ function ConfirmDialog() {
         };
       case "warning":
         return {
-          bg: "bg-amber-50 border-amber-200",
-          icon: <AlertCircle className="w-6 h-6 text-amber-600" />,
+          bg: "", // handled via inline styles
+          icon: <AlertCircle className="w-6 h-6" style={{ color: '#fcba9d' }} />,
           button: "hover:opacity-90 text-white",
         };
       default:
@@ -492,7 +492,6 @@ function ConfirmDialog() {
 
   const styles = getTypeStyles();
 
-  // Get the background color based on type
   const getButtonBgColor = () => {
     switch (dialog.type) {
       case "danger":
@@ -507,7 +506,14 @@ function ConfirmDialog() {
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeConfirm} />
-      <div className={cn("relative rounded-xl border shadow-2xl w-full max-w-md p-6", styles.bg)}>
+      <div
+        className={cn("relative rounded-xl border shadow-2xl w-full max-w-md p-6", styles.bg)}
+        style={
+          dialog.type === "warning"
+            ? { backgroundColor: '#ffffff', borderColor: '#fdddce' }
+            : undefined
+        }
+      >
         <div className="flex items-start gap-4">
           <div className="shrink-0">{styles.icon}</div>
           <div className="flex-1">
@@ -540,7 +546,6 @@ function ConfirmDialog() {
     </div>
   );
 }
-
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type View =
