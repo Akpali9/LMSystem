@@ -358,7 +358,7 @@ function ToastContainer() {
     switch (type) {
       case "success": return <CheckCircle className="w-5 h-5 text-green-500" />;
       case "error": return <AlertCircle className="w-5 h-5 text-red-500" />;
-      case "warning": return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+      case "warning": return <AlertCircle className="w-5 h-5" style={{ color: '#fcba9d' }} />;
       default: return <Info className="w-5 h-5 text-blue-500" />;
     }
   };
@@ -367,7 +367,7 @@ function ToastContainer() {
     switch (type) {
       case "success": return "bg-green-50 border-green-200";
       case "error": return "bg-red-50 border-red-200";
-      case "warning": return "bg-yellow-50 border-yellow-200";
+      case "warning": return ""; // handled via inline styles
       default: return "bg-blue-50 border-blue-200";
     }
   };
@@ -376,7 +376,7 @@ function ToastContainer() {
     switch (type) {
       case "success": return "text-green-800";
       case "error": return "text-red-800";
-      case "warning": return "text-yellow-800";
+      case "warning": return "text-gray-800"; // readable on white background
       default: return "text-blue-800";
     }
   };
@@ -390,8 +390,13 @@ function ToastContainer() {
           key={t.id}
           className={cn(
             "pointer-events-auto rounded-lg border shadow-lg p-4 flex items-start gap-3 animate-in slide-in-from-right duration-300",
-            getBgColor(t.type)
+            t.type !== "warning" ? getBgColor(t.type) : ""
           )}
+          style={
+            t.type === "warning"
+              ? { backgroundColor: '#ffffff', borderColor: '#fdddce' }
+              : undefined
+          }
         >
           <div className="shrink-0 mt-0.5">{getIcon(t.type)}</div>
           <div className="flex-1 min-w-0">
@@ -409,7 +414,6 @@ function ToastContainer() {
     </div>
   );
 }
-
 // ─── Confirmation Dialog ─────────────────────────────────────────────────────
 
 interface ConfirmDialogState {
