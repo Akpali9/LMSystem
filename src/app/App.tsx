@@ -10906,7 +10906,7 @@ export default function App() {
     setView("landing");
     toast({
       type: "info",
-      title: "Signed Out",e5
+      title: "Signed Out",
       message: "You have been signed out successfully.",
     });
   };
