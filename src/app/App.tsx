@@ -2712,6 +2712,7 @@ function StudentAssignments({ profile }: { profile: Profile }) {
           )
         `)
         .eq("student_id", profile.id)
+       .order("assigned_at", { ascending: false });
       
       
       if (error) {
@@ -9583,6 +9584,14 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     };
   }, []);
 
+
+useEffect(() => {
+  if (students.length > 0 && profile) {
+    fetchUnreadMessages();
+  }
+}, [students, profile]);
+
+
   // Fetch unread messages
   const fetchUnreadMessages = async () => {
     if (!profile?.id) return;
@@ -10007,102 +10016,108 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
   };
 
   const renderStudentList = () => {
-    if (students.length === 0) {
-      return (
-        <div className="text-center text-gray-500 py-8">
-          <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p>No students available</p>
-        </div>
-      );
-    }
+  if (students.length === 0) {
+    return (
+      <div className="text-center text-gray-500 py-8">
+        <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
+        <p>No students available</p>
+      </div>
+    );
+  }
 
-    return students.map((student) => {
-      const preview = getStudentPreview(student.id);
-      const unreadData = chatsWithUnread[student.id];
-      const hasUnread = unreadData && unreadData.count > 0;
-      
-      return (
-        <button
-          key={student.id}
-          onClick={() => handleStudentSelect(student.id)}
-          className={cn(
-            "w-full text-left p-3 rounded-lg text-sm transition-all relative",
-            selectedStudentId === student.id
-              ? "border shadow-sm" : "hover:bg-gray-50",
-            hasUnread && "bg-orange-50 border-l-4 border-orange-500"
-          )}
-          style={selectedStudentId === student.id ? { 
-            backgroundColor: '#fdddce', 
-            borderColor: '#fcba9d', 
-            color: '#f7530b' 
-          } : {}}
-        >
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
-              {hasUnread && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md animate-pulse">
-                  {unreadData.count > 9 ? '9+' : unreadData.count}
-                </span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className={cn(
-                  "font-medium truncate",
-                  hasUnread ? "text-gray-900 font-semibold" : "text-gray-700"
-                )}>
-                  {student.full_name}
-                  {hasUnread && (
-                    <span className="ml-2 text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full">
-                      New
-                    </span>
-                  )}
-                </span>
-                {preview && (
-                  <span className="text-[10px] text-gray-400 shrink-0 ml-1">
-                    {preview.time}
-                  </span>
-                )}
-              </div>
-              {preview ? (
-                <div className="flex items-center gap-1">
-                  <p className={cn(
-                    "text-xs truncate",
-                    hasUnread ? "text-gray-700 font-medium" : "text-gray-500"
-                  )}>
-                    {preview.isFromStudent ? (
-                      <span className="text-orange-600">📩 {preview.senderName}: </span>
-                    ) : (
-                      <span className="text-gray-400">You: </span>
-                    )}
-                    {preview.messagePreview}
-                  </p>
-                  {hasUnread && (
-                    <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0 animate-pulse" />
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-400">No messages yet</p>
-              )}
-            </div>
-            {!hasUnread && selectedStudentId !== student.id && (
-              <ChevronRight className="w-4 h-4 text-gray-300" />
+  // Sort students by latest message time (most recent first)
+  const sortedStudents = [...students].sort((a, b) => {
+    const aLatest = latestMessages[a.id]?.created_at || '';
+    const bLatest = latestMessages[b.id]?.created_at || '';
+    return bLatest.localeCompare(aLatest); // descending
+  });
+
+  return sortedStudents.map((student) => {
+    const preview = getStudentPreview(student.id);
+    const unreadData = chatsWithUnread[student.id];
+    const hasUnread = unreadData && unreadData.count > 0;
+    
+    return (
+      <button
+        key={student.id}
+        onClick={() => handleStudentSelect(student.id)}
+        className={cn(
+          "w-full text-left p-3 rounded-lg text-sm transition-all relative",
+          selectedStudentId === student.id
+            ? "border shadow-sm" : "hover:bg-gray-50",
+          hasUnread && "bg-orange-50 border-l-4 border-orange-500"
+        )}
+        style={selectedStudentId === student.id ? { 
+          backgroundColor: '#fdddce', 
+          borderColor: '#fcba9d', 
+          color: '#f7530b' 
+        } : {}}
+      >
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
+            {hasUnread && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md animate-pulse">
+                {unreadData.count > 9 ? '9+' : unreadData.count}
+              </span>
             )}
           </div>
-          {hasUnread && unreadData.latestMessage && (
-            <div className="mt-1 text-xs text-gray-500 truncate pl-11">
-              <span className="text-orange-600 font-medium">{unreadData.senderName}: </span>
-              {unreadData.latestMessage.length > 50 
-                ? unreadData.latestMessage.substring(0, 50) + "..." 
-                : unreadData.latestMessage}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className={cn(
+                "font-medium truncate",
+                hasUnread ? "text-gray-900 font-semibold" : "text-gray-700"
+              )}>
+                {student.full_name}
+                {hasUnread && (
+                  <span className="ml-2 text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full">
+                    New
+                  </span>
+                )}
+              </span>
+              {preview && (
+                <span className="text-[10px] text-gray-400 shrink-0 ml-1">
+                  {preview.time}
+                </span>
+              )}
             </div>
+            {preview ? (
+              <div className="flex items-center gap-1">
+                <p className={cn(
+                  "text-xs truncate",
+                  hasUnread ? "text-gray-700 font-medium" : "text-gray-500"
+                )}>
+                  {preview.isFromStudent ? (
+                    <span className="text-orange-600">📩 {preview.senderName}: </span>
+                  ) : (
+                    <span className="text-gray-400">You: </span>
+                  )}
+                  {preview.messagePreview}
+                </p>
+                {hasUnread && (
+                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0 animate-pulse" />
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">No messages yet</p>
+            )}
+          </div>
+          {!hasUnread && selectedStudentId !== student.id && (
+            <ChevronRight className="w-4 h-4 text-gray-300" />
           )}
-        </button>
-      );
-    });
-  };
-
+        </div>
+        {hasUnread && unreadData.latestMessage && (
+          <div className="mt-1 text-xs text-gray-500 truncate pl-11">
+            <span className="text-orange-600 font-medium">{unreadData.senderName}: </span>
+            {unreadData.latestMessage.length > 50 
+              ? unreadData.latestMessage.substring(0, 50) + "..." 
+              : unreadData.latestMessage}
+          </div>
+        )}
+      </button>
+    );
+  });
+};
 
   // Mobile chat view
   if (isMobile) {
@@ -10293,7 +10308,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
 
       <div className="flex gap-2 mb-4">
         <button
-          onClick={() => { setChatType("personal"); setSelectedCourseId(null); }}
+          onClick={() => { setChatType("personal"); setSelectedCourseId(null); fetchUnreadMessages(); }}
           className={cn(
             "px-4 py-2 rounded-lg text-sm font-medium transition-colors relative",
             chatType === "personal" ? "text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
