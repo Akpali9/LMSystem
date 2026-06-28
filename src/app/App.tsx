@@ -2707,11 +2707,12 @@ function StudentAssignments({ profile }: { profile: Profile }) {
             title,
             description,
             due_days,
-            max_score
+            max_score,
+            attachment_url 
           )
         `)
         .eq("student_id", profile.id)
-        .order("assigned_at", { ascending: false });
+      
       
       if (error) {
         console.error("Error fetching assignments:", error);
