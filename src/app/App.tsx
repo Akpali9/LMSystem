@@ -3719,104 +3719,110 @@ function StudentCourses({ profile, onNavigate, courses, enrollments, onEnroll }:
   
   const otherCourses = courses?.filter(c => !enrolledCourseIds.includes(c.id)) || [];
 
-  const handleEnrollSubmit = async () => {
-    if (!selectedCourse || !receiptFile) {
-      toast({
-        type: "warning",
-        title: "Missing Information",
-        message: "Please select a course and upload a payment receipt.",
-      });
-      return;
-    }
+const handleEnrollSubmit = async () => {
+  if (!selectedCourse || !receiptFile) {
+    toast({
+      type: "warning",
+      title: "Missing Information",
+      message: "Please select a course and upload a payment receipt.",
+    });
+    return;
+  }
+  
+  setUploading(true);
+  setSubmitting(true);
+  
+  try {
+    console.log("Enrolling student:", profile.id, "course:", selectedCourse.id);
     
-    setUploading(true);
-    setSubmitting(true);
-    
-    try {
-      const fileExt = receiptFile.name.split('.').pop();
-      const fileName = `${profile.id}-${selectedCourse.id}-${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from("receipts")
-        .upload(fileName, receiptFile);
-      
-      if (uploadError) {
-        toast({
-          type: "error",
-          title: "Upload Failed",
-          message: "Failed to upload receipt. Please try again.",
-        });
-        setUploading(false);
-        setSubmitting(false);
-        return;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("receipts")
-        .getPublicUrl(fileName);
-
-      const { data: enrollment, error: enrollmentError } = await supabase
-        .from("enrollments")
-        .insert({
-          student_id: profile.id,
-          course_id: selectedCourse.id,
-          status: "pending_payment",
-          current_module_index: 0,
-        })
-        .select()
-        .single();
-
-      if (enrollmentError) {
-        toast({
-          type: "error",
-          title: "Enrollment Failed",
-          message: "Failed to create enrollment. Please try again.",
-        });
-        setUploading(false);
-        setSubmitting(false);
-        return;
-      }
-
-      if (enrollment) {
-        const { error: paymentError } = await supabase.from("payment_receipts").insert({
-          enrollment_id: enrollment.id,
-          student_id: profile.id,
-          receipt_url: publicUrl,
-          amount: selectedCourse.price,
-          status: "pending",
-        });
-        
-        if (paymentError) {
-          toast({
-            type: "warning",
-            title: "Payment Recorded",
-            message: "Payment recorded but please contact admin.",
-          });
-        } else {
-          toast({
-            type: "success",
-            title: "Enrollment Submitted!",
-            message: `Your enrollment for ${selectedCourse.title} is pending admin approval.`,
-          });
-        }
-      }
-
-      await onEnroll(selectedCourse.id);
-      
-      setShowEnroll(false);
-      setSelectedCourse(null);
-      setReceiptFile(null);
-    } catch (error) {
+    // 1. Upload receipt
+    const fileExt = receiptFile.name.split('.').pop();
+    const fileName = `${profile.id}-${selectedCourse.id}-${Date.now()}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage
+      .from("receipts")
+      .upload(fileName, receiptFile);
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
       toast({
         type: "error",
-        title: "Error",
-        message: "An error occurred. Please try again.",
+        title: "Upload Failed",
+        message: uploadError.message || "Check that the 'receipts' bucket exists and is public.",
       });
-    } finally {
       setUploading(false);
       setSubmitting(false);
+      return;
     }
-  };
+    const { data: { publicUrl } } = supabase.storage
+      .from("receipts")
+      .getPublicUrl(fileName);
+    console.log("Receipt uploaded:", publicUrl);
 
+    // 2. Insert enrollment – try without .select() first, or with limited select
+    const { data: enrollment, error: enrollmentError } = await supabase
+      .from("enrollments")
+      .insert({
+        student_id: profile.id,
+        course_id: selectedCourse.id,
+        status: "pending", // use 'pending' if 'pending_payment' is not allowed
+        current_module_index: 0,
+      })
+      .select('id') // only select the ID to avoid full object issues
+      .single();
+
+    if (enrollmentError) {
+      console.error("Enrollment insert error:", enrollmentError);
+      // Show detailed error to user
+      toast({
+        type: "error",
+        title: "Enrollment Failed",
+        message: `Database error: ${enrollmentError.message || 'Unknown'}`,
+      });
+      setUploading(false);
+      setSubmitting(false);
+      return;
+    }
+
+    console.log("Enrollment created:", enrollment.id);
+
+    // 3. Insert payment receipt
+    const { error: paymentError } = await supabase.from("payment_receipts").insert({
+      enrollment_id: enrollment.id,
+      student_id: profile.id,
+      receipt_url: publicUrl,
+      amount: selectedCourse.price,
+      status: "pending",
+    });
+    if (paymentError) {
+      console.error("Payment receipt error:", paymentError);
+      toast({
+        type: "warning",
+        title: "Payment Recorded",
+        message: "Payment saved but admin contact may be needed.",
+      });
+    } else {
+      toast({
+        type: "success",
+        title: "Enrollment Submitted!",
+        message: `Your enrollment for ${selectedCourse.title} is pending admin approval.`,
+      });
+    }
+
+    await onEnroll(selectedCourse.id);
+    setShowEnroll(false);
+    setSelectedCourse(null);
+    setReceiptFile(null);
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    toast({
+      type: "error",
+      title: "Error",
+      message: "An unexpected error occurred. Please try again.",
+    });
+  } finally {
+    setUploading(false);
+    setSubmitting(false);
+  }
+};
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -10900,7 +10906,7 @@ export default function App() {
     setView("landing");
     toast({
       type: "info",
-      title: "Signed Out",
+      title: "Signed Out",e5
       message: "You have been signed out successfully.",
     });
   };
