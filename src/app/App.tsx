@@ -5030,7 +5030,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   const activeEnrollments = enrollments.filter(e => e.status === "active");
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
   const currentEnrollment = activeEnrollments.find(e => e.id === selectedEnrollmentId) || activeEnrollments[0] || null;
-  const courseModules = currentEnrollment
+const courseModules = currentEnrollment
   ? modules.filter(m => m.course_id === currentEnrollment.course_id).sort((a, b) => a.order_index - b.order_index)
   : [];
   const [selectedModuleIndex, setSelectedModuleIndex] = useState(0);
