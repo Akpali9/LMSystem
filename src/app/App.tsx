@@ -2285,32 +2285,9 @@ function Sidebar({
           .subscribe()
       );
     }
-    // --- admin payments count (for dashboard) ---
-const adminPaymentsChannel = supabase
-  .channel('admin-payments-dashboard')
-  .on('postgres_changes',
-    { event: '*', schema: 'public', table: 'payment_receipts' },
-    () => fetchAdminCounts()
-  )
-  .subscribe();
-
-// --- admin assignments count (for dashboard) ---
-const adminAssignmentsChannel = supabase
-  .channel('admin-assignments-dashboard')
-  .on('postgres_changes',
-    { event: '*', schema: 'public', table: 'student_assignments' },
-    () => fetchAdminCounts()
-  )
-  .subscribe();
-    
-    return () => {
-        coursesChannel.unsubscribe();
-  modulesChannel.unsubscribe();
-  moduleContentsChannel.unsubscribe();
-  enrollmentsChannel.unsubscribe();
+      return () => {
       subscriptions.forEach(sub => sub.unsubscribe());
-        adminPaymentsChannel.unsubscribe();
-  adminAssignmentsChannel.unsubscribe();
+     
     };
   }, [profile?.id, profile?.role]);
 
@@ -10909,12 +10886,32 @@ const [submittedAssignmentsCount, setSubmittedAssignmentsCount] = useState(0);
       .channel("enrollments-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "enrollments" }, () => fetchEnrollments())
       .subscribe();
+      // --- admin payments count (for dashboard) ---
+const adminPaymentsChannel = supabase
+  .channel('admin-payments-dashboard')
+  .on('postgres_changes',
+    { event: '*', schema: 'public', table: 'payment_receipts' },
+    () => fetchAdminCounts()
+  )
+  .subscribe();
+
+// --- admin assignments count (for dashboard) ---
+const adminAssignmentsChannel = supabase
+  .channel('admin-assignments-dashboard')
+  .on('postgres_changes',
+    { event: '*', schema: 'public', table: 'student_assignments' },
+    () => fetchAdminCounts()
+  )
+  .subscribe();
+    
 
     return () => {
       coursesChannel.unsubscribe();
       modulesChannel.unsubscribe();
       moduleContentsChannel.unsubscribe();
       enrollmentsChannel.unsubscribe();
+        adminPaymentsChannel.unsubscribe();    
+    adminAssignmentsChannel.unsubscribe();
     };
   }, [profile]);
 
