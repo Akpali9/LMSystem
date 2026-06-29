@@ -48,8 +48,8 @@
 
     /* --- continuous typing container --- */
     .typing-wrapper {
-      display: inline;
-        max-width: 100%;
+      display: flex;
+  
   vertical-align: bottom;
       /* ensure the cursor stays inline */
     }
