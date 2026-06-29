@@ -6051,6 +6051,7 @@ const courseModules = currentEnrollment
   <p style={{ color: '#f7530b' }}>✓ Pass quiz OR complete assignment</p>
 </div>
     </div>
+        </div>
   );
 }
 
