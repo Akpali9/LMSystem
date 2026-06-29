@@ -49,6 +49,8 @@
     /* --- continuous typing container --- */
     .typing-wrapper {
       display: inline;
+        max-width: 100%;
+  vertical-align: bottom;
       /* ensure the cursor stays inline */
     }
 
@@ -60,6 +62,7 @@
       font-weight: 400;
       letter-spacing: -0.01em;
       background: transparent;
+      word-break: break-word; 
 
       /* core typing effect: width from 0 to 100% with steps */
       overflow: hidden;
