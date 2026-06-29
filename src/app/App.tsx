@@ -2285,9 +2285,32 @@ function Sidebar({
           .subscribe()
       );
     }
+    // --- admin payments count (for dashboard) ---
+const adminPaymentsChannel = supabase
+  .channel('admin-payments-dashboard')
+  .on('postgres_changes',
+    { event: '*', schema: 'public', table: 'payment_receipts' },
+    () => fetchAdminCounts()
+  )
+  .subscribe();
+
+// --- admin assignments count (for dashboard) ---
+const adminAssignmentsChannel = supabase
+  .channel('admin-assignments-dashboard')
+  .on('postgres_changes',
+    { event: '*', schema: 'public', table: 'student_assignments' },
+    () => fetchAdminCounts()
+  )
+  .subscribe();
     
     return () => {
+        coursesChannel.unsubscribe();
+  modulesChannel.unsubscribe();
+  moduleContentsChannel.unsubscribe();
+  enrollmentsChannel.unsubscribe();
       subscriptions.forEach(sub => sub.unsubscribe());
+        adminPaymentsChannel.unsubscribe();
+  adminAssignmentsChannel.unsubscribe();
     };
   }, [profile?.id, profile?.role]);
 
@@ -7038,6 +7061,8 @@ function AdminStudents({ students, onSendAssignment, onViewProfile }: {
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(false);
   const [studentProgress, setStudentProgress] = useState<Record<string, { passed: number; total: number; enrollments: any[] }>>({});
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+const [submittedAssignmentsCount, setSubmittedAssignmentsCount] = useState(0);
 
   // Fetch courses, modules, and progress together
   useEffect(() => {
@@ -10852,8 +10877,10 @@ export default function App() {
       fetchModules();
       fetchModuleContents();
       fetchEnrollments();
+      
       if (profile.role === "admin") {
         fetchStudents();
+         fetchAdminCounts();
       }
     }
   }, [profile]);
@@ -10918,6 +10945,38 @@ export default function App() {
     const { data } = await supabase.from("profiles").select("*").eq("role", "student");
     if (data) setStudents(data as Profile[]);
   };
+  const fetchAdminCounts = async () => {
+  if (profile?.role !== 'admin') return;
+
+  const { count: paymentsCount } = await supabase
+    .from('payment_receipts')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  setPendingPaymentsCount(paymentsCount || 0);
+
+  const { count: assignmentsCount } = await supabase
+    .from('student_assignments')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'submitted');
+  setSubmittedAssignmentsCount(assignmentsCount || 0);
+};
+  const fetchAdminCounts = async () => {
+  if (profile?.role !== 'admin') return;
+
+  // Pending payments
+  const { count: paymentsCount } = await supabase
+    .from('payment_receipts')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  setPendingPaymentsCount(paymentsCount || 0);
+
+  // Submitted assignments (waiting for grading)
+  const { count: assignmentsCount } = await supabase
+    .from('student_assignments')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'submitted');
+  setSubmittedAssignmentsCount(assignmentsCount || 0);
+};
 
   const handleLogin = (p: Profile) => {
     setProfile(p);
@@ -11374,16 +11433,16 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
   const renderView = () => {
     if (profile.role === "admin") {
       switch (view) {
-        case "admin-dashboard":
-          return <AdminDashboard 
-            onNavigate={setView} 
-            stats={{
-              students: students?.length || 0,
-              courses: courses?.length || 0,
-              pendingPayments: 0,
-              submittedAssignments: 0,
-            }} 
-          />;
+      case "admin-dashboard":
+  return <AdminDashboard 
+    onNavigate={setView} 
+    stats={{
+      students: students?.length || 0,
+      courses: courses?.length || 0,
+      pendingPayments: pendingPaymentsCount,
+      submittedAssignments: submittedAssignmentsCount,
+    }} 
+  />;
         case "admin-courses":
           return <AdminCourses 
             courses={courses || []} 
