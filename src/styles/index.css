@@ -55,7 +55,7 @@
     }
 
  .typing-text {
-  display: block;              /* allow wrapping */
+  display: flex;              /* allow wrapping */
   overflow: hidden;
   white-space: normal;         /* text wraps */
   border-right: 3px solid #4b5563;
