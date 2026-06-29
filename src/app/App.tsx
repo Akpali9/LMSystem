@@ -10774,6 +10774,8 @@ export default function App() {
   const [students, setStudents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingStudent, setViewingStudent] = useState<Profile | null>(null);
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+const [submittedAssignmentsCount, setSubmittedAssignmentsCount] = useState(0);
 
   const ensureProfile = async (userId: string, userEmail: string, userName: string) => {
     const { data: existing } = await supabase
@@ -10960,24 +10962,6 @@ export default function App() {
     .eq('status', 'submitted');
   setSubmittedAssignmentsCount(assignmentsCount || 0);
 };
-  const fetchAdminCounts = async () => {
-  if (profile?.role !== 'admin') return;
-
-  // Pending payments
-  const { count: paymentsCount } = await supabase
-    .from('payment_receipts')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending');
-  setPendingPaymentsCount(paymentsCount || 0);
-
-  // Submitted assignments (waiting for grading)
-  const { count: assignmentsCount } = await supabase
-    .from('student_assignments')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'submitted');
-  setSubmittedAssignmentsCount(assignmentsCount || 0);
-};
-
   const handleLogin = (p: Profile) => {
     setProfile(p);
     setView(p.role === "admin" ? "admin-dashboard" : "student-dashboard");
@@ -11162,39 +11146,81 @@ export default function App() {
     setProfile(prev => prev ? { ...prev, ...updates, avatar_url: avatarUrl } : null);
   };
 
-  const handleSendAssignment = async (studentId: string, studentName: string, assignmentData: any) => {
-    const { data: assignment } = await supabase
-      .from("assignments")
-      .insert({
-        module_id: assignmentData.module_id,
-        title: assignmentData.title,
-        description: assignmentData.description,
-        due_days: parseInt(assignmentData.due_days),
-        max_score: parseInt(assignmentData.max_score),
-      })
-      .select()
-      .single();
+ const handleSendAssignment = async (studentId: string, studentName: string, assignmentData: any) => {
+  // 1. Create the assignment
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("assignments")
+    .insert({
+      module_id: assignmentData.module_id,
+      title: assignmentData.title,
+      description: assignmentData.description,
+      due_days: parseInt(assignmentData.due_days),
+      max_score: parseInt(assignmentData.max_score),
+    })
+    .select()
+    .single();
 
-    if (assignment) {
-      const moduleInfo = modules.find(m => m.id === assignmentData.module_id);
-      const { data: enrollment } = await supabase
-        .from("enrollments")
-        .select("id")
-        .eq("student_id", studentId)
-        .eq("course_id", moduleInfo?.course_id)
-        .single();
+  if (assignmentError) {
+    console.error("Error creating assignment:", assignmentError);
+    toast({
+      type: "error",
+      title: "Failed",
+      message: "Could not create assignment.",
+    });
+    return;
+  }
 
-     if (currentEnrollment) {
-        await supabase.from("student_assignments").insert({
-          assignment_id: assignment.id,
-          student_id: studentId,
-          enrollment_id: enrollment.id,
-          status: "pending",
-        });
-      }
-    }
-  };
+  // 2. Find the enrollment for this student and course
+  const moduleInfo = modules.find(m => m.id === assignmentData.module_id);
+  if (!moduleInfo) {
+    toast({
+      type: "error",
+      title: "Module Not Found",
+      message: "The selected module does not exist.",
+    });
+    return;
+  }
 
+  const { data: enrollment, error: enrollmentError } = await supabase
+    .from("enrollments")
+    .select("id")
+    .eq("student_id", studentId)
+    .eq("course_id", moduleInfo.course_id)
+    .single();
+
+  if (enrollmentError || !enrollment) {
+    toast({
+      type: "error",
+      title: "Enrollment Not Found",
+      message: "This student is not enrolled in the course.",
+    });
+    return;
+  }
+
+  // 3. Assign to student
+  const { error: insertError } = await supabase.from("student_assignments").insert({
+    assignment_id: assignment.id,
+    student_id: studentId,
+    enrollment_id: enrollment.id,
+    status: "pending",
+  });
+
+  if (insertError) {
+    console.error("Error assigning:", insertError);
+    toast({
+      type: "error",
+      title: "Assignment Failed",
+      message: "Could not assign to student.",
+    });
+  } else {
+    toast({
+      type: "success",
+      title: "Assignment Sent",
+      message: `Assignment sent to ${studentName}.`,
+    });
+  }
+};
+  
   const handleCreateAssignment = async (assignmentData: any) => {
     const { data: assignment } = await supabase
       .from("assignments")
