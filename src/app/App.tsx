@@ -7865,7 +7865,7 @@ function AdminPayments() {
             
             <div className="bg-gray-100 rounded-lg p-6 text-center">
               <FileText className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-             // In AdminPayments component:
+             
 {viewReceipt.receipt_url ? (
   <a 
     href={viewReceipt.receipt_url} 
