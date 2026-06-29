@@ -1254,7 +1254,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           <p className="text-lg text-gray-600 leading-relaxed max-w-md">
              <span className="typing-wrapper">
       <span className="typing-text">
-            Structured 3-month courses taught by industry experts. Progress at your own pace, earn verified certificates, and transform your career.
+            Structured 3-month courses taught by industry experts.<br> Progress at your own pace, earn verified certificates,<br> and transform your career.
          </span>
     </span>    
       </p>
