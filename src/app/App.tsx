@@ -1256,16 +1256,16 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <span className="typing-text">
             Structured 3-month courses taught by industry experts.
          </span>
-    </span> 
-             <span className="typing-wrapper">
+    
+             
       <span className="typing-text">
            Progress at your own pace, earn verified certificates,
-             </span>
+             
     </span> 
-             <span className="typing-wrapper">
+            
       <span className="typing-text">
         and transform your career.
-            </span>
+          
     </span> 
       </p>
           <div className="flex flex-wrap gap-4">
