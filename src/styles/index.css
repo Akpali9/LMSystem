@@ -50,13 +50,11 @@
     .typing-wrapper {
       display: flex;
   
-  vertical-align: bottom;
-      /* ensure the cursor stays inline */
-    }
+  }
 
  .typing-text {
   display: flex;              /* allow wrapping */
-  overflow: hidden;
+
   white-space: normal;         /* text wraps */
   border-right: 3px solid #4b5563;
   padding-right: 2px;
