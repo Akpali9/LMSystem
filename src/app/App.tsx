@@ -10234,24 +10234,25 @@ useEffect(() => {
             ) : (
               <div className="space-y-3">
                 <p className="text-xs text-gray-500 px-1">Select a course:</p>
-                {courses.map((course) => (
-                  <Card
-                    key={course.id}
-                    className="p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-                    onClick={() => { setSelectedCourseId(course.id); setShowList(false); }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                        <img src={course.thumbnail_url || ""} alt="" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-800 text-sm truncate">{course.title}</p>
-                        <p className="text-xs text-gray-500">Tap to chat</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
-                    </div>
-                  </Card>
-                ))}
+             {courses.map((course) => (
+  <div
+    key={course.id}
+    className="bg-white rounded-xl border p-4 cursor-pointer hover:shadow-md transition-all active:opacity-70"
+    style={{ borderColor: '#e0e0e0' }}
+    onClick={() => { setSelectedCourseId(course.id); setShowList(false); }}
+  >
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+        <img src={course.thumbnail_url || ""} alt="" className="w-full h-full object-cover" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-gray-800 text-sm truncate">{course.title}</p>
+        <p className="text-xs text-gray-500">Tap to chat</p>
+      </div>
+      <ChevronRight className="w-4 h-4 text-gray-400" />
+    </div>
+  </div>
+))}
               </div>
             )}
           </div>
