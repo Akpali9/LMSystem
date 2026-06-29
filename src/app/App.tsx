@@ -6034,23 +6034,22 @@ const courseModules = currentEnrollment
           })}
         </div>
         
-        <div className="mt-4 pt-4 border-t" style={{ borderColor: '#e0e0e0' }}>
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Progress</span>
-            <span>{progressData.filter(p => p.status === "passed").length}/{modules?.length || 0}</span>
-          </div>
-          <ProgressBar 
-            value={progressData.filter(p => p.status === "passed").length} 
-             max={courseModules.length || 1} 
-            className="mt-1" 
-          />
-        </div>
-        
-        <div className="mt-3 text-xs text-gray-500 border-t pt-3 space-y-1" style={{ borderColor: '#e0e0e0' }}>
-          <p>Module {selectedModuleIndex + 1} of {modules?.length || 0}</p>
-          <p style={{ color: '#f7530b' }}>✓ Pass quiz OR complete assignment</p>
-        </div>
-      </div>
+       <div className="mt-4 pt-4 border-t" style={{ borderColor: '#e0e0e0' }}>
+  <div className="flex items-center justify-between text-xs text-gray-500">
+    <span>Progress</span>
+    <span>{progressData.filter(p => p.status === "passed").length}/{courseModules.length}</span>
+  </div>
+  <ProgressBar 
+    value={progressData.filter(p => p.status === "passed").length} 
+    max={courseModules.length || 1} 
+    className="mt-1" 
+  />
+</div>
+
+<div className="mt-3 text-xs text-gray-500 border-t pt-3 space-y-1" style={{ borderColor: '#e0e0e0' }}>
+  <p>Module {selectedModuleIndex + 1} of {courseModules.length}</p>
+  <p style={{ color: '#f7530b' }}>✓ Pass quiz OR complete assignment</p>
+</div>
     </div>
   );
 }
