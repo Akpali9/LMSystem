@@ -3741,7 +3741,7 @@ const handleEnrollSubmit = async () => {
       .upload(fileName, receiptFile);
 
     if (uploadError) {
-      console.error("Upload error:", uploadError);
+     
       toast({
         type: "error",
         title: "Upload Failed",
@@ -3755,7 +3755,7 @@ const handleEnrollSubmit = async () => {
     const { data: { publicUrl } } = supabase.storage
       .from("receipts")
       .getPublicUrl(fileName);
-    console.log("Receipt uploaded:", publicUrl);
+   
 
     // 2. Check if course exists
     const { data: courseExists, error: courseCheckError } = await supabase
@@ -3794,7 +3794,7 @@ const handleEnrollSubmit = async () => {
       .single();
 
     if (enrollmentError) {
-      console.error("Full enrollment error:", JSON.stringify(enrollmentError, null, 2));
+     
       toast({
         type: "error",
         title: "Enrollment Failed",
@@ -3805,7 +3805,7 @@ const handleEnrollSubmit = async () => {
       return;
     }
 
-    console.log("Enrollment created:", enrollment);
+   
 
     // 4. Insert payment receipt
     const { error: paymentError } = await supabase.from("payment_receipts").insert({
