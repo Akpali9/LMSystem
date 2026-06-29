@@ -1284,14 +1284,14 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
 </div>
         </div>
         <div className="relative">
-          <div className="rounded-2xl overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
+          <div className="rounded-2xl animate-fade-up overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
             <img
               src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format"
               alt="Students learning"
               className="w-full object-cover"
             />
           </div>
-          <div className="absolute -bottom-6 -left-6 bg-white rounded-xl border shadow-xl p-4 flex items-center gap-3" style={{ borderColor: '#e0e0e0' }}>
+          <div className="absolute -bottom-6 -left-6 animate-fade-up bg-white rounded-xl border shadow-xl p-4 flex items-center gap-3" style={{ borderColor: '#e0e0e0' }}>
             <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
@@ -1300,7 +1300,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               <p className="text-xs text-gray-500">Score: 92/100</p>
             </div>
           </div>
-          <div className="absolute -top-4 -right-4 rounded-xl shadow-xl p-4" style={{ backgroundColor: '#f7530b' }}>
+          <div className="absolute -top-4 -right-4 rounded-xl animate-fade-up shadow-xl p-4" style={{ backgroundColor: '#f7530b' }}>
             <p className="text-white text-sm font-bold">3 Month</p>
             <p className="text-white/70 text-xs">Duration</p>
           </div>
@@ -1308,15 +1308,15 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       </section>
 
       <section id="courses" className="max-w-7xl mx-auto px-6 py-20">
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 animate-fade-up">
           <h2 className="text-3xl font-bold mb-3" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
             Featured Programs
           </h2>
-          <p className="text-gray-500 max-w-xl mx-auto">
+          <p className="text-gray-500 max-w-xl mx-auto animate-fade-up">
             Handcrafted 3-month curricula — each module unlocks only after you demonstrate mastery.
           </p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 animate-fade-up gap-6">
           {courses.map((course) => (
             <div
               key={course.id}
@@ -1388,7 +1388,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       </section>
 
       <section id="why" className="max-w-7xl mx-auto px-6 py-20">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div className="grid lg:grid-cols-2 gap-16 items-center animate-fade-up">
           <div className="space-y-8">
             <h2 className="text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
               Built for Serious Learners
@@ -1419,7 +1419,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               Start Learning Today <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-          <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ borderColor: '#e0e0e0' }}>
+          <div className="rounded-2xl overflow-hidden shadow-xl border animate-fade-up" style={{ borderColor: '#e0e0e0' }}>
             <img
               src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=700&h=550&fit=crop&auto=format"
               alt="Student studying"
