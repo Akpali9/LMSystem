@@ -5030,6 +5030,9 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   const activeEnrollments = enrollments.filter(e => e.status === "active");
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
   const currentEnrollment = activeEnrollments.find(e => e.id === selectedEnrollmentId) || activeEnrollments[0] || null;
+  const courseModules = currentEnrollment
+  ? modules.filter(m => m.course_id === currentEnrollment.course_id).sort((a, b) => a.order_index - b.order_index)
+  : [];
   const [selectedModuleIndex, setSelectedModuleIndex] = useState(0);
   const [videoProgress, setVideoProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<"content" | "quiz" | "exam">("content");
@@ -5050,7 +5053,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Get the current module
-  const currentModule = modules?.[selectedModuleIndex] || modules?.[0] || null;
+  const currentModule = courseModules[selectedModuleIndex] || null;
   const currentContent = moduleContents?.find(c => c.module_id === currentModule?.id) || null;
   const moduleProgress = progressData.find(p => p.module_id === currentModule?.id);
 
@@ -5062,20 +5065,20 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
 
   // Check if module is locked
   const isModuleLocked = (index: number) => {
-    if (!currentEnrollment) return true;
-    const currentIndex = currentEnrollment.current_module_index || 0;
-    if (index === 0) return false;
-    if (index > currentIndex + 1) return true;
-    if (index === currentIndex + 1) {
-      const prevModule = modules?.[index - 1];
-      if (prevModule) {
-        const prevProgress = progressData.find(p => p.module_id === prevModule.id);
-        if (prevProgress?.status !== "passed") return true;
-      }
+  if (!currentEnrollment) return true;
+  const currentIndex = currentEnrollment.current_module_index || 0;
+  if (index === 0) return false;
+  if (index > currentIndex + 1) return true;
+  if (index === currentIndex + 1) {
+    const prevModule = courseModules[index - 1];
+    if (prevModule) {
+      const prevProgress = progressData.find(p => p.module_id === prevModule.id);
+      if (prevProgress?.status !== "passed") return true;
     }
-    return false;
-  };
-
+  }
+  return false;
+};
+  
   useEffect(() => {
     if (activeEnrollments.length > 0) {
       if (!selectedEnrollmentId || !activeEnrollments.find(e => e.id === selectedEnrollmentId)) {
@@ -5088,14 +5091,14 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   }, [enrollments, progressData]);
 
   const fetchStudentAssignments = async () => {
-    if (!currentEnrollment) return;
-    const { data } = await supabase
-      .from("student_assignments")
-      .select("*, assignment:assignment_id(*)")
-      .eq("student_id", profile.id)
-      .eq("enrollment_id", currentEnrollment.id);
-    if (data) setStudentAssignments(data as StudentAssignment[]);
-  };
+  if (!currentEnrollment) return;
+  const { data } = await supabase
+    .from("student_assignments")
+    .select("*, assignment:assignment_id(*)")
+    .eq("student_id", profile.id)
+    .eq("enrollment_id", currentEnrollment.id);
+  if (data) setStudentAssignments(data as StudentAssignment[]);
+};
 
   useEffect(() => {
     if (currentEnrollment) {
@@ -5104,13 +5107,15 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
   }, [currentEnrollment]);
 
   useEffect(() => {
-    if (currentEnrollment) {
-      setCurrentEnrollmentState(currentEnrollment);
-      setSelectedModuleIndex(currentEnrollment.current_module_index || 0);
-      fetchProgress();
-      fetchQuizForModule();
-    }
-  }, [currentEnrollment, quizRefreshKey]);
+  if (currentEnrollment) {
+    setCurrentEnrollmentState(currentEnrollment);
+    // Ensure index is within bounds
+    const newIndex = Math.min(currentEnrollment.current_module_index || 0, courseModules.length - 1);
+    setSelectedModuleIndex(newIndex);
+    fetchProgress();
+    fetchQuizForModule();
+  }
+}, [currentEnrollment, quizRefreshKey, courseModules.length]);
 
   useEffect(() => {
     if (currentEnrollment) {
@@ -5508,7 +5513,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
        <div className="flex-1 p-4 md:p-6 overflow-y-auto order-1 md:order-2" style={{ minHeight: '100vh', height: '100%' }}>
        <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant="info">Module {selectedModuleIndex + 1} of {modules?.length || 0}</Badge>
+           <Badge variant="info">Module {selectedModuleIndex + 1} of {courseModules.length}</Badge>
             {moduleProgress?.status === "passed" && <Badge variant="success">✅ Passed</Badge>}
             {moduleProgress?.status === "failed" && <Badge variant="danger">❌ Failed</Badge>}
             {isModuleLocked(selectedModuleIndex) && <Badge variant="muted">🔒 Locked</Badge>}
@@ -5971,7 +5976,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
           </select>
         </div>
         <div className="space-y-1">
-          {modules?.map((module, index) => {
+         {courseModules.map((module, index) => {
             const isLocked = isModuleLocked(index);
             const isActive = index === selectedModuleIndex;
             const isCompleted = isModuleCompleted(module.id);
@@ -6036,7 +6041,7 @@ function StudentModuleViewer({ profile, enrollments, modules, moduleContents, on
           </div>
           <ProgressBar 
             value={progressData.filter(p => p.status === "passed").length} 
-            max={modules?.length || 1} 
+             max={courseModules.length || 1} 
             className="mt-1" 
           />
         </div>
