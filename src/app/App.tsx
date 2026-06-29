@@ -3728,63 +3728,86 @@ const handleEnrollSubmit = async () => {
     });
     return;
   }
-  
+
   setUploading(true);
   setSubmitting(true);
-  
+
   try {
-    console.log("Enrolling student:", profile.id, "course:", selectedCourse.id);
-    
     // 1. Upload receipt
     const fileExt = receiptFile.name.split('.').pop();
     const fileName = `${profile.id}-${selectedCourse.id}-${Date.now()}.${fileExt}`;
     const { error: uploadError } = await supabase.storage
       .from("receipts")
       .upload(fileName, receiptFile);
+
     if (uploadError) {
       console.error("Upload error:", uploadError);
       toast({
         type: "error",
         title: "Upload Failed",
-        message: uploadError.message || "Check that the 'receipts' bucket exists and is public.",
+        message: uploadError.message || "Failed to upload receipt. Please try again.",
       });
       setUploading(false);
       setSubmitting(false);
       return;
     }
+
     const { data: { publicUrl } } = supabase.storage
       .from("receipts")
       .getPublicUrl(fileName);
     console.log("Receipt uploaded:", publicUrl);
 
-    // 2. Insert enrollment – try without .select() first, or with limited select
-    const { data: enrollment, error: enrollmentError } = await supabase
-      .from("enrollments")
-      .insert({
-        student_id: profile.id,
-        course_id: selectedCourse.id,
-        status: "pending", // use 'pending' if 'pending_payment' is not allowed
-        current_module_index: 0,
-      })
-      .select('id') // only select the ID to avoid full object issues
-      .single();
+    // 2. Check if course exists
+    const { data: courseExists, error: courseCheckError } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("id", selectedCourse.id)
+      .maybeSingle();
 
-    if (enrollmentError) {
-      console.error("Enrollment insert error:", enrollmentError);
-      // Show detailed error to user
+    if (courseCheckError || !courseExists) {
+      console.error("Course check error:", courseCheckError);
       toast({
         type: "error",
-        title: "Enrollment Failed",
-        message: `Database error: ${enrollmentError.message || 'Unknown'}`,
+        title: "Course Not Found",
+        message: "The selected course does not exist. Please refresh and try again.",
       });
       setUploading(false);
       setSubmitting(false);
       return;
     }
 
-    console.log("Enrollment created:", enrollment.id);
+    // 3. Insert enrollment with full response
+    const enrolledAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    // 3. Insert payment receipt
+    const { data: enrollment, error: enrollmentError } = await supabase
+      .from("enrollments")
+      .insert({
+        student_id: profile.id,
+        course_id: selectedCourse.id,
+        status: "pending_payment",
+        current_module_index: 0,
+        enrolled_at: enrolledAt,
+        expires_at: expiresAt,
+      })
+      .select()
+      .single();
+
+    if (enrollmentError) {
+      console.error("Full enrollment error:", JSON.stringify(enrollmentError, null, 2));
+      toast({
+        type: "error",
+        title: "Enrollment Failed",
+        message: `Error: ${enrollmentError.message || enrollmentError.details || 'Unknown'}`,
+      });
+      setUploading(false);
+      setSubmitting(false);
+      return;
+    }
+
+    console.log("Enrollment created:", enrollment);
+
+    // 4. Insert payment receipt
     const { error: paymentError } = await supabase.from("payment_receipts").insert({
       enrollment_id: enrollment.id,
       student_id: profile.id,
@@ -3792,12 +3815,13 @@ const handleEnrollSubmit = async () => {
       amount: selectedCourse.price,
       status: "pending",
     });
+
     if (paymentError) {
       console.error("Payment receipt error:", paymentError);
       toast({
         type: "warning",
         title: "Payment Recorded",
-        message: "Payment saved but admin contact may be needed.",
+        message: "Payment recorded but please contact admin.",
       });
     } else {
       toast({
