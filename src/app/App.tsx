@@ -1243,10 +1243,10 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
 
       <section className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 grid lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-8">
-          <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
-            <Star className="w-3.5 h-3.5 fill-current" style={{ color: '#f7530b' }} />
-            <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: '#f7530b' }}>Globally Certified Programs</span>
-          </div>
+         <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5 animate-fade-up animate-pulse-glow" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
+  <Star className="w-3.5 h-3.5 fill-current" style={{ color: '#f7530b' }} />
+  <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: '#f7530b' }}>Globally Certified Programs</span>
+</div>
           <h1 className="text-5xl lg:text-6xl font-bold leading-[1.1]" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
             Learn Without
             <span className="block italic" style={{ color: '#f7530b' }}>Limits.</span>
@@ -1258,30 +1258,30 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
     </span>
   </span>
 </p>
-          <div className="flex flex-wrap gap-4">
-            <button
-              onClick={onAuth}
-              className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:opacity-90 transition-all hover:shadow-lg"
-              style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-            >
-              Enroll Now <ArrowRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onAuth}
-              className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
-              style={{ backgroundColor: '#e0e0e0', color: '#333333' }}
-            >
-              Browse Courses
-            </button>
-          </div>
-          <div className="flex items-center gap-8 pt-2">
-            {[["1,200+", "Students Enrolled"], ["96%", "Completion Rate"], ["4.9★", "Avg. Rating"]].map(([v, l]) => (
-              <div key={l}>
-                <p className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>{v}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{l}</p>
-              </div>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-4">
+  <button
+    onClick={onAuth}
+    className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:opacity-90 transition-all hover:shadow-lg animate-fade-up animate-delay-300 hover-scale"
+    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+  >
+    Enroll Now <ArrowRight className="w-4 h-4" />
+  </button>
+  <button
+    onClick={onAuth}
+    className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:bg-gray-200 transition-colors animate-fade-up animate-delay-500 hover-scale"
+    style={{ backgroundColor: '#e0e0e0', color: '#333333' }}
+  >
+    Browse Courses
+  </button>
+</div>
+         <div className="flex items-center gap-8 pt-2">
+  {[["1,200+", "Students Enrolled", "animate-delay-200"], ["96%", "Completion Rate", "animate-delay-400"], ["4.9★", "Avg. Rating", "animate-delay-600"]].map(([v, l, delay]) => (
+    <div key={l} className={`animate-fade-up ${delay} hover-scale`}>
+      <p className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>{v}</p>
+      <p className="text-xs text-gray-500 mt-0.5">{l}</p>
+    </div>
+  ))}
+</div>
         </div>
         <div className="relative">
           <div className="rounded-2xl overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
