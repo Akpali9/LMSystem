@@ -1251,23 +1251,13 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             Learn Without
             <span className="block italic" style={{ color: '#f7530b' }}>Limits.</span>
           </h1>
-          <p className="text-lg text-gray-600 leading-relaxed max-w-md">
-             <span className="typing-wrapper">
-      <span className="typing-text">
-            Structured 3-month courses taught by industry experts.
-         </span>
-    
-             
-      <span className="typing-text">
-           Progress at your own pace, earn verified certificates,
-             
-    </span> 
-            
-      <span className="typing-text">
-        and transform your career.
-          
-    </span> 
-      </p>
+        <p className="text-lg text-gray-600 leading-relaxed max-w-md">
+  <span className="typing-wrapper">
+    <span className="typing-text">
+      Structured 3-month courses taught by industry experts. Progress at your own pace, earn verified certificates, and transform your career.
+    </span>
+  </span>
+</p>
           <div className="flex flex-wrap gap-4">
             <button
               onClick={onAuth}
