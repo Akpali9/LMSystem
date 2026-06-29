@@ -54,49 +54,29 @@
       /* ensure the cursor stays inline */
     }
 
-    .typing-text {
-      display: inline;
-      font-size: inherit;
-      line-height: inherit;
-      color: inherit;
-      font-weight: 400;
-      letter-spacing: -0.01em;
-      background: transparent;
-      word-break: break-word; 
+ .typing-text {
+  display: block;              /* allow wrapping */
+  overflow: hidden;
+  white-space: normal;         /* text wraps */
+  border-right: 3px solid #4b5563;
+  padding-right: 2px;
+  clip-path: inset(0 100% 0 0); /* start hidden (cut off from right) */
+  animation: 
+    typingContinuous 6s steps(30, end) infinite,
+    blinkCursor 0.7s step-end infinite;
+}
 
-      /* core typing effect: width from 0 to 100% with steps */
-      overflow: hidden;
-      white-space: nowrap;          /* keep everything on one line */
-      border-right: 3px solid #4b5563;  /* blinking cursor */
-      padding-right: 2px;           /* space after cursor */
-
-      width: 0;
-      display: inline-block;        /* required for width animation */
-      vertical-align: bottom;       /* align with baseline */
-
-      /* animation: 
-         typingContinuous – 6s cycle: type out (4s), pause (2s), reset instantly
-         blinkCursor – independent blinking
-      */
-      animation: 
-        typingContinuous 6s steps(40, end) infinite,
-        blinkCursor 0.7s step-end infinite;
-    }
-
-    /* keyframes: continuous typing with pause */
-    @keyframes typingContinuous {
-      0% {
-        width: 0;
-      }
-      /* typing phase: from 0% to ~66% (4s out of 6s) we type out the text */
-      66% {
-        width: 100%;   /* full width => all text visible */
-      }
-      /* hold (pause) from 66% to 100% (2s) */
-      100% {
-        width: 100%;   /* keep full width, then reset at next cycle */
-      }
-    }
+@keyframes typingContinuous {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  66% {
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
 
     /* blinking cursor */
     @keyframes blinkCursor {
