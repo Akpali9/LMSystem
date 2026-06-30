@@ -1251,7 +1251,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             Learn Without
             <span className="block italic" style={{ color: '#f7530b' }}>Limits.</span>
           </h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed w-full max-w-3xl mx-auto text-center">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed w-full max-w-3xl mx-auto">
 Structured 3-month courses taught by industry experts. Progress at your own pace, earn verified certificates, and transform your career.
    
             </p>
