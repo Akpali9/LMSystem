@@ -9790,6 +9790,7 @@ useEffect(() => {
         .from('chat_messages')
         .update({ read: true })
         .eq('course_id', courseId)
+         .order('created_at', { ascending: false })
         .eq('read', false);
       
       if (!error) {
