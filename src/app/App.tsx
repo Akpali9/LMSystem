@@ -10586,7 +10586,24 @@ function AdminScholarship() {
   };
 
   const handleAction = async (id: string, action: "approved" | "rejected") => {
-    const { error } = await supabase
+    // Get the scholarship record first
+    const { data: scholarship, error: fetchError } = await supabase
+      .from("scholarships")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !scholarship) {
+      toast({
+        type: "error",
+        title: "Error",
+        message: "Could not fetch scholarship details.",
+      });
+      return;
+    }
+
+    // Update scholarship status and admin notes
+    const { error: updateError } = await supabase
       .from("scholarships")
       .update({ 
         status: action, 
@@ -10595,16 +10612,140 @@ function AdminScholarship() {
       })
       .eq("id", id);
 
-    if (!error) {
+    if (updateError) {
       toast({
-        type: "success",
-        title: `Application ${action}`,
-        message: `Scholarship application has been ${action}.`,
+        type: "error",
+        title: "Action Failed",
+        message: "Failed to update application. Please try again.",
       });
-      setSelectedApp(null);
-      setAdminNotes("");
-      fetchApplications();
+      return;
+    }
+
+    // If approved, enroll the student in the course
+    if (action === "approved") {
+      try {
+        // 1. Get course details
+        const { data: course, error: courseError } = await supabase
+          .from("courses")
+          .select("id, duration_months, price")
+          .eq("id", scholarship.course_id)
+          .single();
+
+        if (courseError || !course) {
+          toast({
+            type: "error",
+            title: "Course Not Found",
+            message: "The course associated with this scholarship could not be found.",
+          });
+          // We still updated the scholarship, so we don't throw, but notify user.
+          setSelectedApp(null);
+          setAdminNotes("");
+          fetchApplications();
+          return;
+        }
+
+        // 2. Check if student already has an enrollment for this course
+        const { data: existingEnrollment } = await supabase
+          .from("enrollments")
+          .select("id, status")
+          .eq("student_id", scholarship.student_id)
+          .eq("course_id", course.id)
+          .maybeSingle();
+
+        if (existingEnrollment) {
+          // If already enrolled with a non-active status, update to active
+          if (existingEnrollment.status !== "active") {
+            const { error: updateEnrollmentError } = await supabase
+              .from("enrollments")
+              .update({ status: "active" })
+              .eq("id", existingEnrollment.id);
+
+            if (updateEnrollmentError) {
+              toast({
+                type: "error",
+                title: "Enrollment Update Failed",
+                message: "Student already has an enrollment but we could not activate it.",
+              });
+            } else {
+              toast({
+                type: "success",
+                title: "Scholarship Approved",
+                message: `${scholarship.full_name} has been enrolled in ${scholarship.course_title}. (Existing enrollment activated)`,
+              });
+            }
+          } else {
+            toast({
+              type: "info",
+              title: "Already Enrolled",
+              message: `${scholarship.full_name} is already enrolled in this course.`,
+            });
+          }
+        } else {
+          // 3. Create new enrollment
+          const enrolledAt = new Date().toISOString();
+          const expiresAt = new Date(Date.now() + course.duration_months * 30 * 24 * 60 * 60 * 1000).toISOString();
+
+          const { data: newEnrollment, error: enrollmentError } = await supabase
+            .from("enrollments")
+            .insert({
+              student_id: scholarship.student_id,
+              course_id: course.id,
+              status: "active",
+              current_module_index: 0,
+              enrolled_at: enrolledAt,
+              expires_at: expiresAt,
+            })
+            .select()
+            .single();
+
+          if (enrollmentError) {
+            toast({
+              type: "error",
+              title: "Enrollment Failed",
+              message: "Scholarship approved but could not create enrollment. Please enroll manually.",
+            });
+          } else {
+            // 4. (Optional) Create a payment receipt record for the scholarship
+            await supabase.from("payment_receipts").insert({
+              student_id: scholarship.student_id,
+              enrollment_id: newEnrollment.id,
+              receipt_url: null, // no receipt needed
+              amount: course.price,
+              status: "approved",
+              admin_notes: "Scholarship awarded",
+              submitted_at: new Date().toISOString(),
+            });
+
+            toast({
+              type: "success",
+              title: "🎉 Scholarship Approved & Enrolled!",
+              message: `${scholarship.full_name} has been enrolled in ${scholarship.course_title}.`,
+              duration: 5000,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error during scholarship enrollment:", error);
+        toast({
+          type: "error",
+          title: "Enrollment Error",
+          message: "An unexpected error occurred during enrollment.",
+        });
+      }
     } else {
+      toast({
+        type: "info",
+        title: "Scholarship Rejected",
+        message: `Application for ${scholarship.full_name} has been rejected.`,
+      });
+    }
+
+    setSelectedApp(null);
+    setAdminNotes("");
+    fetchApplications();
+  };
+
+ else {
       toast({
         type: "error",
         title: "Action Failed",
