@@ -10555,7 +10555,6 @@ useEffect(() => {
     </div>
   );
 }
-
 // ─── Admin Scholarship ─────────────────────────────────────────────────────
 
 function AdminScholarship() {
@@ -10586,7 +10585,7 @@ function AdminScholarship() {
   };
 
   const handleAction = async (id: string, action: "approved" | "rejected") => {
-    // Get the scholarship record first
+    // 1. Get the scholarship record
     const { data: scholarship, error: fetchError } = await supabase
       .from("scholarships")
       .select("*")
@@ -10602,7 +10601,7 @@ function AdminScholarship() {
       return;
     }
 
-    // Update scholarship status and admin notes
+    // 2. Update scholarship status
     const { error: updateError } = await supabase
       .from("scholarships")
       .update({ 
@@ -10621,10 +10620,10 @@ function AdminScholarship() {
       return;
     }
 
-    // If approved, enroll the student in the course
+    // 3. If approved, enroll the student
     if (action === "approved") {
       try {
-        // 1. Get course details
+        // 3a. Get course details
         const { data: course, error: courseError } = await supabase
           .from("courses")
           .select("id, duration_months, price")
@@ -10637,14 +10636,14 @@ function AdminScholarship() {
             title: "Course Not Found",
             message: "The course associated with this scholarship could not be found.",
           });
-          // We still updated the scholarship, so we don't throw, but notify user.
+          // We already updated the scholarship, but enrollment failed – notify user.
           setSelectedApp(null);
           setAdminNotes("");
-          fetchApplications();
+          await fetchApplications();
           return;
         }
 
-        // 2. Check if student already has an enrollment for this course
+        // 3b. Check for existing enrollment
         const { data: existingEnrollment } = await supabase
           .from("enrollments")
           .select("id, status")
@@ -10653,7 +10652,7 @@ function AdminScholarship() {
           .maybeSingle();
 
         if (existingEnrollment) {
-          // If already enrolled with a non-active status, update to active
+          // If enrollment exists but is not active, activate it
           if (existingEnrollment.status !== "active") {
             const { error: updateEnrollmentError } = await supabase
               .from("enrollments")
@@ -10681,9 +10680,11 @@ function AdminScholarship() {
             });
           }
         } else {
-          // 3. Create new enrollment
+          // 3c. Create a new enrollment
           const enrolledAt = new Date().toISOString();
-          const expiresAt = new Date(Date.now() + course.duration_months * 30 * 24 * 60 * 60 * 1000).toISOString();
+          const expiresAt = new Date(
+            Date.now() + course.duration_months * 30 * 24 * 60 * 60 * 1000
+          ).toISOString();
 
           const { data: newEnrollment, error: enrollmentError } = await supabase
             .from("enrollments")
@@ -10705,11 +10706,11 @@ function AdminScholarship() {
               message: "Scholarship approved but could not create enrollment. Please enroll manually.",
             });
           } else {
-            // 4. (Optional) Create a payment receipt record for the scholarship
+            // 3d. Record the scholarship as a payment (optional)
             await supabase.from("payment_receipts").insert({
               student_id: scholarship.student_id,
               enrollment_id: newEnrollment.id,
-              receipt_url: null, // no receipt needed
+              receipt_url: null,
               amount: course.price,
               status: "approved",
               admin_notes: "Scholarship awarded",
@@ -10733,6 +10734,7 @@ function AdminScholarship() {
         });
       }
     } else {
+      // action === "rejected"
       toast({
         type: "info",
         title: "Scholarship Rejected",
@@ -10740,20 +10742,13 @@ function AdminScholarship() {
       });
     }
 
+    // 4. Clean up and refresh
     setSelectedApp(null);
     setAdminNotes("");
-    fetchApplications();
+    await fetchApplications();
   };
 
- else {
-      toast({
-        type: "error",
-        title: "Action Failed",
-        message: "Failed to update application. Please try again.",
-      });
-    }
-  };
-
+  // ─── Render (unchanged) ─────────────────────────────────────────────────
   const pendingCount = applications.filter(a => a.status === "pending").length;
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -10875,7 +10870,7 @@ function AdminScholarship() {
                 onClick={() => {
                   showConfirm({
                     title: "Approve Application",
-                    message: `Are you sure you want to approve ${selectedApp.full_name}'s scholarship application?`,
+                    message: `Are you sure you want to approve ${selectedApp.full_name}'s scholarship application? This will automatically enroll them in the course.`,
                     confirmLabel: "Approve",
                     type: "info",
                     onConfirm: () => handleAction(selectedApp.id, "approved"),
@@ -10884,7 +10879,7 @@ function AdminScholarship() {
                 className="py-2.5 text-white font-semibold rounded-lg hover:opacity-90 transition-colors text-sm flex items-center justify-center gap-2"
                 style={{ backgroundColor: '#f7530b' }}
               >
-                <CheckCircle className="w-4 h-4" /> Approve
+                <CheckCircle className="w-4 h-4" /> Approve & Enroll
               </button>
             </div>
           </div>
@@ -10893,7 +10888,6 @@ function AdminScholarship() {
     </div>
   );
 }
-
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
