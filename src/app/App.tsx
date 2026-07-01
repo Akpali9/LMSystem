@@ -4254,32 +4254,28 @@ function StudentChat({ profile, courses, enrollments }: { profile: Profile; cour
   };
 
   const fetchMessages = async () => {
-    if (!selectedCourseId) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .eq("course_id", selectedCourseId)
-        .order("created_at", { ascending: true }); // Oldest first for chronological order
-      
-      if (error) {
-        console.error("Error fetching messages:", error);
-        toast({
-          type: "error",
-          title: "Failed to Load",
-          message: "Could not load messages.",
-        });
-      } else if (data) {
-        console.log("Fetched messages:", data); // Debug log
-        setMessages(data as ChatMessage[]);
-      }
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!selectedCourseId) return;
+  setLoading(true);
+  try {
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("course_id", selectedCourseId)
+      .order("created_at", { ascending: true });
+    
+    if (error) throw error;
+    setMessages(data as ChatMessage[]);
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    toast({
+      type: "error",
+      title: "Failed to Load",
+      message: "Could not load messages.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedCourseId || sending) return;
@@ -9643,16 +9639,15 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     };
     fetchProfileAndUnread();
 
-    const courseSubscription = supabase
-      .channel('admin-course-messages')
-      .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-        () => {
-          fetchUnreadMessages();
-          if (selectedCourseId) fetchMessages();
-        }
-      )
-      .subscribe();
+  const courseSubscription = supabase
+    .channel('admin-course-messages')
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+      () => {
+        if (selectedCourseId) fetchMessages();
+      }
+    )
+    .subscribe();
 
     const personalSubscription = supabase
       .channel('admin-personal-messages')
@@ -9855,12 +9850,12 @@ useEffect(() => {
     }
   };
 
-  useEffect(() => {
-    if (selectedCourseId && chatType === "course") {
-      fetchMessages();
-      markCourseChatAsRead(selectedCourseId);
-    }
-  }, [selectedCourseId, chatType]);
+useEffect(() => {
+  if (selectedCourseId && chatType === "course") {
+    fetchMessages();
+    markCourseChatAsRead(selectedCourseId);
+  }
+}, [selectedCourseId, chatType]);
 
   useEffect(() => {
     if (selectedStudentId && chatType === "personal" && profile?.id) {
@@ -9869,33 +9864,30 @@ useEffect(() => {
     }
   }, [selectedStudentId, chatType, profile?.id]);
 
-  const fetchMessages = async () => {
-    if (!selectedCourseId) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .eq("course_id", selectedCourseId)
-        .order("created_at", { ascending: true });
-      
-      if (error) {
-        console.error("Error fetching messages:", error);
-        toast({
-          type: "error",
-          title: "Failed to Load",
-          message: "Could not load messages.",
-        });
-      } else if (data) {
-        setMessages(data as ChatMessage[]);
-      }
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+const fetchMessages = async () => {
+  if (!selectedCourseId) return;
+  setLoading(true);
+  try {
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("course_id", selectedCourseId)
+      .order("created_at", { ascending: true });
+    
+    if (error) throw error;
+    setMessages(data as ChatMessage[]);
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    toast({
+      type: "error",
+      title: "Failed to Load",
+      message: "Could not load messages.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+  
   const fetchPersonalMessages = async () => {
     if (!selectedStudentId || !profile?.id) return;
     setLoading(true);
@@ -10431,107 +10423,64 @@ useEffect(() => {
 
       <div className="grid md:grid-cols-4 gap-6 h-[calc(100%-120px)]">
         <div className="md:col-span-1 bg-white rounded-xl border p-4 overflow-y-auto" style={{ borderColor: '#e0e0e0' }}>
-          {chatType === "course" ? (
-            <>
-              <h3 className="font-semibold text-gray-800 text-sm mb-3">Courses</h3>
-              <div className="space-y-2">
-                {courses.length === 0 && (
-                  <p className="text-xs text-gray-500">No courses available.</p>
-                )}
-                {courses.map((course) => (
-                  <button
-                    key={course.id}
-                    onClick={() => setSelectedCourseId(course.id)}
-                    className={cn(
-                      "w-full text-left p-3 rounded-lg text-sm transition-all",
-                      selectedCourseId === course.id
-                        ? "border" : "hover:bg-gray-50 text-gray-600"
-                    )}
-                    style={selectedCourseId === course.id ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
-                  >
-                    <p className="font-medium truncate">{course.title}</p>
-                    <p className="text-xs text-gray-500">Click to view chat</p>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-800 text-sm">
-                  Students
-                  {totalUnread > 0 && (
-                    <span className="ml-2 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
-                      {totalUnread} new
-                    </span>
-                  )}
-                </h3>
-              </div>
-              <div className="space-y-1">
-                {renderStudentList()}
-              </div>
-            </>
-          )}
-        </div>
+        {chatType === "course" ? (
+  !selectedCourseId ? (
+    <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="text-center">
+        <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+        <p>Select a course to view messages</p>
+      </div>
+    </div>
+  ) : (
+    <>
+      <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: '#e0e0e0' }}>
+        <p className="font-semibold text-gray-800">
+          {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
+        </p>
+        <Badge variant="info">{messages.length} messages</Badge>
+      </div>
 
-        <div className="md:col-span-3 bg-white rounded-xl border flex flex-col" style={{ borderColor: '#e0e0e0' }}>
-          {chatType === "course" ? (
-            !selectedCourseId ? (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                  <p>Select a course to view messages</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: '#e0e0e0' }}>
-                  <p className="font-semibold text-gray-800">
-                    {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
-                  </p>
-                  <Badge variant="info">{messages.length} messages</Badge>
-                </div>
+      <div className="flex-1 p-4 overflow-y-auto space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#f7530b' }} />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+            <p>No messages yet. Start the conversation!</p>
+          </div>
+        ) : (
+          <>
+            {messages.map(renderCourseMessage)}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
 
-                <div className="flex-1 p-4 overflow-y-auto space-y-3">
-                  {loading ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#f7530b' }} />
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                      <p>No messages yet. Start the conversation!</p>
-                    </div>
-                  ) : (
-                    <>
-                      {messages.map(renderCourseMessage)}
-                      <div ref={messagesEndRef} />
-                    </>
-                  )}
-                </div>
-
-                <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
-                  <input
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                    placeholder="Reply as Admin..."
-                    className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" style={{ borderColor: '#e0e0e0' }}
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim() || sending}
-                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
-                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-                  >
-                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    Send
-                  </button>
-                </div>
-              </>
-            )
-          ) : (
-            !selectedStudentId ? (
+      <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
+        <input
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder="Reply as Admin..."
+          className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" 
+          style={{ borderColor: '#e0e0e0' }}
+        />
+        <button
+          onClick={sendMessage}
+          disabled={!newMessage.trim() || sending}
+          className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
+          style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+        >
+          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          Send
+        </button>
+      </div>
+    </>
+  )
+) : (
+      !selectedStudentId ? (
               <div className="flex-1 flex items-center justify-center text-gray-500">
                 <div className="text-center">
                   <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
