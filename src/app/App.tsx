@@ -3568,7 +3568,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
           </p>
           <p className="text-sm text-gray-500">
             {hasApprovedScholarship 
-              ? "Your scholarship has been approved. Check your email for details." 
+              ? "Your scholarship has been approved. Click for details." 
               : hasPendingScholarship 
                 ? "Your application is being reviewed by the admin." 
                 : "Apply for a scholarship to get financial support for your education."}
