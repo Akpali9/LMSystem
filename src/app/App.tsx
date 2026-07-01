@@ -3194,44 +3194,66 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   };
 
   const handleSave = async () => {
-    setLoading(true);
-    try {
-      // Update main profile (full_name and avatar)
-      await onUpdate({ full_name: fullName }, avatarFile || undefined);
-      
-      // Update student_profiles table
-      await supabase
+  setLoading(true);
+  try {
+    // Update main profile
+    await onUpdate({ full_name: fullName }, avatarFile || undefined);
+    
+    // Update or insert student profile
+    // Check if profile exists
+    const { data: existing, error: checkError } = await supabase
+      .from("student_profiles")
+      .select("id")
+      .eq("user_id", profile.id)
+      .maybeSingle();
+    
+    if (checkError) throw checkError;
+    
+    const profileData = {
+      bio,
+      phone,
+      address,
+      date_of_birth: dateOfBirth || null,
+      updated_at: new Date().toISOString(),
+    };
+    
+    if (existing) {
+      // Update
+      const { error: updateError } = await supabase
         .from("student_profiles")
-        .upsert({
+        .update(profileData)
+        .eq("user_id", profile.id);
+      if (updateError) throw updateError;
+    } else {
+      // Insert
+      const { error: insertError } = await supabase
+        .from("student_profiles")
+        .insert({
           user_id: profile.id,
-          bio,
-          phone,
-          address,
-          date_of_birth: dateOfBirth || null,
-          updated_at: new Date().toISOString(),
+          ...profileData,
         });
-      
-      await fetchStudentProfile();
-      
-      toast({
-        type: "success",
-        title: "Profile Updated",
-        message: "Your profile has been updated successfully.",
-      });
-      
-      setIsEditing(false);
-    } catch (error: any) {
-      console.error("Profile update error:", error);
-      toast({
-        type: "error",
-        title: "Update Failed",
-        message: error.message || "Failed to update profile. Please try again.",
-      });
-    } finally {
-      setLoading(false);
+      if (insertError) throw insertError;
     }
-  };
-
+    
+    await fetchStudentProfile();
+    toast({
+      type: "success",
+      title: "Profile Updated",
+      message: "Your profile has been updated successfully.",
+    });
+    setIsEditing(false);
+  } catch (error: any) {
+    console.error("Profile update error:", error);
+    toast({
+      type: "error",
+      title: "Update Failed",
+      message: error.message || "Failed to update profile. Please try again.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+  
   const activeEnrollments = enrollments?.filter(e => e.status === "active") || [];
   const passedCount = progress?.filter(p => p.status === "passed").length || 0;
   const totalModules = modules?.length || 0;
