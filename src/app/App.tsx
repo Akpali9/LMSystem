@@ -9575,15 +9575,16 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
   const [newMessage, setNewMessage] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [chatType, setChatType] = useState<"course" | "personal">("personal");
+  const [chatType, setChatType] = useState<"course" | "personal">("course");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showList, setShowList] = useState(true);
-  const [chatsWithUnread, setChatsWithUnread] = useState<Record<string, { 
-    count: number; 
-    latestMessage: string; 
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [chatsWithUnread, setChatsWithUnread] = useState<Record<string, {
+    count: number;
+    latestMessage: string;
     senderName: string;
     time: string;
   }>>({});
@@ -9591,7 +9592,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
   const [unreadStudentNames, setUnreadStudentNames] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom
   useEffect(() => {
     scrollToBottom();
   }, [messages, personalMessages]);
@@ -9604,13 +9605,19 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
 
   // Detect mobile
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Auto-select first course on mount
+  useEffect(() => {
+    if (courses.length > 0 && !selectedCourseId) {
+      setSelectedCourseId(courses[0].id);
+      setChatType("course");
+    }
+  }, [courses]);
 
   // Fetch admin profile and unread messages
   useEffect(() => {
@@ -9622,12 +9629,12 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
           .eq("role", "admin")
           .limit(1)
           .single();
-        
+
         if (error) {
           console.error("Error fetching admin profile:", error);
           return;
         }
-        
+
         if (data) {
           setProfile(data as Profile);
           await fetchUnreadMessages();
@@ -9639,15 +9646,16 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
     };
     fetchProfileAndUnread();
 
-  const courseSubscription = supabase
-    .channel('admin-course-messages')
-    .on('postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-      () => {
-        if (selectedCourseId) fetchMessages();
-      }
-    )
-    .subscribe();
+    // Course subscription – re-subscribes when selectedCourseId changes
+    const courseSubscription = supabase
+      .channel('admin-course-messages')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        () => {
+          if (selectedCourseId) fetchMessages();
+        }
+      )
+      .subscribe();
 
     const personalSubscription = supabase
       .channel('admin-personal-messages')
@@ -9670,15 +9678,7 @@ function AdminChat({ courses, students }: { courses: Course[]; students: Profile
       courseSubscription.unsubscribe();
       personalSubscription.unsubscribe();
     };
-  }, []);
-
-
-useEffect(() => {
-  if (students.length > 0 && profile) {
-    fetchUnreadMessages();
-  }
-}, [students, profile]);
-
+  }, [selectedCourseId, selectedStudentId, profile?.id]);
 
   // Fetch unread messages
   const fetchUnreadMessages = async () => {
@@ -9724,20 +9724,20 @@ useEffect(() => {
         return;
       }
 
-      const unreadPerStudent: Record<string, { 
-        count: number; 
-        latestMessage: string; 
+      const unreadPerStudent: Record<string, {
+        count: number;
+        latestMessage: string;
         senderName: string;
         time: string;
       }> = {};
-      
+
       const latestPerStudent: Record<string, any> = {};
       const studentNames: string[] = [];
 
       unreadPersonal?.forEach((msg: any) => {
         const studentId = msg.sender_id;
         const studentName = msg.sender?.full_name || "Unknown Student";
-        
+
         if (!unreadPerStudent[studentId]) {
           unreadPerStudent[studentId] = {
             count: 0,
@@ -9752,7 +9752,7 @@ useEffect(() => {
 
       allPersonalMessages?.forEach((msg: any) => {
         const studentId = msg.sender_id === profile.id ? msg.receiver_id : msg.sender_id;
-        
+
         if (!latestPerStudent[studentId]) {
           latestPerStudent[studentId] = {
             ...msg,
@@ -9780,16 +9780,13 @@ useEffect(() => {
           duration: 5000,
         });
       }
-
     } catch (error) {
       console.error("Error fetching unread messages:", error);
     }
   };
 
   const updateNavbarBadge = (count: number) => {
-    const event = new CustomEvent('updateAdminMessageBadge', { 
-      detail: { count } 
-    });
+    const event = new CustomEvent('updateAdminMessageBadge', { detail: { count } });
     window.dispatchEvent(event);
   };
 
@@ -9800,7 +9797,7 @@ useEffect(() => {
 
   const markChatAsRead = async (studentId: string) => {
     if (!profile?.id) return;
-    
+
     try {
       const { error } = await supabase
         .from("personal_messages")
@@ -9813,17 +9810,17 @@ useEffect(() => {
         setChatsWithUnread(prev => {
           const newState = { ...prev };
           delete newState[studentId];
-          
+
           const remainingCount = Object.keys(newState).length;
           updateNavbarBadge(remainingCount);
-          
+
           if (remainingCount === 0) {
             clearNavbarNotification();
           }
-          
+
           return newState;
         });
-        
+
         await fetchUnreadMessages();
       }
     } catch (error) {
@@ -9837,9 +9834,8 @@ useEffect(() => {
         .from('chat_messages')
         .update({ read: true })
         .eq('course_id', courseId)
-         .order('created_at', { ascending: false })
         .eq('read', false);
-      
+
       if (!error) {
         await fetchUnreadMessages();
         const event = new CustomEvent('clearAdminCourseChatNotification');
@@ -9850,12 +9846,12 @@ useEffect(() => {
     }
   };
 
-useEffect(() => {
-  if (selectedCourseId && chatType === "course") {
-    fetchMessages();
-    markCourseChatAsRead(selectedCourseId);
-  }
-}, [selectedCourseId, chatType]);
+  useEffect(() => {
+    if (selectedCourseId && chatType === "course") {
+      fetchMessages();
+      markCourseChatAsRead(selectedCourseId);
+    }
+  }, [selectedCourseId, chatType]);
 
   useEffect(() => {
     if (selectedStudentId && chatType === "personal" && profile?.id) {
@@ -9864,30 +9860,30 @@ useEffect(() => {
     }
   }, [selectedStudentId, chatType, profile?.id]);
 
-const fetchMessages = async () => {
-  if (!selectedCourseId) return;
-  setLoading(true);
-  try {
-    const { data, error } = await supabase
-      .from("chat_messages")
-      .select("*")
-      .eq("course_id", selectedCourseId)
-      .order("created_at", { ascending: true });
-    
-    if (error) throw error;
-    setMessages(data as ChatMessage[]);
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-    toast({
-      type: "error",
-      title: "Failed to Load",
-      message: "Could not load messages.",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-  
+  const fetchMessages = async () => {
+    if (!selectedCourseId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("course_id", selectedCourseId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      setMessages(data as ChatMessage[]);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      toast({
+        type: "error",
+        title: "Failed to Load",
+        message: "Could not load messages.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchPersonalMessages = async () => {
     if (!selectedStudentId || !profile?.id) return;
     setLoading(true);
@@ -9897,7 +9893,7 @@ const fetchMessages = async () => {
         .select("*")
         .or(`and(sender_id.eq.${selectedStudentId},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${selectedStudentId})`)
         .order("created_at", { ascending: true });
-      
+
       if (error) {
         console.error("Error fetching personal messages:", error);
         toast({
@@ -9922,10 +9918,45 @@ const fetchMessages = async () => {
     await markChatAsRead(studentId);
   };
 
+  // ─── DELETE MESSAGE ──────────────────────────────────────────────────────────
+  const handleDeleteMessage = async (messageId: string) => {
+    showConfirm({
+      title: "Delete Message",
+      message: "Are you sure you want to delete this message? This action cannot be undone.",
+      confirmLabel: "Delete",
+      type: "danger",
+      onConfirm: async () => {
+        setDeletingMessageId(messageId);
+        try {
+          const { error } = await supabase
+            .from("chat_messages")
+            .delete()
+            .eq("id", messageId);
+          if (error) throw error;
+          toast({
+            type: "success",
+            title: "Message Deleted",
+            message: "The message has been deleted.",
+          });
+          await fetchMessages();
+        } catch (error) {
+          console.error("Error deleting message:", error);
+          toast({
+            type: "error",
+            title: "Delete Failed",
+            message: "Could not delete the message. Please try again.",
+          });
+        } finally {
+          setDeletingMessageId(null);
+        }
+      },
+    });
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;
     setSending(true);
-    
+
     try {
       if (chatType === "course" && selectedCourseId) {
         const adminName = "Admin";
@@ -9938,7 +9969,7 @@ const fetchMessages = async () => {
           created_at: new Date().toISOString(),
           read: false,
         });
-        
+
         if (error) {
           console.error("Error sending message:", error);
           toast({
@@ -9963,7 +9994,7 @@ const fetchMessages = async () => {
           read: false,
           created_at: new Date().toISOString(),
         });
-        
+
         if (error) {
           console.error("Error sending personal message:", error);
           toast({
@@ -9995,103 +10026,155 @@ const fetchMessages = async () => {
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const selectedCourse = courses.find(c => c.id === selectedCourseId);
-  
   const totalUnread = Object.keys(chatsWithUnread).length;
 
-  // --- RENDER FUNCTIONS ---
-  
-  // Render course chat message
+  // ─── RENDER FUNCTIONS ──────────────────────────────────────────────────────
+
   const renderCourseMessage = (msg: ChatMessage) => {
-  const isAdmin = msg.user_id === "admin";
-  const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
-  const student = students.find(s => s.id === msg.user_id);
+    const isAdmin = msg.user_id === "admin";
+    const senderName = isAdmin ? "Admin" : msg.user_name || "Student";
+    const student = students.find(s => s.id === msg.user_id);
 
-  return (
-    <div
-      key={msg.id}
-      className={cn(
-        "flex items-start gap-3 max-w-[80%]",
-        isAdmin ? "ml-auto flex-row-reverse" : ""
-      )}
-    >
-      <Avatar 
-        name={senderName} 
-        size="sm" 
-        src={isAdmin ? undefined : student?.avatar_url || msg.user_avatar} 
-      />
-      <div className={cn(
-        "p-3 rounded-lg text-sm",
-        isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
-      )}
-      style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
+    return (
+      <div
+        key={msg.id}
+        className={cn(
+          "flex items-start gap-3 max-w-[80%]",
+          isAdmin ? "ml-auto flex-row-reverse" : ""
+        )}
       >
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-medium">
-            {isAdmin ? "👑 Admin" : senderName}
-          </span>
-          {isAdmin && (
-            <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+        <Avatar
+          name={senderName}
+          size="sm"
+          src={isAdmin ? undefined : student?.avatar_url || msg.user_avatar}
+        />
+        <div className="relative group">
+          <div className={cn(
+            "p-3 rounded-lg text-sm",
+            isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
           )}
-          {!isAdmin && (
-            <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
-          )}
+          style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium">
+                {isAdmin ? "👑 Admin" : senderName}
+              </span>
+              {isAdmin && (
+                <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+              )}
+              {!isAdmin && (
+                <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
+              )}
+            </div>
+            <p className="break-words">{msg.message}</p>
+            <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+          </div>
+          {/* Delete button */}
+          <button
+            onClick={() => handleDeleteMessage(msg.id)}
+            disabled={deletingMessageId === msg.id}
+            className="absolute -top-2 -right-2 p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+            title="Delete message"
+          >
+            {deletingMessageId === msg.id ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Trash2 className="w-3 h-3" />
+            )}
+          </button>
         </div>
-        <p className="break-words">{msg.message}</p>
-        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
-  // Render personal message
   const renderPersonalMessage = (msg: any) => {
-  const isAdmin = msg.sender_id === profile?.id;
-  const senderName = isAdmin ? "Admin" : selectedStudent?.full_name || "Student";
-  const senderAvatar = isAdmin ? undefined : selectedStudent?.avatar_url;
+    const isAdmin = msg.sender_id === profile?.id;
+    const senderName = isAdmin ? "Admin" : selectedStudent?.full_name || "Student";
+    const senderAvatar = isAdmin ? undefined : selectedStudent?.avatar_url;
 
-  return (
-    <div
-      key={msg.id}
-      className={cn(
-        "flex items-start gap-3 max-w-[80%]",
-        isAdmin ? "ml-auto flex-row-reverse" : ""
-      )}
-    >
-      <Avatar name={senderName} size="sm" src={senderAvatar} />
-      <div className={cn(
-        "p-3 rounded-lg text-sm",
-        isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
-      )}
-      style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
+    return (
+      <div
+        key={msg.id}
+        className={cn(
+          "flex items-start gap-3 max-w-[80%]",
+          isAdmin ? "ml-auto flex-row-reverse" : ""
+        )}
       >
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-medium">
-            {isAdmin ? "👑 Admin" : senderName}
-          </span>
-          {isAdmin && (
-            <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+        <Avatar name={senderName} size="sm" src={senderAvatar} />
+        <div className="relative group">
+          <div className={cn(
+            "p-3 rounded-lg text-sm",
+            isAdmin ? "text-white" : "bg-gray-100 text-gray-800"
           )}
-          {!isAdmin && (
-            <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
+          style={isAdmin ? { backgroundColor: '#f7530b' } : {}}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium">
+                {isAdmin ? "👑 Admin" : senderName}
+              </span>
+              {isAdmin && (
+                <Badge variant="default" className="text-[8px] px-1 py-0">Admin</Badge>
+              )}
+              {!isAdmin && (
+                <Badge variant="muted" className="text-[8px] px-1 py-0">Student</Badge>
+              )}
+            </div>
+            <p className="break-words">{msg.message}</p>
+            <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
+          </div>
+          {/* Delete for personal messages (optional) */}
+          {isAdmin && (
+            <button
+              onClick={() => {
+                showConfirm({
+                  title: "Delete Message",
+                  message: "Are you sure you want to delete this message?",
+                  confirmLabel: "Delete",
+                  type: "danger",
+                  onConfirm: async () => {
+                    setDeletingMessageId(msg.id);
+                    try {
+                      const { error } = await supabase
+                        .from("personal_messages")
+                        .delete()
+                        .eq("id", msg.id);
+                      if (error) throw error;
+                      toast({ type: "success", title: "Deleted", message: "Message deleted." });
+                      await fetchPersonalMessages();
+                    } catch (error) {
+                      toast({ type: "error", title: "Delete Failed", message: "Could not delete." });
+                    } finally {
+                      setDeletingMessageId(null);
+                    }
+                  },
+                });
+              }}
+              disabled={deletingMessageId === msg.id}
+              className="absolute -top-2 -right-2 p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+              title="Delete message"
+            >
+              {deletingMessageId === msg.id ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Trash2 className="w-3 h-3" />
+              )}
+            </button>
           )}
         </div>
-        <p className="break-words">{msg.message}</p>
-        <p className="text-xs opacity-50 mt-1">{formatTime(msg.created_at)}</p>
       </div>
-    </div>
-  );
-};
-  
+    );
+  };
+
   const getStudentPreview = (studentId: string) => {
     const latest = latestMessages[studentId];
     if (!latest) return null;
-    
+
     const isFromStudent = latest.sender_id !== profile?.id;
     const senderName = isFromStudent ? latest.studentName : "You";
-    const messagePreview = latest.message?.length > 40 
-      ? latest.message.substring(0, 40) + "..." 
+    const messagePreview = latest.message?.length > 40
+      ? latest.message.substring(0, 40) + "..."
       : latest.message;
-    
+
     return {
       senderName,
       messagePreview,
@@ -10102,110 +10185,109 @@ const fetchMessages = async () => {
   };
 
   const renderStudentList = () => {
-  if (students.length === 0) {
-    return (
-      <div className="text-center text-gray-500 py-8">
-        <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
-        <p>No students available</p>
-      </div>
-    );
-  }
+    if (students.length === 0) {
+      return (
+        <div className="text-center text-gray-500 py-8">
+          <Users className="w-12 h-12 mx-auto mb-3 opacity-40" />
+          <p>No students available</p>
+        </div>
+      );
+    }
 
-  // Sort students by latest message time (most recent first)
-  const sortedStudents = [...students].sort((a, b) => {
-    const aLatest = latestMessages[a.id]?.created_at || '';
-    const bLatest = latestMessages[b.id]?.created_at || '';
-    return bLatest.localeCompare(aLatest); // descending
-  });
+    const sortedStudents = [...students].sort((a, b) => {
+      const aLatest = latestMessages[a.id]?.created_at || '';
+      const bLatest = latestMessages[b.id]?.created_at || '';
+      return bLatest.localeCompare(aLatest);
+    });
 
-  return sortedStudents.map((student) => {
-    const preview = getStudentPreview(student.id);
-    const unreadData = chatsWithUnread[student.id];
-    const hasUnread = unreadData && unreadData.count > 0;
-    
-    return (
-      <button
-        key={student.id}
-        onClick={() => handleStudentSelect(student.id)}
-        className={cn(
-          "w-full text-left p-3 rounded-lg text-sm transition-all relative",
-          selectedStudentId === student.id
-            ? "border shadow-sm" : "hover:bg-gray-50",
-          hasUnread && "bg-orange-50 border-l-4 border-orange-500"
-        )}
-        style={selectedStudentId === student.id ? { 
-          backgroundColor: '#fdddce', 
-          borderColor: '#fcba9d', 
-          color: '#f7530b' 
-        } : {}}
-      >
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
-            {hasUnread && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md animate-pulse">
-                {unreadData.count > 9 ? '9+' : unreadData.count}
-              </span>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <span className={cn(
-                "font-medium truncate",
-                hasUnread ? "text-gray-900 font-semibold" : "text-gray-700"
-              )}>
-                {student.full_name}
-                {hasUnread && (
-                  <span className="ml-2 text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full">
-                    New
-                  </span>
-                )}
-              </span>
-              {preview && (
-                <span className="text-[10px] text-gray-400 shrink-0 ml-1">
-                  {preview.time}
+    return sortedStudents.map((student) => {
+      const preview = getStudentPreview(student.id);
+      const unreadData = chatsWithUnread[student.id];
+      const hasUnread = unreadData && unreadData.count > 0;
+
+      return (
+        <button
+          key={student.id}
+          onClick={() => handleStudentSelect(student.id)}
+          className={cn(
+            "w-full text-left p-3 rounded-lg text-sm transition-all relative",
+            selectedStudentId === student.id
+              ? "border shadow-sm" : "hover:bg-gray-50",
+            hasUnread && "bg-orange-50 border-l-4 border-orange-500"
+          )}
+          style={selectedStudentId === student.id ? {
+            backgroundColor: '#fdddce',
+            borderColor: '#fcba9d',
+            color: '#f7530b'
+          } : {}}
+        >
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Avatar name={student.full_name} size="sm" src={student.avatar_url} />
+              {hasUnread && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md animate-pulse">
+                  {unreadData.count > 9 ? '9+' : unreadData.count}
                 </span>
               )}
             </div>
-            {preview ? (
-              <div className="flex items-center gap-1">
-                <p className={cn(
-                  "text-xs truncate",
-                  hasUnread ? "text-gray-700 font-medium" : "text-gray-500"
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className={cn(
+                  "font-medium truncate",
+                  hasUnread ? "text-gray-900 font-semibold" : "text-gray-700"
                 )}>
-                  {preview.isFromStudent ? (
-                    <span className="text-orange-600">📩 {preview.senderName}: </span>
-                  ) : (
-                    <span className="text-gray-400">You: </span>
+                  {student.full_name}
+                  {hasUnread && (
+                    <span className="ml-2 text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full">
+                      New
+                    </span>
                   )}
-                  {preview.messagePreview}
-                </p>
-                {hasUnread && (
-                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0 animate-pulse" />
+                </span>
+                {preview && (
+                  <span className="text-[10px] text-gray-400 shrink-0 ml-1">
+                    {preview.time}
+                  </span>
                 )}
               </div>
-            ) : (
-              <p className="text-xs text-gray-400">No messages yet</p>
+              {preview ? (
+                <div className="flex items-center gap-1">
+                  <p className={cn(
+                    "text-xs truncate",
+                    hasUnread ? "text-gray-700 font-medium" : "text-gray-500"
+                  )}>
+                    {preview.isFromStudent ? (
+                      <span className="text-orange-600">📩 {preview.senderName}: </span>
+                    ) : (
+                      <span className="text-gray-400">You: </span>
+                    )}
+                    {preview.messagePreview}
+                  </p>
+                  {hasUnread && (
+                    <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0 animate-pulse" />
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400">No messages yet</p>
+              )}
+            </div>
+            {!hasUnread && selectedStudentId !== student.id && (
+              <ChevronRight className="w-4 h-4 text-gray-300" />
             )}
           </div>
-          {!hasUnread && selectedStudentId !== student.id && (
-            <ChevronRight className="w-4 h-4 text-gray-300" />
+          {hasUnread && unreadData.latestMessage && (
+            <div className="mt-1 text-xs text-gray-500 truncate pl-11">
+              <span className="text-orange-600 font-medium">{unreadData.senderName}: </span>
+              {unreadData.latestMessage.length > 50
+                ? unreadData.latestMessage.substring(0, 50) + "..."
+                : unreadData.latestMessage}
+            </div>
           )}
-        </div>
-        {hasUnread && unreadData.latestMessage && (
-          <div className="mt-1 text-xs text-gray-500 truncate pl-11">
-            <span className="text-orange-600 font-medium">{unreadData.senderName}: </span>
-            {unreadData.latestMessage.length > 50 
-              ? unreadData.latestMessage.substring(0, 50) + "..." 
-              : unreadData.latestMessage}
-          </div>
-        )}
-      </button>
-    );
-  });
-};
+        </button>
+      );
+    });
+  };
 
-  // Mobile chat view
+  // ─── MOBILE VIEW ──────────────────────────────────────────────────────────────
   if (isMobile) {
     return (
       <div className="h-full flex flex-col bg-[#eeeeee]" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -10288,30 +10370,29 @@ const fetchMessages = async () => {
             ) : (
               <div className="space-y-3">
                 <p className="text-xs text-gray-500 px-1">Select a course:</p>
-             {courses.map((course) => (
-  <div
-    key={course.id}
-    className="bg-white rounded-xl border p-4 cursor-pointer hover:shadow-md transition-all active:opacity-70"
-    style={{ borderColor: '#e0e0e0' }}
-    onClick={() => { setSelectedCourseId(course.id); setShowList(false); }}
-  >
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-        <img src={course.thumbnail_url || ""} alt="" className="w-full h-full object-cover" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-800 text-sm truncate">{course.title}</p>
-        <p className="text-xs text-gray-500">Tap to chat</p>
-      </div>
-      <ChevronRight className="w-4 h-4 text-gray-400" />
-    </div>
-  </div>
-))}
+                {courses.map((course) => (
+                  <div
+                    key={course.id}
+                    className="bg-white rounded-xl border p-4 cursor-pointer hover:shadow-md transition-all active:opacity-70"
+                    style={{ borderColor: '#e0e0e0' }}
+                    onClick={() => { setSelectedCourseId(course.id); setShowList(false); }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                        <img src={course.thumbnail_url || ""} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-800 text-sm truncate">{course.title}</p>
+                        <p className="text-xs text-gray-500">Tap to chat</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         ) : (
-          // Mobile chat view (same as before)
           <div className="flex-1 flex flex-col bg-white">
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {loading ? (
@@ -10370,117 +10451,154 @@ const fetchMessages = async () => {
     );
   }
 
-  // Desktop chat view
+  // ─── DESKTOP VIEW ────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto h-[calc(100vh-100px)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-              Messages
-            </h1>
-            <p className="text-gray-500 mt-1 text-sm md:text-base">
-              {totalUnread > 0 
-                ? `📬 ${totalUnread} unread message${totalUnread > 1 ? 's' : ''} from ${unreadStudentNames.join(", ")}`
-                : "No unread messages"}
-            </p>
-          </div>
-          {totalUnread > 0 && (
-            <Badge variant="warning" className="animate-pulse">
-              {totalUnread} New
-            </Badge>
-          )}
+    <div className="p-4 md:p-8 max-w-7xl mx-auto h-[calc(100vh-100px)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333' }}>Messages</h1>
+          <p className="text-gray-500 text-sm">
+            {totalUnread > 0
+              ? `📬 ${totalUnread} unread message${totalUnread > 1 ? 's' : ''}`
+              : "All messages"}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setChatType("course"); setSelectedStudentId(null); }}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              chatType === "course" ? "text-white shadow-md" : "bg-gray-100 hover:bg-gray-200"
+            )}
+            style={chatType === "course" ? { backgroundColor: '#f7530b' } : {}}
+          >
+            💬 Course Chat
+          </button>
+          <button
+            onClick={() => { setChatType("personal"); setSelectedCourseId(null); fetchUnreadMessages(); }}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors relative",
+              chatType === "personal" ? "text-white shadow-md" : "bg-gray-100 hover:bg-gray-200"
+            )}
+            style={chatType === "personal" ? { backgroundColor: '#f7530b' } : {}}
+          >
+            📩 Student Messages
+            {totalUnread > 0 && (
+              <span className="ml-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
+                {totalUnread}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => { setChatType("personal"); setSelectedCourseId(null); fetchUnreadMessages(); }}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-colors relative",
-            chatType === "personal" ? "text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+      <div className="grid md:grid-cols-3 gap-6 h-[calc(100%-80px)]">
+        {/* Sidebar */}
+        <div className="bg-white rounded-xl border p-4 overflow-y-auto" style={{ borderColor: '#e0e0e0' }}>
+          {chatType === "course" ? (
+            <>
+              <h3 className="font-semibold text-gray-800 text-sm mb-3">Courses</h3>
+              <div className="space-y-2">
+                {courses.map((course) => (
+                  <button
+                    key={course.id}
+                    onClick={() => {
+                      setSelectedCourseId(course.id);
+                      setChatType("course");
+                      setSelectedStudentId(null);
+                    }}
+                    className={cn(
+                      "w-full text-left p-3 rounded-lg text-sm transition-all",
+                      selectedCourseId === course.id
+                        ? "border shadow-sm" : "hover:bg-gray-50"
+                    )}
+                    style={selectedCourseId === course.id ? { backgroundColor: '#fdddce', borderColor: '#fcba9d', color: '#f7530b' } : {}}
+                  >
+                    <p className="font-medium truncate">{course.title}</p>
+                    <p className="text-xs text-gray-500">Click to view chat</p>
+                  </button>
+                ))}
+                {courses.length === 0 && (
+                  <p className="text-xs text-gray-500">No courses available.</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-800 text-sm">Students</h3>
+                {totalUnread > 0 && (
+                  <Badge variant="warning" className="animate-pulse">{totalUnread} new</Badge>
+                )}
+              </div>
+              <div className="space-y-1">
+                {renderStudentList()}
+              </div>
+            </>
           )}
-          style={chatType === "personal" ? { backgroundColor: '#f7530b' } : {}}
-        >
-          📩 Student Messages
-          {totalUnread > 0 && (
-            <span className="ml-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
-              {totalUnread}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => { setChatType("course"); setSelectedStudentId(null); }}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-            chatType === "course" ? "text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-          )}
-          style={chatType === "course" ? { backgroundColor: '#f7530b' } : {}}
-        >
-          💬 Course Chat
-        </button>
-      </div>
+        </div>
 
-      <div className="grid md:grid-cols-4 gap-6 h-[calc(100%-120px)]">
-        <div className="md:col-span-1 bg-white rounded-xl border p-4 overflow-y-auto" style={{ borderColor: '#e0e0e0' }}>
-        {chatType === "course" ? (
-  !selectedCourseId ? (
-    <div className="flex-1 flex items-center justify-center text-gray-500">
-      <div className="text-center">
-        <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
-        <p>Select a course to view messages</p>
-      </div>
-    </div>
-  ) : (
-    <>
-      <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: '#e0e0e0' }}>
-        <p className="font-semibold text-gray-800">
-          {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
-        </p>
-        <Badge variant="info">{messages.length} messages</Badge>
-      </div>
+        {/* Chat Panel */}
+        <div className="md:col-span-2 bg-white rounded-xl border flex flex-col" style={{ borderColor: '#e0e0e0' }}>
+          {chatType === "course" ? (
+            !selectedCourseId ? (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                  <p>Select a course to view messages</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: '#e0e0e0' }}>
+                  <p className="font-semibold text-gray-800">
+                    {courses.find(c => c.id === selectedCourseId)?.title || "Course Chat"}
+                  </p>
+                  <Badge variant="info">{messages.length} messages</Badge>
+                </div>
 
-      <div className="flex-1 p-4 overflow-y-auto space-y-3">
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#f7530b' }} />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p>No messages yet. Start the conversation!</p>
-          </div>
-        ) : (
-          <>
-            {messages.map(renderCourseMessage)}
-            <div ref={messagesEndRef} />
-          </>
-        )}
-      </div>
+                <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#f7530b' }} />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">
+                      <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                      <p>No messages yet. Start the conversation!</p>
+                    </div>
+                  ) : (
+                    <>
+                      {messages.map(renderCourseMessage)}
+                      <div ref={messagesEndRef} />
+                    </>
+                  )}
+                </div>
 
-      <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
-        <input
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          placeholder="Reply as Admin..."
-          className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" 
-          style={{ borderColor: '#e0e0e0' }}
-        />
-        <button
-          onClick={sendMessage}
-          disabled={!newMessage.trim() || sending}
-          className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
-          style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-        >
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          Send
-        </button>
-      </div>
-    </>
-  )
-) : (
-      !selectedStudentId ? (
+                <div className="p-4 border-t flex gap-3" style={{ borderColor: '#e0e0e0' }}>
+                  <input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                    placeholder="Reply as Admin..."
+                    className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
+                    style={{ borderColor: '#e0e0e0' }}
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim() || sending}
+                    className="px-4 py-2.5 rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                  >
+                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Send
+                  </button>
+                </div>
+              </>
+            )
+          ) : (
+            // Personal messages
+            !selectedStudentId ? (
               <div className="flex-1 flex items-center justify-center text-gray-500">
                 <div className="text-center">
                   <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-40" />
@@ -10488,7 +10606,7 @@ const fetchMessages = async () => {
                   {totalUnread > 0 && (
                     <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                       <p className="text-sm text-orange-700">
-                        📬 {totalUnread} unread message{totalUnread > 1 ? 's' : ''} from {unreadStudentNames.join(", ")}
+                        📬 {totalUnread} unread message{totalUnread > 1 ? 's' : ''}
                       </p>
                     </div>
                   )}
@@ -10532,7 +10650,8 @@ const fetchMessages = async () => {
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                     placeholder={`Message ${selectedStudent?.full_name || "student"}...`}
-                    className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400" style={{ borderColor: '#e0e0e0' }}
+                    className="flex-1 px-4 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
+                    style={{ borderColor: '#e0e0e0' }}
                   />
                   <button
                     onClick={sendMessage}
