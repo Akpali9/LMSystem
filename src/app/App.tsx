@@ -3153,17 +3153,34 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   }, [profile.id]);
 
   const fetchStudentProfile = async () => {
-    const { data } = await supabase
-      .from("student_profiles")
-      .select("*")
-      .eq("user_id", profile.id)
-      .single();
-    if (data) {
-      setStudentProfile(data);
-      setBio(data.bio || "");
-      setPhone(data.phone || "");
-      setAddress(data.address || "");
-      setDateOfBirth(data.date_of_birth || "");
+    try {
+      const { data, error } = await supabase
+        .from("student_profiles")
+        .select("*")
+        .eq("user_id", profile.id)
+        .maybeSingle(); // ✅ Fix: use maybeSingle
+    
+      if (error) {
+        console.error("Error fetching student profile:", error);
+        return;
+      }
+      
+      if (data) {
+        setStudentProfile(data);
+        setBio(data.bio || "");
+        setPhone(data.phone || "");
+        setAddress(data.address || "");
+        setDateOfBirth(data.date_of_birth || "");
+      } else {
+        // No profile yet – set defaults
+        setStudentProfile(null);
+        setBio("");
+        setPhone("");
+        setAddress("");
+        setDateOfBirth("");
+      }
+    } catch (err) {
+      console.error("Error in fetchStudentProfile:", err);
     }
   };
 
@@ -3219,6 +3236,7 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   const passedCount = progress?.filter(p => p.status === "passed").length || 0;
   const totalModules = modules?.length || 0;
   const completion = calculateProfileCompletion(profile, studentProfile);
+
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
