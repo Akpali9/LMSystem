@@ -3142,6 +3142,12 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [studentProfile, setStudentProfile] = useState<any>(null);
 
+  // Sync local state with parent profile
+  useEffect(() => {
+    setFullName(profile.full_name);
+    setAvatarPreview(profile.avatar_url || null);
+  }, [profile.full_name, profile.avatar_url]);
+
   useEffect(() => {
     fetchStudentProfile();
   }, [profile.id]);
@@ -3172,10 +3178,11 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
 
   const handleSave = async () => {
     setLoading(true);
-    
     try {
+      // Update main profile (full_name and avatar)
       await onUpdate({ full_name: fullName }, avatarFile || undefined);
       
+      // Update student_profiles table
       await supabase
         .from("student_profiles")
         .upsert({
@@ -3196,11 +3203,12 @@ function StudentProfile({ profile, onUpdate, enrollments, progress, modules }: {
       });
       
       setIsEditing(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Profile update error:", error);
       toast({
         type: "error",
         title: "Update Failed",
-        message: "Failed to update profile. Please try again.",
+        message: error.message || "Failed to update profile. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -11266,13 +11274,14 @@ const adminAssignmentsChannel = supabase
     await supabase.from("module_contents").delete().eq("id", contentId);
     await fetchModuleContents();
   };
+const handleUpdateProfile = async (updates: Partial<Profile>, avatarFile?: File) => {
+  if (!profile) return; // prevent errors if profile is null
 
-  const handleUpdateProfile = async (updates: Partial<Profile>, avatarFile?: File) => {
-    let avatarUrl = updates.avatar_url;
-    
-    if (avatarFile) {
+  let avatarUrl = updates.avatar_url;
+  if (avatarFile) {
+    try {
       const fileExt = avatarFile.name.split('.').pop();
-      const fileName = `${profile?.id}-${Date.now()}.${fileExt}`;
+      const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(fileName, avatarFile);
@@ -11282,16 +11291,25 @@ const adminAssignmentsChannel = supabase
           .from("avatars")
           .getPublicUrl(fileName);
         avatarUrl = publicUrl;
+      } else {
+        console.warn("Avatar upload failed, continuing without it:", uploadError);
+        // Continue without updating avatar
       }
+    } catch (err) {
+      console.warn("Avatar upload error:", err);
+      // Continue without updating avatar
     }
-    
-    await supabase
-      .from("profiles")
-      .update({ ...updates, avatar_url: avatarUrl })
-      .eq("id", profile?.id);
-    
-    setProfile(prev => prev ? { ...prev, ...updates, avatar_url: avatarUrl } : null);
-  };
+  }
+  
+  const { error } = await supabase
+    .from("profiles")
+    .update({ ...updates, avatar_url: avatarUrl })
+    .eq("id", profile.id);
+
+  if (error) throw error;
+
+  setProfile(prev => prev ? { ...prev, ...updates, avatar_url: avatarUrl } : null);
+};
 
  const handleSendAssignment = async (studentId: string, studentName: string, assignmentData: any) => {
   // 1. Create the assignment
