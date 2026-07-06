@@ -1217,8 +1217,50 @@ function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
+  // --- Refs for scroll animation sections ---
+  const coursesRef = useRef<HTMLDivElement>(null);
+  const howRef = useRef<HTMLDivElement>(null);
+  const whyRef = useRef<HTMLDivElement>(null);
+  const contactRef = useRef<HTMLDivElement>(null);
+
+  // --- Visibility state ---
+  const [visible, setVisible] = useState<Record<string, boolean>>({
+    courses: false,
+    how: false,
+    why: false,
+    contact: false,
+  });
+
+  // --- Intersection Observer ---
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const key = entry.target.getAttribute('data-section');
+          if (key) {
+            setVisible((prev) => ({
+              ...prev,
+              [key]: entry.isIntersecting,
+            }));
+          }
+        });
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px',
+      }
+    );
+
+    const refs = [coursesRef, howRef, whyRef, contactRef];
+    refs.forEach((ref) => {
+      if (ref.current) observer.observe(ref.current);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>     
       <nav className="sticky top-0 z-40 backdrop-blur-md border-b rounded-b-lg" style={{ backgroundColor: '#333333', borderBottomColor: '#444444' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -1310,16 +1352,26 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
         </div>
       </section>
 
-      <section id="courses" className="max-w-7xl mx-auto px-6 py-20">
-        <div className="text-center mb-12 animate-fade-up">
+        <section
+        id="courses"
+        ref={coursesRef}
+        data-section="courses"
+        className={cn(
+          "max-w-7xl mx-auto px-6 py-20 transition-all duration-700 ease-out",
+          visible.courses
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        )}
+      >
+        <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-3" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
             Featured Programs
           </h2>
-          <p className="text-gray-500 max-w-xl mx-auto animate__animated animate__fadeIn">
+          <p className="text-gray-500 max-w-xl mx-auto">
             Handcrafted 3-month curricula — each module unlocks only after you demonstrate mastery.
           </p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 animate__animated animate__fadeIn gap-6 ">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {courses.map((course) => (
             <div
               key={course.id}
@@ -1356,17 +1408,27 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
         </div>
       </section>
 
-      <section className="py-20" style={{ backgroundColor: '#333333' }}>
+<section
+        ref={howRef}
+        data-section="how"
+        className={cn(
+          "py-20 transition-all duration-700 ease-out",
+          visible.how
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        )}
+        style={{ backgroundColor: '#333333' }}
+      >
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3 animate__animated animate__fadeIn" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            <h2 className="text-3xl font-bold text-white mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
               How It Works
             </h2>
-            <p className="text-gray-400 max-w-xl mx-auto animate__animated animate__fadeIn">
+            <p className="text-gray-400 max-w-xl mx-auto">
               A carefully designed learning journey from enrollment to certification.
             </p>
           </div>
-          <div className="grid md:grid-cols-4 gap-8 animate__animated animate__slideInUp">
+          <div className="grid md:grid-cols-4 gap-8">
             {[
               { icon: BookOpen, step: "01", title: "Choose a Course", desc: "Browse and select from our curated 3-month programs." },
               { icon: DollarSign, step: "02", title: "Pay & Confirm", desc: "Make payment and upload your receipt. Admin confirms access." },
@@ -1390,8 +1452,18 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
         </div>
       </section>
 
-      <section id="why" className="max-w-7xl mx-auto px-6 py-20">
-        <div className="grid lg:grid-cols-2 gap-16 items-center animate-fade-up">
+        <section
+        id="why"
+        ref={whyRef}
+        data-section="why"
+        className={cn(
+          "max-w-7xl mx-auto px-6 py-20 transition-all duration-700 ease-out",
+          visible.why
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        )}
+      >
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-8">
             <h2 className="text-3xl font-bold animate__animated animate__slideInUp" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
               Built for Serious Learners
@@ -1433,8 +1505,19 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="max-w-7xl mx-auto px-6 py-20 border-t" style={{ borderColor: '#e0e0e0' }}>
-        <div className="text-center mb-12 animate__animated animate__slideInDown">
+      <section
+        id="contact"
+        ref={contactRef}
+        data-section="contact"
+        className={cn(
+          "max-w-7xl mx-auto px-6 py-20 border-t transition-all duration-700 ease-out",
+          visible.contact
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        )}
+        style={{ borderColor: '#e0e0e0' }}
+      >
+        <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
             Contact Us
           </h2>
