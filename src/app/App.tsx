@@ -1357,7 +1357,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
         ref={coursesRef}
         data-section="courses"
         className={cn(
-          "max-w-7xl mx-auto px-6 py-20 transition-all duration-700 ease-out",
+          "max-w-7xl mx-auto px-6 py-20 transition-all duration-900 ease-out",
           visible.courses
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
@@ -1457,7 +1457,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
         ref={whyRef}
         data-section="why"
         className={cn(
-          "max-w-7xl mx-auto px-6 py-20 transition-all duration-700 ease-out",
+          "max-w-7xl mx-auto px-6 py-20 transition-all duration-700 animated-element animate__animated animate__zoomIn",
           visible.why
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
