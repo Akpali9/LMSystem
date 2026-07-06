@@ -1242,26 +1242,26 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
 
       <section className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 grid lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-8">
-         <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5 animate-fade-up animate-pulse-glow" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
+         <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5 animate-fade-up animate-pulse-glow animate__animated animate__fadeIn" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
   <Star className="w-3.5 h-3.5 fill-current" style={{ color: '#f7530b' }} />
   <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: '#f7530b' }}>Globally Certified Programs</span>
 </div>
-          <h1 className="text-5xl lg:text-6xl font-bold leading-[1.1]" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+          <h1 className="text-5xl lg:text-6xl animate__animated animate__slideInRight font-bold leading-[1.1]" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
             Learn Without
             <span className="block italic" style={{ color: '#f7530b' }}>Limits.</span>
           </h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed w-full max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed w-full max-w-3xl mx-auto animate__animated animate__slideInUp">
 Structured 3-month courses taught by industry experts. Progress at your own pace, earn verified certificates, and transform your career.
    
             </p>
-<p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed w-full max-w-3xl mx-auto text-center">
+<p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed w-full max-w-3xl mx-auto text-center ">
   <span className="typing-wrapper inline-block">
     <span className="typing-text">
       Take the opportunity to apply for our Program Scholarship!
        </span>
   </span>
 </p>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 animate__animated animate__slideInUp">
   <button
     onClick={onAuth}
     className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:opacity-90 transition-all hover:shadow-lg animate-fade-up animate-delay-300 hover-scale"
@@ -1277,7 +1277,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
     Browse Courses
   </button>
 </div>
-         <div className="flex items-center gap-8 pt-2">
+         <div className="flex items-center gap-8 pt-2 animate__animated animate__slideInRight">
   {[["1,200+", "Students Enrolled", "animate-delay-200"], ["96%", "Completion Rate", "animate-delay-400"], ["4.9★", "Avg. Rating", "animate-delay-600"]].map(([v, l, delay]) => (
     <div key={l} className={`animate-fade-up ${delay} hover-scale`}>
       <p className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>{v}</p>
@@ -1287,18 +1287,18 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
 </div>
         </div>
         <div className="relative">
-          <div className="rounded-2xl animate-fade-up overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
+          <div className="rounded-2xl animate-fade-up overflow-hidden shadow-2xl animated-element animate__animated animate__zoomIn border" style={{ borderColor: '#e0e0e0' }}>
             <img
               src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format"
               alt="Students learning"
               className="w-full object-cover"
             />
           </div>
-          <div className="absolute -bottom-6 -left-6 animate-fade-up bg-white rounded-xl border shadow-xl p-4 flex items-center gap-3" style={{ borderColor: '#e0e0e0' }}>
+          <div className="absolute -bottom-6 -left-6 animate-fade-up bg-white rounded-xl border shadow-xl p-4 flex items-center animate__animated animate__slideInLeft gap-3" style={{ borderColor: '#e0e0e0' }}>
             <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
-            <div>
+            <div classNam="animate__animated animate__slideInLeft">
               <p className="text-sm font-semibold text-gray-800">Module Passed!</p>
               <p className="text-xs text-gray-500">Score: 92/100</p>
             </div>
@@ -1315,11 +1315,11 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
           <h2 className="text-3xl font-bold mb-3" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
             Featured Programs
           </h2>
-          <p className="text-gray-500 max-w-xl mx-auto animate-fade-up">
+          <p className="text-gray-500 max-w-xl mx-auto animate__animated animate__fadeIn">
             Handcrafted 3-month curricula — each module unlocks only after you demonstrate mastery.
           </p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 animate-fade-up gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 animate__animated animate__fadeIn gap-6 ">
           {courses.map((course) => (
             <div
               key={course.id}
@@ -1359,14 +1359,14 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
       <section className="py-20" style={{ backgroundColor: '#333333' }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            <h2 className="text-3xl font-bold text-white mb-3 animate__animated animate__fadeIn" style={{ fontFamily: "'Poppins', sans-serif" }}>
               How It Works
             </h2>
-            <p className="text-gray-400 max-w-xl mx-auto">
+            <p className="text-gray-400 max-w-xl mx-auto animate__animated animate__fadeIn">
               A carefully designed learning journey from enrollment to certification.
             </p>
           </div>
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-4 gap-8 animate__animated animate__slideInUp">
             {[
               { icon: BookOpen, step: "01", title: "Choose a Course", desc: "Browse and select from our curated 3-month programs." },
               { icon: DollarSign, step: "02", title: "Pay & Confirm", desc: "Make payment and upload your receipt. Admin confirms access." },
@@ -1393,10 +1393,10 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
       <section id="why" className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid lg:grid-cols-2 gap-16 items-center animate-fade-up">
           <div className="space-y-8">
-            <h2 className="text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+            <h2 className="text-3xl font-bold animate__animated animate__slideInUp" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
               Built for Serious Learners
             </h2>
-            <div className="space-y-5">
+            <div className="space-y-5 animate__animated animate__fadeIn">
               {[
                 { icon: Shield, title: "Secure Content", desc: "All videos and materials are DRM-protected. No downloads, no sharing." },
                 { icon: Lock, title: "Sequential Mastery", desc: "You must pass each module before the next unlocks — no shortcuts." },
@@ -1416,7 +1416,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
             </div>
             <button
               onClick={onAuth}
-              className="inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors animate__animated animate__bounce"
               style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
             >
               Start Learning Today <ArrowRight className="w-4 h-4" />
@@ -1426,7 +1426,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
             <img
               src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=700&h=550&fit=crop&auto=format"
               alt="Student studying"
-              className="w-full object-cover"
+              className="w-full object-cover animate__animated animate__fadeIn"
             />
           </div>
         </div>
@@ -1434,7 +1434,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
 
       {/* Contact Section */}
       <section id="contact" className="max-w-7xl mx-auto px-6 py-20 border-t" style={{ borderColor: '#e0e0e0' }}>
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 animate__animated animate__slideInDown">
           <h2 className="text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
             Contact Us
           </h2>
@@ -1443,7 +1443,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
           </p>
         </div>
         <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
-          <div className="flex items-center gap-4 p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow" style={{ borderColor: '#e0e0e0' }}>
+          <div className="flex items-center gap-4 p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow animate__animated animate__slideInRight" style={{ borderColor: '#e0e0e0' }}>
             <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#fdddce' }}>
               <Phone className="w-7 h-7" style={{ color: '#f7530b' }} />
             </div>
@@ -1459,7 +1459,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
               <p className="text-xs text-gray-400 mt-1">Mon - Fri, 9am - 6pm</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow" style={{ borderColor: '#e0e0e0' }}>
+          <div className="flex items-center gap-4 p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow animate__animated animate__slideInRight" style={{ borderColor: '#e0e0e0' }}>
             <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#fdddce' }}>
               <Mail className="w-7 h-7" style={{ color: '#f7530b' }} />
             </div>
