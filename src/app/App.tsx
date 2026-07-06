@@ -1306,14 +1306,14 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
         <div className="flex flex-wrap gap-4 animate__animated animate__slideInUp">
   <button
     onClick={onAuth}
-    className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:opacity-90 transition-all hover:shadow-lg animate-fade-up animate-delay-300 hover-scale"
+    className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:opacity-90 transition-all hover:shadow-lg animate-fade-up animate-delay-600 hover-scale"
     style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
   >
     Enroll Now <ArrowRight className="w-4 h-4" />
   </button>
   <button
     onClick={onAuth}
-    className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:bg-gray-200 transition-colors animate-fade-up animate-delay-500 hover-scale"
+    className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:bg-gray-200 transition-colors animate-fade-up animate-delay-900 hover-scale"
     style={{ backgroundColor: '#e0e0e0', color: '#333333' }}
   >
     Browse Courses
@@ -1357,7 +1357,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
         ref={coursesRef}
         data-section="courses"
         className={cn(
-          "max-w-7xl mx-auto px-6 py-20 transition-all duration-900 ease-out",
+          "max-w-7xl mx-auto px-6 py-20 transition-all duration-1900 zoom-in",
           visible.courses
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
@@ -1383,7 +1383,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
                 <img
                   src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"}
                   alt={course.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-900"
                 />
                 <div className="absolute top-3 right-3">
                   <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
@@ -1412,7 +1412,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
         ref={howRef}
         data-section="how"
         className={cn(
-          "py-20 transition-all duration-700 ease-out",
+          "py-20 transition-all duration-1400 ease-in",
           visible.how
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
@@ -1510,7 +1510,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
         ref={contactRef}
         data-section="contact"
         className={cn(
-          "max-w-7xl mx-auto px-6 py-20 border-t transition-all duration-700 ease-out",
+          "max-w-7xl mx-auto px-6 py-20 border-t transition-all duration-1700 ease-out",
           visible.contact
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
