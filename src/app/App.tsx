@@ -1835,8 +1835,8 @@ function Sidebar({
   onNavigate: (v: View) => void;
   onLogout: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
+const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   
   // --- STUDENT NOTIFICATION COUNTS ---
   const [studentNewAssignmentsCount, setStudentNewAssignmentsCount] = useState(0);
@@ -1856,21 +1856,17 @@ function Sidebar({
   // --- TRACK VIEWED NOTIFICATIONS FOR ADMIN (in-memory cache) ---
   const [adminViewed, setAdminViewed] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) {
-        setCollapsed(false);
-      } else {
-        setCollapsed(false);
-      }
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+useEffect(() => {
+  const checkMobile = () => {
+    const mobile = window.innerWidth < 768;
+    setIsMobile(mobile);
+    // On mobile: sidebar hidden (collapsed = true), on desktop: visible (collapsed = false)
+    setCollapsed(mobile);
+  };
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+  return () => window.removeEventListener('resize', checkMobile);
+}, []);
 
   // --- STUDENT: MARK COURSE CHAT AS VIEWED ---
   const markCourseChatAsViewed = async () => {
