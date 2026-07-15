@@ -1299,7 +1299,7 @@ Structured 3-month courses taught by industry experts. Progress at your own pace
 <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed w-full max-w-3xl mx-auto text-center ">
   <span className="typing-wrapper inline-block">
     <span className="typing-text">
-      Take the opportunity to apply for our Program Scholarship!
+      Apply for our Program Scholarship now!
        </span>
   </span>
 </p>
