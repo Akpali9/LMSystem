@@ -1217,366 +1217,537 @@ function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
-  // --- Refs for scroll animation sections ---
-  const coursesRef = useRef<HTMLDivElement>(null);
-  const howRef = useRef<HTMLDivElement>(null);
-  const whyRef = useRef<HTMLDivElement>(null);
-  const contactRef = useRef<HTMLDivElement>(null);
+  // ─── Refs for scroll animations ────────────────────────────────────────────
+  const sectionsRef = useRef<HTMLElement[]>([]);
 
-  // --- Visibility state ---
-  const [visible, setVisible] = useState<Record<string, boolean>>({
-    courses: false,
-    how: false,
-    why: false,
-    contact: false,
-  });
-
-  // --- Intersection Observer ---
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          const key = entry.target.getAttribute('data-section');
-          if (key) {
-            setVisible((prev) => ({
-              ...prev,
-              [key]: entry.isIntersecting,
-            }));
+          if (entry.isIntersecting) {
+            entry.target.classList.add('animated');
           }
         });
       },
-      {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px',
-      }
+      { threshold: 0.1 }
     );
 
-    const refs = [coursesRef, howRef, whyRef, contactRef];
-    refs.forEach((ref) => {
-      if (ref.current) observer.observe(ref.current);
-    });
-
+    document.querySelectorAll('.wow').forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
 
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>     
-      <nav className="sticky top-0 z-40 backdrop-blur-md border-b rounded-b-lg" style={{ backgroundColor: '#333333', borderBottomColor: '#444444' }}>
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
-          </div>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <a href="#courses" className="hover:text-white transition-colors"></a>
-            <a href="#how" className="hover:text-white transition-colors"></a>
-            <a href="#why" className="hover:text-white transition-colors"></a>
-            <a href="#contact" className="hover:text-white transition-colors"></a>
-          </div>
-          <button
-            onClick={onAuth}
-            className="px-5 py-2.5 text-sm font-semibold rounded-lg hover:opacity-90 transition-colors"
-            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-          >
-            Get Started
-          </button>
-        </div>
-      </nav>
+    <div className="landing-page" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      {/* ─── PRELOADER ──────────────────────────────────────────────────────── */}
+      <div id="loader-wrapper" style={{ display: 'none' }}>
+        <div id="loader"></div>
+        <div className="loader-section section-left"></div>
+        <div className="loader-section section-right"></div>
+      </div>
 
-      <section className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 grid lg:grid-cols-2 gap-16 items-center">
-        <div className="space-y-8">
-         <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5 animate-fade-up animate-pulse-glow animate__animated animate__fadeIn" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
-  <Star className="w-3.5 h-3.5 fill-current" style={{ color: '#f7530b' }} />
-  <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: '#f7530b' }}>Globally Certified Programs</span>
-</div>
-          <h1 className="text-5xl lg:text-6xl animate__animated animate__slideInRight font-bold leading-[1.1]" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-            Learn Without
-            <span className="block italic" style={{ color: '#f7530b' }}>Limits.</span>
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed w-full max-w-3xl mx-auto animate__animated animate__slideInUp">
-Structured 3-month courses taught by industry experts. Progress at your own pace, earn verified certificates, and transform your career.
-   
-            </p>
-<p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed w-full max-w-3xl mx-auto text-center ">
-  <span className="typing-wrapper inline-block">
-    <span className="typing-text">
-      Apply for our Program Scholarship now!
-       </span>
-  </span>
-</p>
-        <div className="flex flex-wrap gap-4 animate__animated animate__slideInUp">
-  <button
-    onClick={onAuth}
-    className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:opacity-90 transition-all hover:shadow-lg animate-fade-up animate-delay-600 hover-scale"
-    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-  >
-    Enroll Now <ArrowRight className="w-4 h-4" />
-  </button>
-  <button
-    onClick={onAuth}
-    className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:bg-gray-200 transition-colors animate-fade-up animate-delay-900 hover-scale"
-    style={{ backgroundColor: '#e0e0e0', color: '#333333' }}
-  >
-    Browse Courses
-  </button>
-</div>
-         <div className="flex items-center gap-8 pt-2 animate__animated animate__slideInRight">
-  {[["1,200+", "Students Enrolled", "animate-delay-200"], ["96%", "Completion Rate", "animate-delay-400"], ["4.9★", "Avg. Rating", "animate-delay-600"]].map(([v, l, delay]) => (
-    <div key={l} className={`animate-fade-up ${delay} hover-scale`}>
-      <p className="text-2xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>{v}</p>
-      <p className="text-xs text-gray-500 mt-0.5">{l}</p>
-    </div>
-  ))}
-</div>
+      {/* ─── NAVBAR ────────────────────────────────────────────────────────── */}
+      <div id="navigation" className="fixed-top navbar-light bg-faded site-navigation" style={{ background: '#333', borderBottom: '1px solid #444' }}>
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-lg-2 col-md-3 col-sm-4">
+              <div className="site-logo">
+                <a href="#">
+                  <img src="https://i.postimg.cc/Qd3jCBQp/PRUTALOGO.png" alt="Pruta Academy" style={{ height: '44px' }} />
+                </a>
+              </div>
+            </div>
+            <div className="col-lg-6 col-md-9 col-sm-8">
+              <div className="header_right">
+                <nav id="main-menu" className="ms-auto">
+                  <ul style={{ display: 'flex', gap: '24px', listStyle: 'none', margin: 0, padding: 0 }}>
+                    <li><a href="#home" className="nav-link" style={{ color: '#aaa' }}>Home</a></li>
+                    <li><a href="#about" className="nav-link" style={{ color: '#aaa' }}>About</a></li>
+                    <li><a href="#courses" className="nav-link" style={{ color: '#aaa' }}>Courses</a></li>
+                    <li><a href="#why" className="nav-link" style={{ color: '#aaa' }}>Why Us</a></li>
+                    <li><a href="#contact" className="nav-link" style={{ color: '#aaa' }}>Contact</a></li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+            <div className="col-lg-4 col-md-3 col-sm-8 text-end">
+              <div className="call_to_action" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button onClick={onAuth} className="btn_one" style={{ background: '#f7530b', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: '6px', fontWeight: 600 }}>Login</button>
+                <button onClick={onAuth} className="btn_two" style={{ background: '#555', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: '6px', fontWeight: 600 }}>Sign Up</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="relative">
-          <div className="rounded-2xl animate-fade-up overflow-hidden shadow-2xl animated-element animate__animated animate__zoomIn border" style={{ borderColor: '#e0e0e0' }}>
-            <img
-              src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format"
-              alt="Students learning"
-              className="w-full object-cover"
-            />
-          </div>
-          <div className="absolute -bottom-6 -left-6 animate-fade-up bg-white rounded-xl border shadow-xl p-4 flex items-center animate__animated animate__slideInLeft gap-3" style={{ borderColor: '#e0e0e0' }}>
-            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+      </div>
+
+      {/* ─── HOME ──────────────────────────────────────────────────────────── */}
+      <section id="home" className="home_bg" style={{ background: 'linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%)', padding: '100px 0 60px' }}>
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-lg-6 col-sm-6">
+              <div className="home_content">
+                <h1 style={{ fontSize: '3rem', fontWeight: 700, color: '#333' }}>
+                  Better <span style={{ color: '#f7530b' }}>Learning Future</span> Starts With Pruta
+                </h1>
+                <p style={{ color: '#666', marginTop: '16px' }}>
+                  Structured 3-month courses taught by industry experts. Progress at your own pace,
+                  earn verified certificates, and transform your career.
+                </p>
+              </div>
+              <div className="home_btn" style={{ marginTop: '24px' }}>
+                <button onClick={onAuth} className="cta" style={{ background: '#f7530b', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '8px', fontWeight: 600 }}>
+                  Explore Courses &nbsp;→
+                </button>
+              </div>
             </div>
-            <div classNam="animate__animated animate__slideInLeft">
-              <p className="text-sm font-semibold text-gray-800">Module Passed!</p>
-              <p className="text-xs text-gray-500">Score: 92/100</p>
+            <div className="col-lg-6 col-sm-6">
+              <div className="home_me_img" style={{ position: 'relative' }}>
+                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format" alt="Students" className="img-fluid" style={{ borderRadius: '12px' }} />
+                <div className="home_ps" style={{ position: 'absolute', bottom: '20px', left: '20px', background: '#fff', padding: '12px 20px', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+                  <h2 style={{ margin: 0, color: '#f7530b' }}>7500+</h2>
+                  <span style={{ fontSize: '0.8rem', color: '#666' }}>Active students</span>
+                </div>
+                <div className="home_ps2" style={{ position: 'absolute', top: '20px', right: '20px', background: '#f7530b', padding: '12px 20px', borderRadius: '12px', color: '#fff' }}>
+                  <h2 style={{ margin: 0 }}>4500+</h2>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Online Courses</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="absolute -top-4 -right-4 rounded-xl animate-fade-up shadow-xl p-4" style={{ backgroundColor: '#f7530b' }}>
-            <p className="text-white text-sm font-bold">3 Month</p>
-            <p className="text-white/70 text-xs">Duration</p>
           </div>
         </div>
       </section>
 
-        <section
-        id="courses"
-        ref={coursesRef}
-        data-section="courses"
-        className={cn(
-          "max-w-7xl mx-auto px-6 py-20 transition-all duration-1900 zoom-in",
-          visible.courses
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-10"
-        )}
-      >
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-3" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-            Featured Programs
-          </h2>
-          <p className="text-gray-500 max-w-xl mx-auto">
-            Handcrafted 3-month curricula — each module unlocks only after you demonstrate mastery.
-          </p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {courses.map((course) => (
-            <div
-              key={course.id}
-              className="bg-white rounded-xl border overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
-              style={{ borderColor: '#e0e0e0' }}
-              onClick={onAuth}
-            >
-              <div className="relative h-40 bg-gray-100 overflow-hidden">
-                <img
-                  src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"}
-                  alt={course.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-900"
-                />
-                <div className="absolute top-3 right-3">
-                  <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
-                    {course.duration_months} months
-                  </span>
-                </div>
-              </div>
-              <div className="p-5">
-                <h3 className="font-semibold text-gray-800 text-sm leading-snug mb-2">{course.title}</h3>
-                <p className="text-xs text-gray-500 leading-relaxed mb-4 line-clamp-2">{course.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold" style={{ color: '#f7530b', fontFamily: "'Poppins', sans-serif" }}>
-                    {formatNaira(course.price)}
-                  </span>
-                  <span className="text-xs font-medium flex items-center gap-1" style={{ color: '#f7530b' }}>
-                    Enroll <ChevronRight className="w-3 h-3" />
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-<section
-        ref={howRef}
-        data-section="how"
-        className={cn(
-          "py-20 transition-all duration-1400 ease-in",
-          visible.how
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-10"
-        )}
-        style={{ backgroundColor: '#333333' }}
-      >
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
-              How It Works
-            </h2>
-            <p className="text-gray-400 max-w-xl mx-auto">
-              A carefully designed learning journey from enrollment to certification.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-4 gap-8">
+      {/* ─── TOP PROMO FEATURES ───────────────────────────────────────────── */}
+      <section className="tp_feature" style={{ padding: '40px 0', background: '#fff' }}>
+        <div className="container-fluid">
+          <div className="row">
             {[
-              { icon: BookOpen, step: "01", title: "Choose a Course", desc: "Browse and select from our curated 3-month programs." },
-              { icon: DollarSign, step: "02", title: "Pay & Confirm", desc: "Make payment and upload your receipt. Admin confirms access." },
-              { icon: TrendingUp, step: "03", title: "Progress Module by Module", desc: "Pass each module's assessment before the next unlocks." },
-              { icon: Award, step: "04", title: "Earn Your Certificate", desc: "Complete all modules and receive your certificate via email." },
-            ].map(({ icon: Icon, step, title, desc }) => (
-              <div key={step} className="text-center space-y-4">
-                <div className="relative inline-block">
-                  <div className="w-16 h-16 rounded-2xl border flex items-center justify-center mx-auto" style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)' }}>
-                    <Icon className="w-7 h-7" style={{ color: '#f7530b' }} />
-                  </div>
-                  <span className="absolute -top-2 -right-2 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
-                    {step[1]}
-                  </span>
+              { title: 'Quality Education', text: 'Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.' },
+              { title: 'Experienced Teachers', text: 'Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.' },
+              { title: 'Delicious Food', text: 'Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.' }
+            ].map((item, idx) => (
+              <div key={idx} className="col-lg-4 col-sm-4 col-xs-12 no-padding wow fadeInUp" style={{ padding: '0 15px' }}>
+                <div className="single_tp" style={{ background: '#f9f9f9', padding: '30px', borderRadius: '12px', textAlign: 'center' }}>
+                  <h3 style={{ color: '#333' }}>{item.title}</h3>
+                  <p style={{ color: '#666' }}>{item.text}</p>
+                  <a href="#" className="cta" style={{ color: '#f7530b', fontWeight: 600 }}>Explore →</a>
                 </div>
-                <h3 className="font-semibold text-white">{title}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-        <section
-        id="why"
-        ref={whyRef}
-        data-section="why"
-        className={cn(
-          "max-w-7xl mx-auto px-6 py-20 transition-all duration-700 animated-element animate__animated animate__zoomIn",
-          visible.why
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-10"
-        )}
-      >
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-8">
-            <h2 className="text-3xl font-bold animate__animated animate__slideInUp" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-              Built for Serious Learners
-            </h2>
-            <div className="space-y-5 animate__animated animate__fadeIn">
-              {[
-                { icon: Shield, title: "Secure Content", desc: "All videos and materials are DRM-protected. No downloads, no sharing." },
-                { icon: Lock, title: "Sequential Mastery", desc: "You must pass each module before the next unlocks — no shortcuts." },
-                { icon: Users, title: "Personalised Access", desc: "Each enrollment is tied to one student for 3 months exactly." },
-                { icon: Award, title: "Verified Certificates", desc: "Certificates issued personally via email upon course completion." },
-              ].map(({ icon: Icon, title, desc }) => (
-                <div key={title} className="flex gap-4">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: '#fdddce' }}>
-                    <Icon className="w-5 h-5" style={{ color: '#f7530b' }} />
-                  </div>
+      {/* ─── ABOUT US ──────────────────────────────────────────────────────── */}
+      <section id="about" className="ab_one section-padding" style={{ padding: '60px 0', background: '#fafafa' }}>
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-lg-6 col-sm-12">
+              <div className="ab_img">
+                <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=700&h=550&fit=crop&auto=format" alt="About" className="img-fluid" style={{ borderRadius: '12px' }} />
+              </div>
+            </div>
+            <div className="col-lg-6 col-sm-12">
+              <div className="ab_content">
+                <h2 style={{ fontSize: '2rem', fontWeight: 700, color: '#333' }}>
+                  Learn new skills to go <u style={{ color: '#f7530b' }}>ahead for your</u> career.
+                </h2>
+                <p style={{ color: '#666', marginTop: '12px' }}>Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore et simply.</p>
+              </div>
+              <div className="abmv" style={{ marginTop: '20px' }}>
+                <span className="ti-medall" style={{ fontSize: '2rem', color: '#f7530b' }}></span>
+                <h4 style={{ fontWeight: 600 }}>Our Mission</h4>
+                <p style={{ color: '#666' }}>Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.</p>
+              </div>
+              <div className="abmv" style={{ marginTop: '20px' }}>
+                <span className="ti-wand" style={{ fontSize: '2rem', color: '#f7530b' }}></span>
+                <h4 style={{ fontWeight: 600 }}>Our Vision</h4>
+                <p style={{ color: '#666' }}>Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.</p>
+              </div>
+              <button onClick={onAuth} className="btn_one" style={{ marginTop: '24px', background: '#f7530b', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '8px', fontWeight: 600 }}>Discover More</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── COUNTER ───────────────────────────────────────────────────────── */}
+      <section id="counts" className="counts section-padding" style={{ padding: '60px 0', background: '#fff' }}>
+        <div className="container">
+          <div className="section-title text-center" style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Some Fun Fact</h2>
+            <p style={{ color: '#666' }}>Our Great <span style={{ color: '#f7530b' }}>Achievement</span></p>
+          </div>
+          <div className="row gy-4">
+            {[
+              { icon: '😊', label: 'Enrolled Students', value: '8,232' },
+              { icon: '📄', label: 'Academic Programs', value: '521' },
+              { icon: '🎧', label: 'Winning Award', value: '163' },
+              { icon: '👤', label: 'Certified Students', value: '93' }
+            ].map((item, idx) => (
+              <div key={idx} className="col-lg-3 col-md-6">
+                <div className="count-box text-center" style={{ padding: '20px', background: '#f9f9f9', borderRadius: '12px' }}>
+                  <i style={{ fontSize: '2.5rem' }}>{item.icon}</i>
                   <div>
-                    <p className="font-semibold text-gray-800 text-sm">{title}</p>
-                    <p className="text-sm text-gray-500 mt-0.5">{desc}</p>
+                    <span style={{ fontSize: '2rem', fontWeight: 700, display: 'block' }}>{item.value}</span>
+                    <p style={{ color: '#666' }}>{item.label}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-            <button
-              onClick={onAuth}
-              className="inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors animate__animated animate__bounce"
-              style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-            >
-              Start Learning Today <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="rounded-2xl overflow-hidden shadow-xl border animate-fade-up" style={{ borderColor: '#e0e0e0' }}>
-            <img
-              src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=700&h=550&fit=crop&auto=format"
-              alt="Student studying"
-              className="w-full object-cover animate__animated animate__fadeIn"
-            />
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section
-        id="contact"
-        ref={contactRef}
-        data-section="contact"
-        className={cn(
-          "max-w-7xl mx-auto px-6 py-20 border-t transition-all duration-1700 ease-out",
-          visible.contact
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-10"
-        )}
-        style={{ borderColor: '#e0e0e0' }}
-      >
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-            Contact Us
-          </h2>
-          <p className="text-gray-500 max-w-xl mx-auto mt-2">
-            Have questions? Reach out to us and we'll get back to you as soon as possible.
-          </p>
-        </div>
-        <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
-          <div className="flex items-center gap-4 p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow animate__animated animate__slideInRight" style={{ borderColor: '#e0e0e0' }}>
-            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#fdddce' }}>
-              <Phone className="w-7 h-7" style={{ color: '#f7530b' }} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Call Us</p>
-              <a 
-                href="tel:+2347018090107" 
-                className="text-xl font-bold hover:underline"
-                style={{ color: '#f7530b' }}
-              >
-                +2347018090107
-              </a>
-              <p className="text-xs text-gray-400 mt-1">Mon - Fri, 9am - 6pm</p>
+      {/* ─── PARTNER LOGO ─────────────────────────────────────────────────── */}
+      <div className="partner-logo section-padding" style={{ padding: '40px 0', background: '#f5f5f5' }}>
+        <div className="container">
+          <div className="row">
+            <div className="col-lg-12 text-center">
+              <div className="partner_title">
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Trusted Companies Around The World!</h3>
+              </div>
+              <div className="partner" style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '20px', marginTop: '20px' }}>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <a href="#" key={i}><img src={`https://via.placeholder.com/100x50?text=Logo${i}`} alt="partner" style={{ height: '50px' }} /></a>
+                ))}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-6 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow animate__animated animate__slideInRight" style={{ borderColor: '#e0e0e0' }}>
-            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#fdddce' }}>
-              <Mail className="w-7 h-7" style={{ color: '#f7530b' }} />
+        </div>
+      </div>
+
+      {/* ─── WHY CHOOSE US ────────────────────────────────────────────────── */}
+      <section id="why" className="marketing_content_area section-padding" style={{ padding: '60px 0', background: '#fff' }}>
+        <div className="container">
+          <div className="section-title text-center" style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Why Choose Pruta</h2>
+            <p style={{ color: '#666' }}>Find the <span style={{ color: '#f7530b' }}>best features</span> of Pruta.</p>
+          </div>
+          <div className="row">
+            {[
+              { icon: '📚', title: 'Learn More Anywhere', desc: 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.' },
+              { icon: '❤️', title: 'Expert Instructor', desc: 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.' },
+              { icon: '👤', title: 'Team Management', desc: 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.' },
+              { icon: '👁️', title: 'Course Planning', desc: 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.' },
+              { icon: '💡', title: 'Teacher Monitoring', desc: 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.' },
+              { icon: '✉️', title: '24/7 Strong Support', desc: 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.' }
+            ].map((item, idx) => (
+              <div key={idx} className="col-lg-4 col-sm-6 col-xs-12 wow fadeInUp" style={{ marginBottom: '24px' }}>
+                <div className="single_feature_one" style={{ background: '#f9f9f9', padding: '24px', borderRadius: '12px', textAlign: 'center' }}>
+                  <div className="sf_top">
+                    <span style={{ fontSize: '2.5rem' }}>{item.icon}</span>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginTop: '8px' }}>{item.title}</h2>
+                  </div>
+                  <p style={{ color: '#666' }}>{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── POPULAR COURSES (dynamic) ──────────────────────────────────── */}
+      <div className="best-cpurse section-padding" style={{ padding: '60px 0', background: '#fafafa' }}>
+        <div className="container">
+          <div className="section-title text-center" style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Popular Courses</h2>
+            <p style={{ color: '#666' }}>Choose Our <span style={{ color: '#f7530b' }}>Top Courses</span></p>
+          </div>
+          <div className="row">
+            {courses.slice(0, 6).map((course) => (
+              <div key={course.id} className="col-lg-4 col-sm-6 col-xs-12 wow fadeInUp" style={{ marginBottom: '24px' }}>
+                <div className="course-slide" style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <div className="course-img" style={{ position: 'relative' }}>
+                    <img src={course.thumbnail_url || 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format'} alt={course.title} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
+                    <div className="course-date" style={{ position: 'absolute', top: '12px', right: '12px', background: '#f7530b', color: '#fff', padding: '4px 12px', borderRadius: '20px' }}>
+                      <span className="month">{formatNaira(course.price)}</span>
+                    </div>
+                  </div>
+                  <div className="course-content" style={{ padding: '16px' }}>
+                    <a className="c_btn" href="#" style={{ color: '#f7530b', fontWeight: 600 }}>{course.duration_months} months</a>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '8px 0' }}><a href="#" style={{ color: '#333' }}>{course.title}</a></h3>
+                    <p style={{ color: '#666', fontSize: '0.85rem' }}>{course.description}</p>
+                    <span><i className="fa fa-star" style={{ color: '#f7530b' }}></i> 4.9</span>
+                    <span style={{ marginLeft: '12px' }}><i className="fa fa-table"></i> 30 Seats Available</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="col-lg-12 text-center" style={{ marginTop: '20px' }}>
+            <button onClick={onAuth} className="btn_one" style={{ background: '#f7530b', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '8px', fontWeight: 600 }}>View All Courses</button>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── COURSE PROMOTION ────────────────────────────────────────────── */}
+      <section className="course_promo section-padding" style={{ padding: '60px 0', background: '#fff' }}>
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-lg-6 col-sm-12">
+              <div className="cp_content">
+                <h4 style={{ color: '#f7530b' }}>Best Online Learning Platform</h4>
+                <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>One Platform & Many <span style={{ color: '#f7530b' }}>Courses</span> For You</h2>
+                <p style={{ color: '#666' }}>From blogs to emails to ad copies, auto-generate catchy, original, and high-converting copies in popular tones languages.</p>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  <li><span className="ti-check" style={{ color: '#f7530b' }}>✓</span> 9/10 Average Satisfaction Rate</li>
+                  <li><span className="ti-check" style={{ color: '#f7530b' }}>✓</span> 96% Completion Rate</li>
+                  <li><span className="ti-check" style={{ color: '#f7530b' }}>✓</span> Friendly Environment & Expert Teacher</li>
+                </ul>
+              </div>
+              <div className="cp_btn" style={{ marginTop: '24px' }}>
+                <button onClick={onAuth} className="cta" style={{ background: '#f7530b', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '8px', fontWeight: 600 }}>Explore Our Courses →</button>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Email Us</p>
-              <a 
-                href="mailto:info@prutamagic.com" 
-                className="text-lg font-bold hover:underline"
-                style={{ color: '#f7530b' }}
-              >
-                info@prutamagic.com
-              </a>
-              <p className="text-xs text-gray-400 mt-1">We respond within 24 hours</p>
+            <div className="col-lg-6 col-sm-12">
+              <div className="cp_img">
+                <img src="https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=700&h=550&fit=crop&auto=format" alt="Promo" className="img-fluid" style={{ borderRadius: '12px' }} />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <footer className="border-t" style={{ borderColor: '#e0e0e0' }}>
-        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <img src="https://i.postimg.cc/Qd3jCBQp/PRUTALOGO.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain" />
-          </div>
-          <p className="text-sm text-gray-500">© {new Date().getFullYear()} All rights reserved.</p>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Shield className="w-3.5 h-3.5" />
-            <span>Content Protected</span>
+      {/* ─── NEWSLETTER ───────────────────────────────────────────────────── */}
+      <section className="newsletter_area section-padding" style={{ padding: '60px 0', background: '#f5f5f5' }}>
+        <div className="container">
+          <div className="row text-center">
+            <div className="col-lg-6 offset-lg-3">
+              <div className="subs_form">
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Subscribe to our newsletter, We don't make any spam.</h3>
+                <p style={{ color: '#666' }}>Lorem ipsum dolor sit amet consectetur adipisicing elitsed eiusmod tempor enim minim</p>
+                <form action="#" className="home_subs" style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                  <input type="text" className="subscribe__input" placeholder="Enter your Email Address" style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                  <button type="button" className="subscribe__btn" style={{ background: '#f7530b', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px' }}><i className="fa fa-paper-plane-o"></i></button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
-      </footer>
+      </section>
+
+      {/* ─── TOPICS ────────────────────────────────────────────────────────── */}
+      <section className="topic_content_area section-padding" style={{ padding: '60px 0', background: '#fff' }}>
+        <div className="container">
+          <div className="section-title text-center" style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Start Learning</h2>
+            <p style={{ color: '#666' }}>Popular <span style={{ color: '#f7530b' }}>Topics To Learn</span> From Today.</p>
+          </div>
+          <div className="row">
+            {[
+              { icon: '🎨', title: 'UI/UX Design', courses: 71 },
+              { icon: '💻', title: 'Digital Program', courses: 59 },
+              { icon: '💰', title: 'Finance', courses: 68 },
+              { icon: '⚛️', title: 'Modern Physics', courses: 83 },
+              { icon: '🎵', title: 'Music Production', courses: 37 },
+              { icon: '📊', title: 'Data Science', courses: 51 }
+            ].map((item, idx) => (
+              <div key={idx} className="col-lg-4 col-sm-6 col-xs-12" style={{ marginBottom: '24px' }}>
+                <div className="single_tca" style={{ background: '#f9f9f9', padding: '24px', borderRadius: '12px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '2.5rem' }}>{item.icon}</span>
+                  <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '8px' }}><a href="#" style={{ color: '#333' }}>{item.title}</a></h2>
+                  <span style={{ color: '#666' }}>{item.courses} Courses</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── EVENTS ────────────────────────────────────────────────────────── */}
+      <section className="our-event section-padding" style={{ padding: '60px 0', background: '#fafafa' }}>
+        <div className="container">
+          <div className="section-title text-center" style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Upcoming Events</h2>
+            <p style={{ color: '#666' }}>Join With Us <span style={{ color: '#f7530b' }}>Our Events</span></p>
+          </div>
+          <div className="row">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="col-lg-4 col-sm-6 col-xs-12" style={{ marginBottom: '24px' }}>
+                <div className="event-slide" style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <div className="event-img" style={{ position: 'relative' }}>
+                    <img src={`https://via.placeholder.com/600x340?text=Event+${i}`} alt="event" style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
+                    <div className="event-date" style={{ position: 'absolute', top: '12px', left: '12px', background: '#f7530b', color: '#fff', padding: '4px 12px', borderRadius: '20px', textAlign: 'center' }}>
+                      <span className="date" style={{ display: 'block', fontWeight: 700 }}>20</span>
+                      <span className="month">Oct</span>
+                    </div>
+                  </div>
+                  <div className="event-content" style={{ padding: '16px' }}>
+                    <h3><a href="#" style={{ color: '#333' }}>Electrical Engineering of Batparder new event</a></h3>
+                    <span><i className="fa fa-clock-o"></i> 10.00AM - 12.00PM</span>
+                    <span><i className="fa fa-table"></i> At Pruta School</span>
+                    <p style={{ color: '#666' }}>Lorem ipsum dolor sit amet magna consectetur adipisicing elit.</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── TESTIMONIALS ────────────────────────────────────────────────── */}
+      <section className="testi_home_area section-padding" style={{ padding: '60px 0', background: '#fff' }}>
+        <div className="container">
+          <div className="section-title text-center" style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Testimonial</h2>
+            <p style={{ color: '#666' }}>What Says <span style={{ color: '#f7530b' }}>Our Students</span></p>
+          </div>
+          <div className="row">
+            <div className="col-lg-12">
+              <div id="testimonial-slider" className="owl-carousel" style={{ display: 'flex', gap: '20px' }}>
+                {[
+                  { name: 'James Clayton', role: 'Design Expert', text: 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr sed diam nonumy eirmod tempor.' },
+                  { name: 'James Simmons', role: 'Marketing Expert', text: 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr sed diam nonumy eirmod tempor.' },
+                  { name: 'Alex Feroundo', role: 'Founder', text: 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr sed diam nonumy eirmod tempor.' }
+                ].map((item, idx) => (
+                  <div key={idx} className="testimonial" style={{ background: '#f9f9f9', padding: '24px', borderRadius: '12px', flex: '1' }}>
+                    <div className="testimonial_content">
+                      <i className="fa fa-star" style={{ color: '#f7530b' }}></i>
+                      <i className="fa fa-star" style={{ color: '#f7530b' }}></i>
+                      <i className="fa fa-star" style={{ color: '#f7530b' }}></i>
+                      <i className="fa fa-star" style={{ color: '#f7530b' }}></i>
+                      <i className="fa fa-star" style={{ color: '#f7530b' }}></i>
+                      <p style={{ color: '#666' }}>{item.text}</p>
+                    </div>
+                    <div className="testi_pic_title" style={{ marginTop: '16px' }}>
+                      <h4 style={{ fontWeight: 600 }}>{item.name}</h4>
+                      <small style={{ color: '#666' }}>- {item.role}</small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── TEAM ──────────────────────────────────────────────────────────── */}
+      <section className="team_home_area section-padding" style={{ padding: '60px 0', background: '#fafafa' }}>
+        <div className="container">
+          <div className="section-title text-center" style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Team Member</h2>
+            <p style={{ color: '#666' }}>Our Expert <span style={{ color: '#f7530b' }}>Instructors</span></p>
+          </div>
+          <div className="row">
+            {[
+              { name: 'Marina Mojo', role: 'Developer', course: 5, student: 12 },
+              { name: 'Ayoub Fennouni', role: 'Logo Expert', course: 5, student: 7 },
+              { name: 'Mark Linomi', role: 'Marketer', course: 9, student: 17 },
+              { name: 'Amira Yerden', role: 'UI/UX Designer', course: 15, student: 31 }
+            ].map((item, idx) => (
+              <div key={idx} className="col-lg-3 col-sm-6 col-xs-12" style={{ marginBottom: '24px' }}>
+                <div className="single-team-home" style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+                  <div className="img"><img src={`https://via.placeholder.com/300x300?text=${item.name[0]}`} className="img-fluid" alt={item.name} style={{ width: '100%', height: '250px', objectFit: 'cover' }} /></div>
+                  <div className="team-content-home" style={{ padding: '16px' }}>
+                    <h3 style={{ fontWeight: 600 }}>{item.name}</h3>
+                    <p style={{ color: '#666' }}>{item.role}</p>
+                    <div className="sth_det">
+                      <span className="ti-file"> {item.course} Course</span>
+                      <span className="ti-user" style={{ marginLeft: '12px' }}> {item.student} Student</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── BLOG ──────────────────────────────────────────────────────────── */}
+      <section id="blog" className="blog_area section-padding" style={{ padding: '60px 0', background: '#fff' }}>
+        <div className="container">
+          <div className="section-title text-center" style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>News</h2>
+            <p style={{ color: '#666' }}>Our Latest <span style={{ color: '#f7530b' }}>Blogs</span></p>
+          </div>
+          <div className="row">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="col-lg-4 col-sm-4 col-xs-12" style={{ marginBottom: '24px' }}>
+                <div className="single_blog" style={{ background: '#f9f9f9', borderRadius: '12px', overflow: 'hidden' }}>
+                  <img src={`https://via.placeholder.com/600x340?text=Blog+${i}`} className="img-fluid" alt="blog" style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
+                  <div className="content_box" style={{ padding: '16px' }}>
+                    <span style={{ color: '#666' }}>August 25, 2023 | <a href="#" style={{ color: '#f7530b' }}>Design</a></span>
+                    <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '8px 0' }}><a href="#" style={{ color: '#333' }}>Professional Mobile Painting and Sculpting</a></h2>
+                    <a href="#" className="cta" style={{ color: '#f7530b', fontWeight: 600 }}>READ MORE →</a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── FOOTER ────────────────────────────────────────────────────────── */}
+      <div className="footer section-padding" style={{ background: '#333', color: '#aaa', padding: '60px 0 30px' }}>
+        <div className="container">
+          <div className="row">
+            <div className="col-lg-3 col-sm-6 col-xs-12">
+              <div className="single_footer">
+                <a href="#"><img src="https://i.postimg.cc/Qd3jCBQp/PRUTALOGO.png" alt="Pruta" style={{ height: '44px' }} /></a>
+                <p style={{ marginTop: '12px' }}>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce vitae risus nec dui venenatis dignissim.</p>
+              </div>
+              <div className="foot_social" style={{ marginTop: '12px' }}>
+                <ul style={{ display: 'flex', gap: '12px', listStyle: 'none', padding: 0 }}>
+                  <li><a href="#" style={{ color: '#aaa' }}>TW</a></li>
+                  <li><a href="#" style={{ color: '#aaa' }}>FB</a></li>
+                  <li><a href="#" style={{ color: '#aaa' }}>INS</a></li>
+                  <li><a href="#" style={{ color: '#aaa' }}>YT</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="col-lg-3 col-sm-6 col-xs-12">
+              <div className="single_footer">
+                <h4 style={{ color: '#fff' }}>Courses</h4>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  <li><a href="#" style={{ color: '#aaa' }}>Creative Writing</a></li>
+                  <li><a href="#" style={{ color: '#aaa' }}>Digital Marketing</a></li>
+                  <li><a href="#" style={{ color: '#aaa' }}>SEO Business</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="col-lg-3 col-sm-6 col-xs-12">
+              <div className="single_footer">
+                <h4 style={{ color: '#fff' }}>Company</h4>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  <li><a href="#" style={{ color: '#aaa' }}>About us</a></li>
+                  <li><a href="#" style={{ color: '#aaa' }}>Knowledge Base</a></li>
+                  <li><a href="#" style={{ color: '#aaa' }}>Support team</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="col-lg-3 col-sm-6 col-xs-12">
+              <div className="single_footer">
+                <h4 style={{ color: '#fff' }}>Contact Info</h4>
+                <div className="sf_contact" style={{ marginBottom: '12px' }}>
+                  <span className="ti-mobile" style={{ color: '#f7530b' }}>📞</span>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Phone number</h3>
+                  <p>+88 457 845 695</p>
+                </div>
+                <div className="sf_contact" style={{ marginBottom: '12px' }}>
+                  <span className="ti-email" style={{ color: '#f7530b' }}>✉️</span>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Email Address</h3>
+                  <p>example@yourmail.com</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="row fc" style={{ borderTop: '1px solid #444', paddingTop: '24px', marginTop: '24px' }}>
+            <div className="col-lg-6 col-sm-6 col-xs-12">
+              <div className="footer_copyright">
+                <p>&copy; {new Date().getFullYear()}. All Rights Reserved.</p>
+              </div>
+            </div>
+            <div className="col-lg-6 col-sm-6 col-xs-12">
+              <div className="footer_menu" style={{ display: 'flex', justifyContent: 'flex-end', gap: '20px' }}>
+                <a href="#" style={{ color: '#aaa' }}>Terms of use</a>
+                <a href="#" style={{ color: '#aaa' }}>Privacy Policy</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
 // ─── Auth Page ────────────────────────────────────────────────────────────────
 
 function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
