@@ -1422,10 +1422,9 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         <div className="container-fluid px-0 max-w-7xl mx-auto">
           <div className="grid md:grid-cols-3 gap-0">
             {[
-              { title: "Quality Education", desc: "Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.", icon: <BookOpen className="w-6 h-6" style={{ color: '#f7530b' }} /> },
-              { title: "Experienced Teachers", desc: "Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.", icon: <Users className="w-6 h-6" style={{ color: '#f7530b' }} /> },
-              { title: "Scholarships ", desc: "Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.", icon: <Gift className="w-6 h-6" style={{ color: '#f7530b' }} /> },
-            ].map((item, idx) => (
+              { title: "Quality Education", desc: "We deliver industry‑aligned curricula crafted by experts to ensure you gain practical, job‑ready skills.", icon: <BookOpen className="w-6 h-6" style={{ color: '#f7530b' }} /> },          
+              { title: "Experienced Teachers", desc: "Learn from professionals with years of real‑world experience who are passionate about mentoring the next generation.", icon: <Users className="w-6 h-6" style={{ color: '#f7530b' }} /> },       
+              { title: "Healthy Learning Environment", desc: "Our supportive community and structured programs keep you motivated, with access to resources whenever you need them.", icon: <Gift className="w-6 h-6" style={{ color: '#f7530b' }} /> },
               <div
                 key={idx}
                 className="p-8 text-center border-r border-b md:border-b-0 transition-all hover:shadow-lg"
