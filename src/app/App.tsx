@@ -1564,27 +1564,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-      {/* TOPICS */}
-      <section id="topics" ref={topicsRef} data-section="topics" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.topics ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Start Learning Today</h2>
-          <p className="text-gray-500 mt-2">Popular <span style={{ color: '#f7530b' }}>Topics To Learn</span> From Today.</p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {['UI/UX Design', 'Digital Marketing', 'Finance & Accounting', 'Modern Physics', 'Music Production', 'Data Science'].map((topic, idx) => (
-            <div key={idx} className="bg-white p-6 rounded-xl border text-center hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
-              <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: '#fdddce' }}>
-                <span className="text-2xl">📚</span>
-              </div>
-              <h3 className="font-semibold text-gray-800">{topic}</h3>
-              <p className="text-sm text-gray-500">{Math.floor(Math.random() * 50 + 30)} Courses</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-        
-      {/* TESTIMONIALS */}
+       {/* TESTIMONIALS */}
       <section id="testimonials" ref={testimonialsRef} data-section="testimonials" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.testimonials ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Testimonial</h2>
