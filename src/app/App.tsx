@@ -1338,17 +1338,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <a href="#home" className="hover:text-white transition-colors">Home</a>
-            <a href="#about" className="hover:text-white transition-colors">About</a>
-            <a href="#courses" className="hover:text-white transition-colors">Courses</a>
-            <a href="#features" className="hover:text-white transition-colors">Why Us</a>
-            <a href="#topics" className="hover:text-white transition-colors">Topics</a>
-            <a href="#events" className="hover:text-white transition-colors">Events</a>
-            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
-            <a href="#team" className="hover:text-white transition-colors">Team</a>
-            <a href="#blog" className="hover:text-white transition-colors">Blog</a>
-            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
-          </div>
+         </div>
           <button
             onClick={onAuth}
             className="px-5 py-2.5 text-sm font-semibold rounded-lg hover:opacity-90 transition-colors"
@@ -1465,54 +1455,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-      {/* ─── FUN FACTS COUNTER SECTION ─── */}
-      <section
-        ref={counterRef}
-        data-section="counter"
-        className={cn(
-          "py-20 bg-white transition-all duration-1000",
-          visible.counter ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Some Fun Facts</h2>
-            <p className="text-gray-500 mt-2">Our Great <span style={{ color: '#f7530b' }}><u>Achievement</u></span></p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div>
-              <i className="ti-face-smile text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.students.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Enrolled Students</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-files text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.programs.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Academic Programs</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-headphone-alt text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.awards.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Industry Awards</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-user text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.certified.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Certified Graduates</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* WHY CHOOSE US */}
+        {/* WHY CHOOSE US */}
       <section id="why" ref={whyRef} data-section="why" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.why ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Why Choose Pruta Academy</h2>
@@ -1680,33 +1623,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-      {/* BLOG */}
-      <section id="blog" ref={blogRef} data-section="blog" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.blog ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>News</h2>
-          <p className="text-gray-500 mt-2">Our Latest <span style={{ color: '#f7530b' }}>Blogs</span></p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {[
-            { title: "Professional Mobile Painting and Sculpting", date: "August 25, 2023", category: "Design", img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=250&fit=crop&auto=format" },
-            { title: "Professional Ceramic Moulding for Beginners", date: "August 26, 2023", category: "Education", img: "https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=250&fit=crop&auto=format" },
-            { title: "Education Is About Creating Leaders for Tomorrow", date: "August 28, 2023", category: "Programming", img: "https://images.unsplash.com/photo-1523050854058-8df90110c7f1?w=400&h=250&fit=crop&auto=format" },
-          ].map((post, idx) => (
-            <div key={idx} className="bg-white rounded-xl border overflow-hidden hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
-              <img src={post.img} alt="" className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="p-5">
-                <p className="text-xs text-gray-500">{post.date} | <a href="#" style={{ color: '#f7530b' }}>{post.category}</a></p>
-                <h3 className="font-semibold text-gray-800 mt-2 leading-snug">{post.title}</h3>
-                <button onClick={onAuth} className="mt-3 inline-flex items-center gap-2 text-sm font-medium hover:underline" style={{ color: '#f7530b' }}>
-                  Read More <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CONTACT */}
+       {/* CONTACT */}
       <section id="contact" ref={contactRef} data-section="contact" className={cn("py-20 border-t max-w-7xl mx-auto px-6 transition-all duration-1000", visible.contact ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")} style={{ borderColor: '#e0e0e0' }}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Contact Us</h2>
