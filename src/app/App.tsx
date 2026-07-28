@@ -1601,7 +1601,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { name: "Marina Mojo", role: "Developer", img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&auto=format" },
+              { name: "Akpali Francis Ezennaya", role: "Developer", img: "https://i.postimg.cc/B6PdffYR/IMG-20260717-WA0008.jpg" },
               { name: "Ayoub Fennouni", role: "Logo Expert", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&auto=format" },
               { name: "Mark Linomi", role: "Marketer", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&auto=format" },
               { name: "Amira Yerden", role: "UI/UX Designer", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&auto=format" },
@@ -1612,9 +1612,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
                   <h3 className="font-semibold text-gray-800">{member.name}</h3>
                   <p className="text-sm text-gray-500">{member.role}</p>
                   <div className="flex justify-center gap-3 mt-3 text-gray-400">
-                    <a href="#" className="hover:text-gray-700"><Facebook className="w-4 h-4" /></a>
-                    <a href="#" className="hover:text-gray-700"><Twitter className="w-4 h-4" /></a>
-                    <a href="#" className="hover:text-gray-700"><Instagram className="w-4 h-4" /></a>
+                   
                   </div>
                 </div>
               </div>
