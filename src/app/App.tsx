@@ -1508,8 +1508,8 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
                   <h3 className="font-semibold text-gray-800 text-base mt-2 leading-snug">{course.title}</h3>
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
                   <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
-                    <span><i className="fa fa-calendar mr-1"></i>3 Lessons</span>
-                    <span><i className="fa fa-clock-o mr-1"></i>3h 45m</span>
+                    <span><i className="fa fa-calendar mr-1"></i></span>
+                    <span><i className="fa fa-clock-o mr-1"></i></span>
                     <span><i className="fa fa-star mr-1" style={{ color: '#f7530b' }}></i>4.9</span>
                   </div>
                   <button onClick={onAuth} className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
