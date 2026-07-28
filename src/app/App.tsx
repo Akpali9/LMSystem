@@ -1204,8 +1204,8 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
     },
     {
       id: 2,
-      title: "testing 2",
-      description: "testing desc",
+      title: "Web development ",
+      description: "HTML, CSS, JavaScript",
       price: 30000,
       category: "General",
       duration_months: 1,
@@ -1213,14 +1213,14 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
     },
     {
       id: 3,
-      title: "Design",
+      title: "Graphic Design",
       description: "Design description",
       price: 50000,
       category: "Design",
       duration_months: 2,
       thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
     },
-    // Add more if needed
+  
   ];
 
   // ─── Refs for scroll animation sections ──────────────────────────
