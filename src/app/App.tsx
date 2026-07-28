@@ -1379,7 +1379,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
         <div className="relative">
           <div className="rounded-2xl overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
-            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format" alt="Students learning" className="w-full object-cover" />
+            <img src="https://i.postimg.cc/Y0dgN0YW/Screenshot-2026-07-28-162236.jpg" alt="Students learning" className="w-full object-cover" />
           </div>
           <div className="absolute -bottom-6 -left-6 bg-white rounded-xl border shadow-xl p-4 flex items-center gap-3" style={{ borderColor: '#e0e0e0' }}>
             <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
