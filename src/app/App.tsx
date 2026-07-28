@@ -1236,7 +1236,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
   const teamRef = useRef<HTMLDivElement>(null);
   const blogRef = useRef<HTMLDivElement>(null);
   const contactRef = useRef<HTMLDivElement>(null);
-  const counterRef = useRef<HTMLDivElement>(null); 
+  const counterRef = useRef<HTMLDivElement>(null); // for fun facts counter
 
   // ─── Visibility state ────────────────────────────────────────────────
   const [visible, setVisible] = useState<Record<string, boolean>>({
@@ -1251,10 +1251,10 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
     team: false,
     blog: false,
     contact: false,
-    counter: false, 
+    counter: false,
   });
 
-  // ─── Counter state ──────────────────────────────────────────────────
+  // ─── Counter state for fun facts ────────────────────────────────────
   const [counters, setCounters] = useState({
     students: 0,
     programs: 0,
@@ -1283,7 +1283,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
     const refs = [
       homeRef, aboutRef, coursesRef, featuresRef, whyRef,
       topicsRef, eventsRef, testimonialsRef, teamRef, blogRef,
-      contactRef, counterRef // <── include counter
+      contactRef, counterRef
     ];
     refs.forEach((ref) => {
       if (ref.current) observer.observe(ref.current);
@@ -1292,7 +1292,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
     return () => observer.disconnect();
   }, []);
 
-  // ─── Counter animation (triggers when counter section becomes visible) ──
+  // ─── Fun facts counter animation (triggers when counter section becomes visible) ──
   useEffect(() => {
     if (visible.counter && !countersStarted) {
       setCountersStarted(true);
@@ -1338,7 +1338,16 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            
+            <a href="#home" className="hover:text-white transition-colors">Home</a>
+            <a href="#about" className="hover:text-white transition-colors">About</a>
+            <a href="#courses" className="hover:text-white transition-colors">Courses</a>
+            <a href="#features" className="hover:text-white transition-colors">Why Us</a>
+            <a href="#topics" className="hover:text-white transition-colors">Topics</a>
+            <a href="#events" className="hover:text-white transition-colors">Events</a>
+            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
+            <a href="#team" className="hover:text-white transition-colors">Team</a>
+            <a href="#blog" className="hover:text-white transition-colors">Blog</a>
+            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
           </div>
           <button
             onClick={onAuth}
@@ -1372,7 +1381,11 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               Explore Courses <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-         
+          <div className="flex items-center gap-8 pt-2">
+            <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>1,200+</p><p className="text-xs text-gray-500">Students Enrolled</p></div>
+            <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>96%</p><p className="text-xs text-gray-500">Completion Rate</p></div>
+            <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>4.9★</p><p className="text-xs text-gray-500">Avg. Rating</p></div>
+          </div>
         </div>
         <div className="relative">
           <div className="rounded-2xl overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
@@ -1394,54 +1407,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-       {/* ─── COUNTER / FUN FACTS ─── (NEW) */}
-      <section
-        ref={counterRef}
-        data-section="counter"
-        className={cn(
-          "py-20 transition-all duration-1000",
-          visible.counter ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div>
-              <i className="ti-face-smile text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.students.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Enrolled Students</p>
-                 <div className="flex items-center gap-8 pt-2">
-           
-              </div>
-            </div>
-            <div>
-              <i className="ti-files text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.programs.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Completion Rate</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-headphone-alt text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.awards.toLocaleString()} ★</span>
-                <p className="text-sm text-gray-500">Avg. Rating</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-user text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.certified.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Certified Graduates</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-        
-
-      {/* TOP PROMO FEATURES – FIXED MAP SYNTAX */}
+      {/* TOP PROMO FEATURES */}
       <section id="features" ref={featuresRef} data-section="features" className={cn("py-16 transition-all duration-1000", visible.features ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="container-fluid px-0 max-w-7xl mx-auto">
           <div className="grid md:grid-cols-3 gap-0">
@@ -1496,6 +1462,53 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           <button onClick={onAuth} className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
             Discover More
           </button>
+        </div>
+      </section>
+
+      {/* ─── FUN FACTS COUNTER SECTION ─── */}
+      <section
+        ref={counterRef}
+        data-section="counter"
+        className={cn(
+          "py-20 bg-white transition-all duration-1000",
+          visible.counter ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        )}
+      >
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <div className="mb-12">
+            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Some Fun Facts</h2>
+            <p className="text-gray-500 mt-2">Our Great <span style={{ color: '#f7530b' }}><u>Achievement</u></span></p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+              <i className="ti-face-smile text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.students.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Enrolled Students</p>
+              </div>
+            </div>
+            <div>
+              <i className="ti-files text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.programs.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Academic Programs</p>
+              </div>
+            </div>
+            <div>
+              <i className="ti-headphone-alt text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.awards.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Industry Awards</p>
+              </div>
+            </div>
+            <div>
+              <i className="ti-user text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.certified.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Certified Graduates</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1607,7 +1620,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-       {/* TESTIMONIALS */}
+      {/* TESTIMONIALS */}
       <section id="testimonials" ref={testimonialsRef} data-section="testimonials" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.testimonials ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Testimonial</h2>
@@ -1667,7 +1680,33 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-        {/* CONTACT */}
+      {/* BLOG */}
+      <section id="blog" ref={blogRef} data-section="blog" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.blog ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>News</h2>
+          <p className="text-gray-500 mt-2">Our Latest <span style={{ color: '#f7530b' }}>Blogs</span></p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            { title: "Professional Mobile Painting and Sculpting", date: "August 25, 2023", category: "Design", img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=250&fit=crop&auto=format" },
+            { title: "Professional Ceramic Moulding for Beginners", date: "August 26, 2023", category: "Education", img: "https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=250&fit=crop&auto=format" },
+            { title: "Education Is About Creating Leaders for Tomorrow", date: "August 28, 2023", category: "Programming", img: "https://images.unsplash.com/photo-1523050854058-8df90110c7f1?w=400&h=250&fit=crop&auto=format" },
+          ].map((post, idx) => (
+            <div key={idx} className="bg-white rounded-xl border overflow-hidden hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
+              <img src={post.img} alt="" className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="p-5">
+                <p className="text-xs text-gray-500">{post.date} | <a href="#" style={{ color: '#f7530b' }}>{post.category}</a></p>
+                <h3 className="font-semibold text-gray-800 mt-2 leading-snug">{post.title}</h3>
+                <button onClick={onAuth} className="mt-3 inline-flex items-center gap-2 text-sm font-medium hover:underline" style={{ color: '#f7530b' }}>
+                  Read More <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CONTACT */}
       <section id="contact" ref={contactRef} data-section="contact" className={cn("py-20 border-t max-w-7xl mx-auto px-6 transition-all duration-1000", visible.contact ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")} style={{ borderColor: '#e0e0e0' }}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Contact Us</h2>
