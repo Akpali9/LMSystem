@@ -1236,7 +1236,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
   const teamRef = useRef<HTMLDivElement>(null);
   const blogRef = useRef<HTMLDivElement>(null);
   const contactRef = useRef<HTMLDivElement>(null);
-  const counterRef = useRef<HTMLDivElement>(null); // <── NEW
+  const counterRef = useRef<HTMLDivElement>(null); 
 
   // ─── Visibility state ────────────────────────────────────────────────
   const [visible, setVisible] = useState<Record<string, boolean>>({
@@ -1251,7 +1251,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
     team: false,
     blog: false,
     contact: false,
-    counter: false, // <── NEW
+    counter: false, 
   });
 
   // ─── Counter state ──────────────────────────────────────────────────
@@ -1372,11 +1372,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               Explore Courses <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex items-center gap-8 pt-2">
-            <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>1,200+</p><p className="text-xs text-gray-500">Students Enrolled</p></div>
-            <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>96%</p><p className="text-xs text-gray-500">Completion Rate</p></div>
-            <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>4.9★</p><p className="text-xs text-gray-500">Avg. Rating</p></div>
-          </div>
+         
         </div>
         <div className="relative">
           <div className="rounded-2xl overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
@@ -1394,6 +1390,53 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           <div className="absolute -top-4 -right-4 rounded-xl shadow-xl p-4" style={{ backgroundColor: '#f7530b' }}>
             <p className="text-white text-sm font-bold">3 Month</p>
             <p className="text-white/70 text-xs">Duration</p>
+          </div>
+        </div>
+      </section>
+
+       {/* ─── COUNTER / FUN FACTS ─── (NEW) */}
+      <section
+        ref={counterRef}
+        data-section="counter"
+        className={cn(
+          "py-20 bg-white transition-all duration-1000",
+          visible.counter ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        )}
+      >
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <div className="mb-12">
+            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Some Fun Facts</h2>
+            <p className="text-gray-500 mt-2">Our Great <span style={{ color: '#f7530b' }}><u>Achievement</u></span></p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+              <i className="ti-face-smile text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.students.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Enrolled Students</p>
+              </div>
+            </div>
+            <div>
+              <i className="ti-files text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.programs.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Academic Programs</p>
+              </div>
+            </div>
+            <div>
+              <i className="ti-headphone-alt text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.awards.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Industry Awards</p>
+              </div>
+            </div>
+            <div>
+              <i className="ti-user text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.certified.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Certified Graduates</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
