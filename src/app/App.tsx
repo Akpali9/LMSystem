@@ -1338,16 +1338,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <a href="#home" className="hover:text-white transition-colors">Home</a>
-            <a href="#about" className="hover:text-white transition-colors">About</a>
-            <a href="#courses" className="hover:text-white transition-colors">Courses</a>
-            <a href="#features" className="hover:text-white transition-colors">Why Us</a>
-            <a href="#topics" className="hover:text-white transition-colors">Topics</a>
-            <a href="#events" className="hover:text-white transition-colors">Events</a>
-            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
-            <a href="#team" className="hover:text-white transition-colors">Team</a>
-            <a href="#blog" className="hover:text-white transition-colors">Blog</a>
-            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+            
           </div>
           <button
             onClick={onAuth}
@@ -1462,53 +1453,6 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           <button onClick={onAuth} className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
             Discover More
           </button>
-        </div>
-      </section>
-
-      {/* ─── COUNTER / FUN FACTS ─── (NEW) */}
-      <section
-        ref={counterRef}
-        data-section="counter"
-        className={cn(
-          "py-20 bg-white transition-all duration-1000",
-          visible.counter ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Some Fun Facts</h2>
-            <p className="text-gray-500 mt-2">Our Great <span style={{ color: '#f7530b' }}><u>Achievement</u></span></p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div>
-              <i className="ti-face-smile text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.students.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Enrolled Students</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-files text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.programs.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Academic Programs</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-headphone-alt text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.awards.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Industry Awards</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-user text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.certified.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Certified Graduates</p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -1639,41 +1583,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-      {/* EVENTS */}
-      <section id="events" ref={eventsRef} data-section="events" className={cn("py-20 bg-white transition-all duration-1000", visible.events ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Upcoming Events</h2>
-            <p className="text-gray-500 mt-2">Join With Us <span style={{ color: '#f7530b' }}>Our Events</span></p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: "Electrical Engineering Workshop", date: "20 Oct", time: "10.00AM - 12.00PM", location: "Virtual Event" },
-              { title: "Architecture Design International Art Fair", date: "22 Oct", time: "10.00AM - 12.00PM", location: "Lagos, Nigeria" },
-              { title: "Chiter Astana – Coding Bootcamp", date: "26 Oct", time: "10.00AM - 12.00PM", location: "Online" },
-            ].map((ev, idx) => (
-              <div key={idx} className="bg-white rounded-xl border overflow-hidden hover:shadow-xl transition-all" style={{ borderColor: '#e0e0e0' }}>
-                <div className="relative h-48 bg-gray-100">
-                  <img src={`https://picsum.photos/seed/event${idx}/600/300`} alt="" className="w-full h-full object-cover" />
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 text-center shadow-lg">
-                    <span className="block text-2xl font-bold" style={{ color: '#f7530b' }}>{ev.date.split(' ')[0]}</span>
-                    <span className="text-xs font-medium text-gray-600">{ev.date.split(' ')[1]}</span>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-semibold text-gray-800">{ev.title}</h3>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                    <span><Clock className="w-4 h-4 inline mr-1" />{ev.time}</span>
-                    <span><MapPin className="w-4 h-4 inline mr-1" />{ev.location}</span>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">Join us for an insightful session and network with fellow learners.</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
+        
       {/* TESTIMONIALS */}
       <section id="testimonials" ref={testimonialsRef} data-section="testimonials" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.testimonials ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="text-center mb-12">
@@ -1734,33 +1644,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-      {/* BLOG */}
-      <section id="blog" ref={blogRef} data-section="blog" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.blog ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>News</h2>
-          <p className="text-gray-500 mt-2">Our Latest <span style={{ color: '#f7530b' }}>Blogs</span></p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {[
-            { title: "Professional Mobile Painting and Sculpting", date: "August 25, 2023", category: "Design", img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=250&fit=crop&auto=format" },
-            { title: "Professional Ceramic Moulding for Beginners", date: "August 26, 2023", category: "Education", img: "https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=250&fit=crop&auto=format" },
-            { title: "Education Is About Creating Leaders for Tomorrow", date: "August 28, 2023", category: "Programming", img: "https://images.unsplash.com/photo-1523050854058-8df90110c7f1?w=400&h=250&fit=crop&auto=format" },
-          ].map((post, idx) => (
-            <div key={idx} className="bg-white rounded-xl border overflow-hidden hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
-              <img src={post.img} alt="" className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="p-5">
-                <p className="text-xs text-gray-500">{post.date} | <a href="#" style={{ color: '#f7530b' }}>{post.category}</a></p>
-                <h3 className="font-semibold text-gray-800 mt-2 leading-snug">{post.title}</h3>
-                <button onClick={onAuth} className="mt-3 inline-flex items-center gap-2 text-sm font-medium hover:underline" style={{ color: '#f7530b' }}>
-                  Read More <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CONTACT */}
+        {/* CONTACT */}
       <section id="contact" ref={contactRef} data-section="contact" className={cn("py-20 border-t max-w-7xl mx-auto px-6 transition-all duration-1000", visible.contact ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")} style={{ borderColor: '#e0e0e0' }}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Contact Us</h2>
