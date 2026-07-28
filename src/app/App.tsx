@@ -1633,7 +1633,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       <section className="py-20 bg-white">
         <div className="max-w-2xl mx-auto px-6 text-center">
           <h3 className="text-2xl font-bold text-gray-800 mb-2">Subscribe to our newsletter, We don't make any spam.</h3>
-          <p className="text-gray-500 mb-6">Lorem ipsum dolor sit amet consectetur adipisicing elitsed eiusmod tempor enim minim</p>
+          <p className="text-gray-500 mb-6">Get the latest course updates, tips, and exclusive offers delivered to your inbox.</p>
           <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
             <input
               type="email"
@@ -1648,33 +1648,6 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               <Send className="w-4 h-4 inline mr-1" /> Subscribe
             </button>
           </div>
-        </div>
-      </section>
-
-      {/* TOPICS */}
-      <section
-        id="topics"
-        ref={topicsRef}
-        data-section="topics"
-        className={cn(
-          "py-20 max-w-7xl mx-auto px-6 transition-all duration-1000",
-          visible.topics ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Start Learning</h2>
-          <p className="text-gray-500 mt-2">Popular <span style={{ color: '#f7530b' }}><u>Topics To Learn</u></span> From Today.</p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {['UI/UX Design','Digital Program','Finance','Modern Physics','Music Production','Data Science'].map((topic, idx) => (
-            <div key={idx} className="bg-white p-6 rounded-xl border text-center hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
-              <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: '#fdddce' }}>
-                <span className="text-2xl">📚</span>
-              </div>
-              <h3 className="font-semibold text-gray-800">{topic}</h3>
-              <p className="text-sm text-gray-500">{Math.floor(Math.random() * 50 + 30)} Courses</p>
-            </div>
-          ))}
         </div>
       </section>
  
@@ -1693,10 +1666,10 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           <p className="text-gray-500 mt-2">What Says <span style={{ color: '#f7530b' }}><u>Our Students</u></span></p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
-          {[
-            { name: "James Clayton", role: "Design Expert", text: "Lorem ipsum dolor sit amet, consetetur sadipscing elitr sed diam nonumy eirmod tempor." },
-            { name: "James Simmons", role: "Marketing Expert", text: "Lorem ipsum dolor sit amet, consetetur sadipscing elitr sed diam nonumy eirmod tempor." },
-            { name: "Alex feroundo", role: "Founder", text: "Lorem ipsum dolor sit amet, consetetur sadipscing elitr sed diam nonumy eirmod tempor." },
+           {[
+            { name: "James Clayton", role: "Design Expert", text: "The UI/UX course completely transformed my design thinking. I landed a job within weeks of completing the program." },
+            { name: "James Simmons", role: "Marketing Expert", text: "Pruta Academy's digital marketing course gave me the practical skills I needed to double my client base in just 3 months." },
+            { name: "Alex Feroundo", role: "Founder", text: "The mentorship and community support are incredible. I've recommended Pruta to all my colleagues." },
           ].map((t, idx) => (
             <div key={idx} className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-xl transition-all" style={{ borderColor: '#e0e0e0' }}>
               <div className="flex text-yellow-400 mb-3">
