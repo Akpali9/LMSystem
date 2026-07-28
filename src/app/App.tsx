@@ -1817,7 +1817,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
     <div className="min-h-screen grid lg:grid-cols-2" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
       <div className="hidden lg:block relative overflow-hidden">
         <img
-          src="https://postimg.cc/rdFX5f2F"
+          src="https://i.postimg.cc/7LSH8RB7/Screenshot-2026-07-28-161405.jpg"
           alt="Student in a library"
           className="w-full h-full object-cover"
         />
