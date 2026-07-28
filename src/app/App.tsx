@@ -1368,7 +1368,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: '#f7530b' }}>Globally Certified Programs</span>
           </div>
           <h1 className="text-5xl lg:text-6xl animate__animated animate__slideInRight font-bold leading-[1.1]" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
-            Better <span className="italic" style={{ color: '#f7530b' }}>Learning Future</span> Starts With Penn
+            Better <span className="italic" style={{ color: '#f7530b' }}>Learning Future</span> Starts With Pruta Academy
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl animate__animated animate__slideInUp">
             It is a long established fact that reader will be distracted readable content of a page when.
@@ -1514,8 +1514,8 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         )}
       >
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Why Choose Penn</h2>
-          <p className="text-gray-500 mt-2">Find the <span style={{ color: '#f7530b' }}><u>best features</u></span> of Penn.</p>
+          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Why Choose Pruta Academy</h2>
+          <p className="text-gray-500 mt-2">Find the <span style={{ color: '#f7530b' }}><u>best features</u></span> of Pruta Academy.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
