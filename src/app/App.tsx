@@ -1196,7 +1196,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
     {
       id: 1,
       title: "Data Analysis",
-      description: "Master the art of interpreting data to make informed decisions. This course delves into tools, techniques, and strategies for analyzing and visualizing data effectively in real-world scenarios.",v
+      description: "Master the art of interpreting data to make informed decisions. This course delves into tools, techniques, and strategies for analyzing and visualizing data effectively in real-world scenarios.",
       price: 150000,
       category: "Data Science",
       duration_months: 3,
