@@ -1422,7 +1422,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       {/* ABOUT US */}
       <section id="about" ref={aboutRef} data-section="about" className={cn("py-20 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center transition-all duration-1000", visible.about ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="relative">
-          <img src="https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600&h=450&fit=crop&auto=format" alt="About us" className="rounded-2xl shadow-xl w-full object-cover" />
+          <img src="https://i.postimg.cc/gkBtmk5C/Screenshot-2026-07-28-163547.jpg" alt="About us" className="rounded-2xl shadow-xl w-full object-cover" />
           <div className="absolute -bottom-6 -right-6 bg-white rounded-xl border shadow-xl p-4" style={{ borderColor: '#e0e0e0' }}>
             <p className="text-2xl font-bold" style={{ color: '#f7530b' }}>6k+</p>
             <p className="text-xs text-gray-500">Happy Clients</p>
@@ -1545,7 +1545,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </button>
         </div>
         <div className="relative">
-          <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&h=400&fit=crop&auto=format" alt="Promo" className="rounded-2xl shadow-xl w-full object-cover" />
+          <img src="https://i.postimg.cc/XvBTTyv6/Screenshot-2026-07-28-163157.jpg" alt="Promo" className="rounded-2xl shadow-xl w-full object-cover" />
         </div>
       </section>
 
