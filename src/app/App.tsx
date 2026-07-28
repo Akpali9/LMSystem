@@ -1399,35 +1399,34 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         ref={counterRef}
         data-section="counter"
         className={cn(
-          "py-20 bg-white transition-all duration-1000",
+          "py-20 transition-all duration-1000",
           visible.counter ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         )}
       >
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Some Fun Facts</h2>
-            <p className="text-gray-500 mt-2">Our Great <span style={{ color: '#f7530b' }}><u>Achievement</u></span></p>
-          </div>
+          
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div>
               <i className="ti-face-smile text-4xl" style={{ color: '#f7530b' }}></i>
               <div className="mt-2">
                 <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.students.toLocaleString()}</span>
                 <p className="text-sm text-gray-500">Enrolled Students</p>
+                 <div className="flex items-center gap-8 pt-2">
+           
               </div>
             </div>
             <div>
               <i className="ti-files text-4xl" style={{ color: '#f7530b' }}></i>
               <div className="mt-2">
                 <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.programs.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Academic Programs</p>
+                <p className="text-sm text-gray-500">Completion Rate</p>
               </div>
             </div>
             <div>
               <i className="ti-headphone-alt text-4xl" style={{ color: '#f7530b' }}></i>
               <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.awards.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Industry Awards</p>
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.awards.toLocaleString()} ★</span>
+                <p className="text-sm text-gray-500">Avg. Rating</p>
               </div>
             </div>
             <div>
