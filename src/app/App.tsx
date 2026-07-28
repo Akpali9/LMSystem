@@ -63,6 +63,13 @@ import {
   Unlock,
   Phone,
   Download,
+ 
+  Heart,
+  Lightbulb,
+  Facebook,
+  Twitter,
+  Instagram,
+  MapPin,
 } from "lucide-react";
 
 // ─── Console Protection ──────────────────────────────────────────────────────
