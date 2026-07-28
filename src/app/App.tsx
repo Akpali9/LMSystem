@@ -1190,13 +1190,40 @@ function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
 }
 
 // ─── Landing Page ─────────────────────────────────────────────────────────────
+function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (v: View) => void }) {
+  // ─── Static course data (from your screenshot) ──────────────────
+  const STATIC_COURSES = [
+    {
+      id: 1,
+      title: "Data Analysis",
+      description: "power bi, excel, sql, python",
+      price: 250000,
+      category: "Data Science",
+      duration_months: 3,
+      thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
+    },
+    {
+      id: 2,
+      title: "testing 2",
+      description: "testing desc",
+      price: 30000,
+      category: "General",
+      duration_months: 1,
+      thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
+    },
+    {
+      id: 3,
+      title: "Design",
+      description: "Design description",
+      price: 50000,
+      category: "Design",
+      duration_months: 2,
+      thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
+    },
+    // Add more if needed
+  ];
 
-function LandingPage({ onAuth, onNavigate, courses }: { 
-  onAuth: () => void; 
-  onNavigate: (view: View, data?: any) => void; 
-  courses: Course[];
-}) {
-  // ─── Refs for scroll animation sections ──────────────────────────────
+  // ─── Refs for scroll animation sections ──────────────────────────
   const homeRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
   const coursesRef = useRef<HTMLDivElement>(null);
@@ -1210,7 +1237,7 @@ function LandingPage({ onAuth, onNavigate, courses }: {
   const contactRef = useRef<HTMLDivElement>(null);
   const counterRef = useRef<HTMLDivElement>(null);
 
-  // ─── Visibility state ────────────────────────────────────────────────
+  // ─── Visibility state ─────────────────────────────────────────────
   const [visible, setVisible] = useState<Record<string, boolean>>({
     home: true,
     about: false,
@@ -1226,7 +1253,7 @@ function LandingPage({ onAuth, onNavigate, courses }: {
     counter: false,
   });
 
-  // ─── Counter state for fun facts ────────────────────────────────────
+  // ─── Counter state for fun facts ─────────────────────────────────
   const [counters, setCounters] = useState({
     students: 0,
     programs: 0,
@@ -1235,7 +1262,7 @@ function LandingPage({ onAuth, onNavigate, courses }: {
   });
   const [countersStarted, setCountersStarted] = useState(false);
 
-  // ─── Intersection Observer ──────────────────────────────────────────
+  // ─── Intersection Observer ──────────────────────────────────────
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -1264,7 +1291,7 @@ function LandingPage({ onAuth, onNavigate, courses }: {
     return () => observer.disconnect();
   }, []);
 
-  // ─── Fun facts counter animation ──────────────────────────────────
+  // ─── Fun facts counter animation ──────────────────────────────
   useEffect(() => {
     if (visible.counter && !countersStarted) {
       setCountersStarted(true);
@@ -1300,7 +1327,7 @@ function LandingPage({ onAuth, onNavigate, courses }: {
     }
   }, [visible.counter, countersStarted]);
 
-  // ─── Render ──────────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
       {/* Navbar */}
@@ -1309,8 +1336,6 @@ function LandingPage({ onAuth, onNavigate, courses }: {
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onNavigate("landing")}>
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
           </div>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-         </div>
           <button
             onClick={onAuth}
             className="px-5 py-2.5 text-sm font-semibold rounded-lg hover:opacity-90 transition-colors"
@@ -1427,7 +1452,7 @@ function LandingPage({ onAuth, onNavigate, courses }: {
         </div>
       </section>
 
-        {/* WHY CHOOSE US */}
+      {/* WHY CHOOSE US */}
       <section id="why" ref={whyRef} data-section="why" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.why ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Why Choose Pruta Academy</h2>
@@ -1455,7 +1480,7 @@ function LandingPage({ onAuth, onNavigate, courses }: {
         </div>
       </section>
 
-      {/* COURSES */}
+      {/* ─── COURSES ─────────────────────────────────────────────────── */}
       <section id="courses" ref={coursesRef} data-section="courses" className={cn("py-20 bg-white transition-all duration-1000", visible.courses ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
@@ -1463,16 +1488,15 @@ function LandingPage({ onAuth, onNavigate, courses }: {
             <p className="text-gray-500 mt-2">Choose Our <span style={{ color: '#f7530b' }}>Top Courses</span></p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.slice(0, 6).map((course) => (
-              <div 
-                key={course.id} 
-                className="bg-white rounded-xl border overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer"
+            {STATIC_COURSES.slice(0, 6).map((course) => (
+              <div
+                key={course.id}
+                className="bg-white rounded-xl border overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group"
                 style={{ borderColor: '#e0e0e0' }}
-                onClick={() => onNavigate("public-course-detail", { courseId: course.id })}
               >
                 <div className="relative h-48 bg-gray-100 overflow-hidden">
                   <img
-                    src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"}
+                    src={course.thumbnail_url}
                     alt={course.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -1481,17 +1505,19 @@ function LandingPage({ onAuth, onNavigate, courses }: {
                   </div>
                 </div>
                 <div className="p-5">
-                  <span className="inline-block px-3 py-1 text-xs font-medium rounded-full" style={{ backgroundColor: '#fdddce', color: '#f7530b' }}>Course</span>
+                  <span className="inline-block px-3 py-1 text-xs font-medium rounded-full" style={{ backgroundColor: '#fdddce', color: '#f7530b' }}>
+                    {course.category || "Course"}
+                  </span>
                   <h3 className="font-semibold text-gray-800 text-base mt-2 leading-snug">{course.title}</h3>
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
                   <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
-                    <span><i className="fa fa-calendar mr-1"></i></span>
-                    <span><i className="fa fa-clock-o mr-1"></i></span>
-                    <span><i className="fa fa-star mr-1" style={{ color: '#f7530b' }}></i>4.9</span>
+                    <span><i className="fa-regular fa-clock mr-1"></i> {course.duration_months} months</span>
+                    <span><i className="fa-regular fa-user mr-1"></i> 100+ students</span>
+                    <span><i className="fa-solid fa-star mr-1 text-yellow-400"></i> 4.9</span>
                   </div>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onAuth(); }} 
-                    className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors" 
+                  <button
+                    onClick={onAuth}
+                    className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
                   >
                     Enroll Now
@@ -1501,9 +1527,9 @@ function LandingPage({ onAuth, onNavigate, courses }: {
             ))}
           </div>
           <div className="text-center mt-10">
-            <button 
-              onClick={() => onNavigate("public-courses")} 
-              className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" 
+            <button
+              onClick={() => onNavigate("public-courses")}
+              className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors"
               style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
             >
               View All Course
@@ -1605,7 +1631,7 @@ function LandingPage({ onAuth, onNavigate, courses }: {
         </div>
       </section>
 
-       {/* CONTACT */}
+      {/* CONTACT */}
       <section id="contact" ref={contactRef} data-section="contact" className={cn("py-20 border-t max-w-7xl mx-auto px-6 transition-all duration-1000", visible.contact ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")} style={{ borderColor: '#e0e0e0' }}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Contact Us</h2>
@@ -1651,6 +1677,7 @@ function LandingPage({ onAuth, onNavigate, courses }: {
     </div>
   );
 }
+
 
 // ─── Public Courses Page ─────────────────────────────────────────────────────
 
