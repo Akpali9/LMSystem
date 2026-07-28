@@ -1439,6 +1439,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </div>
         </div>
       </section>
+        
 
       {/* TOP PROMO FEATURES – FIXED MAP SYNTAX */}
       <section id="features" ref={featuresRef} data-section="features" className={cn("py-16 transition-all duration-1000", visible.features ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
