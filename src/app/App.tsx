@@ -1334,16 +1334,13 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <a href="#home" className="hover:text-white transition-colors">Home</a>
-            <a href="#about" className="hover:text-white transition-colors">About</a>
-            <a href="#courses" className="hover:text-white transition-colors">Courses</a>
-            <a href="#features" className="hover:text-white transition-colors">Why Us</a>
-            <a href="#topics" className="hover:text-white transition-colors">Topics</a>
-            <a href="#events" className="hover:text-white transition-colors">Events</a>
-            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
-            <a href="#team" className="hover:text-white transition-colors">Team</a>
-            <a href="#blog" className="hover:text-white transition-colors">Blog</a>
-            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+            <a href="#home" className="hover:text-white transition-colors"></a>
+            <a href="#about" className="hover:text-white transition-colors"></a>
+            <a href="#courses" className="hover:text-white transition-colors"></a>
+            <a href="#features" className="hover:text-white transition-colors"></a>
+            <a href="#topics" className="hover:text-white transition-colors"></a>
+            <a href="#events" className="hover:text-white transition-colors"></a>
+           
           </div>
           <button
             onClick={onAuth}
