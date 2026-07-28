@@ -1470,22 +1470,22 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
         <div className="space-y-6">
           <h2 className="text-3xl font-bold leading-tight" style={{ color: '#333333' }}>
-            Learn new skills to go <u><span style={{ color: '#f7530b' }}>ahead for your </span></u> career.
+            Learn new skills to go  <span style={{ color: '#f7530b' }}>ahead for your career. </span>
           </h2>
-          <p className="text-gray-500">Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore et simply.</p>
+          <p className="text-gray-500">At Pruta Academy, we believe education should be accessible, engaging, and directly applicable to your career goals. Our courses are designed to bridge the gap between theory and practice.</p>
           <div className="space-y-4">
             <div className="flex gap-4">
               <span className="text-2xl" style={{ color: '#f7530b' }}>🎯</span>
               <div>
                 <h4 className="font-semibold text-gray-800">Our Mission</h4>
-                <p className="text-sm text-gray-500">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.</p>
+                <p className="text-sm text-gray-500">To democratise quality education by offering affordable, flexible, and practical courses that empower individuals to thrive in the digital economy.</p>
               </div>
             </div>
             <div className="flex gap-4">
               <span className="text-2xl" style={{ color: '#f7530b' }}>✨</span>
               <div>
                 <h4 className="font-semibold text-gray-800">Our Vision</h4>
-                <p className="text-sm text-gray-500">Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore.</p>
+                <p className="text-sm text-gray-500">To become Africa's leading online learning platform, producing a new generation of innovators, leaders, and change-makers.</p>
               </div>
             </div>
           </div>
@@ -1516,12 +1516,12 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            { icon: <BookOpen />, title: "Learn More Anywhere", desc: "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore." },
-            { icon: <Heart />, title: "Expert Instructor", desc: "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore." },
-            { icon: <Users />, title: "Team Management", desc: "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore." },
-            { icon: <Eye />, title: "Course Planing", desc: "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore." },
-            { icon: <Lightbulb />, title: "Teacher Monitoring", desc: "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore." },
-            { icon: <Mail />, title: "24/7 Strong Support", desc: "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor ut labore." },
+             { icon: <BookOpen />, title: "Learn Anywhere", desc: "Access your courses from any device, anytime—study at your own pace, wherever you are." },
+            { icon: <Heart />, title: "Expert Instructors", desc: "Our teachers are industry professionals with a passion for teaching and mentoring." },
+            { icon: <Users />, title: "Team Management", desc: "Collaborate with peers and instructors through group projects and live discussions." },
+            { icon: <Eye />, title: "Course Planning", desc: "Structured timelines and clear milestones keep you on track toward your goals." },
+            { icon: <Lightbulb />, title: "Teacher Monitoring", desc: "Regular feedback and progress reports ensure you're always moving forward." },
+            { icon: <Mail />, title: "24/7 Strong Support", desc: "Our support team is available around the clock to answer your questions." },
           ].map((item, idx) => (
             <div key={idx} className="bg-white p-6 rounded-xl border hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
               <div className="flex items-center gap-4 mb-3">
@@ -1597,17 +1597,20 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       </section>
 
       {/* COURSE PROMOTION */}
-      <section className="py-20 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+      
+       <section className="py-20 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
           <h4 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#f7530b' }}>Best Online Learning Platform</h4>
           <h2 className="text-3xl font-bold leading-tight" style={{ color: '#333333' }}>
             One Platform & Many <span style={{ color: '#f7530b' }}><u>Courses</u></span> For You
           </h2>
-          <p className="text-gray-500">From blogs to emails to ad copies, auto-generate catchy, original, and high-converting copies in popular tones languages.</p>
+          <p className="text-gray-500">
+            From interactive video lessons to hands‑on projects, we provide everything you need to master new skills and advance your career.
+          </p>
           <ul className="space-y-2">
             <li className="flex items-center gap-2 text-gray-700"><CheckCircle className="w-4 h-4" style={{ color: '#f7530b' }} /> 9/10 Average Satisfaction Rate</li>
-            <li className="flex items-center gap-2 text-gray-700"><CheckCircle className="w-4 h-4" style={{ color: '#f7530b' }} /> 96% Completitation Rate</li>
-            <li className="flex items-center gap-2 text-gray-700"><CheckCircle className="w-4 h-4" style={{ color: '#f7530b' }} /> Friendly Environment & Expert Teacher</li>
+            <li className="flex items-center gap-2 text-gray-700"><CheckCircle className="w-4 h-4" style={{ color: '#f7530b' }} /> 96% Course Completion Rate</li>
+            <li className="flex items-center gap-2 text-gray-700"><CheckCircle className="w-4 h-4" style={{ color: '#f7530b' }} /> Friendly Environment & Expert Teachers</li>
           </ul>
           <button
             onClick={onAuth}
@@ -1625,7 +1628,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           />
         </div>
       </section>
-
+      
       {/* NEWSLETTER */}
       <section className="py-20 bg-white">
         <div className="max-w-2xl mx-auto px-6 text-center">
