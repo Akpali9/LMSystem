@@ -1427,7 +1427,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             {[
               { title: "Quality Education", desc: "Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.", icon: <BookOpen className="w-6 h-6" style={{ color: '#f7530b' }} /> },
               { title: "Experienced Teachers", desc: "Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.", icon: <Users className="w-6 h-6" style={{ color: '#f7530b' }} /> },
-              { title: "Delicious Food", desc: "Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.", icon: <Gift className="w-6 h-6" style={{ color: '#f7530b' }} /> },
+              { title: "Scholarships ", desc: "Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore.", icon: <Gift className="w-6 h-6" style={{ color: '#f7530b' }} /> },
             ].map((item, idx) => (
               <div
                 key={idx}
@@ -1547,19 +1547,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </div>
         </div>
       </section>
-
-      {/* PARTNERS */}
-      <section className="py-16 border-y" style={{ borderColor: '#e0e0e0' }}>
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h3 className="text-xl font-semibold text-gray-800 mb-8">Trusted Company Arround The World!</h3>
-          <div className="flex flex-wrap justify-center gap-8 items-center">
-            {[1,2,3,4,5,6].map(i => (
-              <img key={i} src={`https://picsum.photos/seed/company${i}/120/60`} alt="partner" className="h-12 grayscale hover:grayscale-0 transition-all" />
-            ))}
-          </div>
-        </div>
-      </section>
-
+      
       {/* WHY CHOOSE US (features grid) */}
       <section
         id="why"
@@ -1734,50 +1722,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           ))}
         </div>
       </section>
-
-      {/* EVENTS */}
-      <section
-        id="events"
-        ref={eventsRef}
-        data-section="events"
-        className={cn(
-          "py-20 bg-white transition-all duration-1000",
-          visible.events ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Upcoming Events</h2>
-            <p className="text-gray-500 mt-2">Join With Us <span style={{ color: '#f7530b' }}><u>Our Events</u></span></p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: "Electrical Engineering of Batparder new event", date: "20 Oct", time: "10.00AM - 12.00PM", location: "At Penn School" },
-              { title: "Architecture Design of International Art Fair 2023", date: "22 Oct", time: "10.00AM - 12.00PM", location: "At Penn School" },
-              { title: "Chiter astana event", date: "26 Oct", time: "10.00AM - 12.00PM", location: "At Penn School" },
-            ].map((ev, idx) => (
-              <div key={idx} className="bg-white rounded-xl border overflow-hidden hover:shadow-xl transition-all" style={{ borderColor: '#e0e0e0' }}>
-                <div className="relative h-48 bg-gray-100">
-                  <img src={`https://picsum.photos/seed/event${idx}/600/300`} alt="" className="w-full h-full object-cover" />
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 text-center shadow-lg">
-                    <span className="block text-2xl font-bold" style={{ color: '#f7530b' }}>{ev.date.split(' ')[0]}</span>
-                    <span className="text-xs font-medium text-gray-600">{ev.date.split(' ')[1]}</span>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-semibold text-gray-800">{ev.title}</h3>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                    <span><Clock className="w-4 h-4 inline mr-1" />{ev.time}</span>
-                    <span><MapPin className="w-4 h-4 inline mr-1" />{ev.location}</span>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">Lorem ipsum dolor sit amet magna consectetur adipisicing elit.</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
+ 
       {/* TESTIMONIALS */}
       <section
         id="testimonials"
@@ -1853,45 +1798,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </div>
         </div>
       </section>
-
-      {/* BLOG */}
-      <section
-        id="blog"
-        ref={blogRef}
-        data-section="blog"
-        className={cn(
-          "py-20 max-w-7xl mx-auto px-6 transition-all duration-1000",
-          visible.blog ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>News</h2>
-          <p className="text-gray-500 mt-2">Our Latest <span style={{ color: '#f7530b' }}><u>Blogs</u></span></p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {[
-            { title: "Professional Mobile Painting and Sculpting", date: "August 25, 2023", category: "Design", img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=250&fit=crop&auto=format" },
-            { title: "Professional Ceramic Moulding for Beginner", date: "August 26, 2023", category: "Education", img: "https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=250&fit=crop&auto=format" },
-            { title: "Education Is About Create Leaders For Tomorrow", date: "August 28, 2023", category: "Programing", img: "https://images.unsplash.com/photo-1523050854058-8df90110c7f1?w=400&h=250&fit=crop&auto=format" },
-          ].map((post, idx) => (
-            <div key={idx} className="bg-white rounded-xl border overflow-hidden hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
-              <img src={post.img} alt="" className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="p-5">
-                <p className="text-xs text-gray-500">{post.date} | <a href="#" style={{ color: '#f7530b' }}>{post.category}</a></p>
-                <h3 className="font-semibold text-gray-800 mt-2 leading-snug">{post.title}</h3>
-                <button
-                  onClick={onAuth}
-                  className="mt-3 inline-flex items-center gap-2 text-sm font-medium hover:underline"
-                  style={{ color: '#f7530b' }}
-                >
-                  Read More <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
+ 
       {/* CONTACT (already exists) */}
       <section
         id="contact"
