@@ -1502,52 +1502,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-      {/* COUNTER / FUN FACTS */}
-      <section
-        data-section="about"
-        className={cn(
-          "py-20 bg-white transition-all duration-1000",
-          visible.about ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Some Fun Fact</h2>
-            <p className="text-gray-500 mt-2">Our Great <span style={{ color: '#f7530b' }}><u>Achievement</u></span></p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div>
-              <i className="ti-face-smile text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.students.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Enrolled Students</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-files text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.programs.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Academic Programs</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-headphone-alt text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.awards.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Winning Award</p>
-              </div>
-            </div>
-            <div>
-              <i className="ti-user text-4xl" style={{ color: '#f7530b' }}></i>
-              <div className="mt-2">
-                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.certified.toLocaleString()}</span>
-                <p className="text-sm text-gray-500">Certified Students</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      
+       
       {/* WHY CHOOSE US (features grid) */}
       <section
         id="why"
