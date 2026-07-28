@@ -1512,7 +1512,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       >
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Why Choose Pruta Academy</h2>
-          <p className="text-gray-500 mt-2">Find the <span style={{ color: '#f7530b' }}><u>best features</u></span> of Pruta Academy.</p>
+          <p className="text-gray-500 mt-2">Find the <span style={{ color: '#f7530b' }}>best features</span> of Pruta Academy.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
@@ -1549,7 +1549,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Popular Courses</h2>
-            <p className="text-gray-500 mt-2">Choose Our <span style={{ color: '#f7530b' }}><u>Top Courses</u></span></p>
+            <p className="text-gray-500 mt-2">Choose Our <span style={{ color: '#f7530b' }}>Top Courses</span></p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.slice(0, 6).map((course) => (
@@ -1602,7 +1602,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         <div className="space-y-6">
           <h4 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#f7530b' }}>Best Online Learning Platform</h4>
           <h2 className="text-3xl font-bold leading-tight" style={{ color: '#333333' }}>
-            One Platform & Many <span style={{ color: '#f7530b' }}><u>Courses</u></span> For You
+            One Platform & Many <span style={{ color: '#f7530b' }}>Courses</span> For You
           </h2>
           <p className="text-gray-500">
             From interactive video lessons to hands‑on projects, we provide everything you need to master new skills and advance your career.
@@ -1663,13 +1663,13 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       >
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Testimonial</h2>
-          <p className="text-gray-500 mt-2">What Says <span style={{ color: '#f7530b' }}><u>Our Students</u></span></p>
+          <p className="text-gray-500 mt-2">What Says <span style={{ color: '#f7530b' }}>Our Students</span></p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
            {[
-            { name: "James Clayton", role: "Design Expert", text: "The UI/UX course completely transformed my design thinking. I landed a job within weeks of completing the program." },
-            { name: "James Simmons", role: "Marketing Expert", text: "Pruta Academy's digital marketing course gave me the practical skills I needed to double my client base in just 3 months." },
-            { name: "Alex Feroundo", role: "Founder", text: "The mentorship and community support are incredible. I've recommended Pruta to all my colleagues." },
+            { name: "James Okoye", role: "Design Expert", text: "The UI/UX course completely transformed my design thinking. I landed a job within weeks of completing the program." },
+            { name: "Chidubem Nweke", role: "Marketing Expert", text: "Pruta Academy's digital marketing course gave me the practical skills I needed to double my client base in just 3 months." },
+            { name: "Usman Galadima", role: "Student", text: "The mentorship and community support are incredible. I've recommended Pruta to all my colleagues." },
           ].map((t, idx) => (
             <div key={idx} className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-xl transition-all" style={{ borderColor: '#e0e0e0' }}>
               <div className="flex text-yellow-400 mb-3">
@@ -1701,7 +1701,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Team Member</h2>
-            <p className="text-gray-500 mt-2">Our Expert <span style={{ color: '#f7530b' }}><u>Instructors</u></span></p>
+            <p className="text-gray-500 mt-2">Our Expert <span style={{ color: '#f7530b' }}>Instructors</span></p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
