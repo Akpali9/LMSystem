@@ -1196,30 +1196,86 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
     {
       id: 1,
       title: "Data Analysis",
-      description: "power bi, excel, sql, python",
-      price: 250000,
+      description: "Master the art of interpreting data to make informed decisions. This course delves into tools, techniques, and strategies for analyzing and visualizing data effectively in real-world scenarios.",v
+      price: 150000,
       category: "Data Science",
       duration_months: 3,
       thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
     },
     {
       id: 2,
-      title: "Web development ",
-      description: "HTML, CSS, JavaScript",
-      price: 30000,
+      title: "Website Design (Front End) ",
+      description: "Learn the foundations of web design, including HTML, CSS, JavaScript, and frameworks like Bootstrap, to create visually appealing and interactive websites.",
+      price: 150000,
       category: "General",
-      duration_months: 1,
+      duration_months: 2,
       thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
     },
     {
       id: 3,
-      title: "Graphic Design",
-      description: "Design description",
-      price: 50000,
-      category: "Design",
+      title: "Website Design (FULL-STACK DEV) ",
+      description: "Learn to build and deploy fully functional web applications with modern technologies. This course covers both front-end and back-end development, including MongoDB, Node.js, React, and more, along with SEO optimization and Cpanel hosting.",
+      price: 250000,
+      category: "General ",
+      duration_months: 4,
+      thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
+    },
+     {
+      id: 4,
+      title: "WordPress (ELEMENTOR) ",
+      description: "Learn how to build professional websites without coding. This course takes you from setup to launch, teaching you how to design pages, customize themes, and add powerful features with ease. By the end, you’ll be able to create functional and responsive websites for any purpose.",
+      price: 100000,
+      category: "General ",
       duration_months: 2,
       thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
     },
+    {
+      id: 5,
+      title: "Graphics Design (BASIC) ",
+      description: "Learn the fundamentals of graphic design using Adobe Photoshop, with an introduction to Illustrator. You’ll gain the skills to create stunning flyers and other designs for both digital and print media, without diving into logo creation.",
+      price: 70000,
+      category: "General ",
+      duration_months: 2,
+      thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
+    },
+      {
+      id: 6,
+      title: "Graphics Design (ADVANCED) ",
+      description: "Take your graphic design skills to the next level with advanced Photoshop techniques, Illustrator, logo design, and brand identity creation. Learn how to craft professional presentations and develop cohesive brand strategies.",
+      price: 100000,
+      category: "General ",
+      duration_months: 2,
+      thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
+    },
+      {
+      id: 7,
+      title: "UI/UX Design ",
+      description: "Master the art of designing intuitive and visually appealing user interfaces with a focus on user experience. This course covers key principles of design, wireframing, prototyping, and testing to create seamless digital experiences.",
+      price: 70000,
+      category: "General ",
+      duration_months: 2,
+      thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
+    },
+    {
+      id: 8,
+      title: "Video Editing",
+      description: "Learn how to create stunning video content with advanced editing techniques using Adobe Premiere Pro and After Effects. This course will teach you how to enhance videos with motion graphics, sound design, and professional-level effects.",
+      price: 150000,
+      category: "General ",
+      duration_months: 3,
+      thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
+    },
+      {
+      id: 9,
+      title: "Digital Marketing",
+      description: "Learn how to effectively promote brands and businesses online with key digital marketing strategies. This course covers SEO, social media marketing, email campaigns, and more, equipping you with the skills to drive engagement and boost conversions.",
+      price: 70000,
+      category: "General ",
+      duration_months: "per month ",
+      thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
+    },
+      
+  
   
   ];
 
@@ -1435,14 +1491,14 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
               <span className="text-2xl" style={{ color: '#f7530b' }}>🎯</span>
               <div>
                 <h4 className="font-semibold text-gray-800">Our Mission</h4>
-                <p className="text-sm text-gray-500">To democratise quality education by offering affordable, flexible, and practical courses that empower individuals to thrive in the digital economy.</p>
+                <p className="text-sm text-gray-500">To lead the charge in tech education, offering unparalleled learning experiences that empower students to unlock their potential and shape the digital landscape.</p>
               </div>
             </div>
             <div className="flex gap-4">
               <span className="text-2xl" style={{ color: '#f7530b' }}>✨</span>
               <div>
                 <h4 className="font-semibold text-gray-800">Our Vision</h4>
-                <p className="text-sm text-gray-500">To become Africa's leading online learning platform, producing a new generation of innovators, leaders, and change-makers.</p>
+                <p className="text-sm text-gray-500">To inspire and guide individuals on their tech journey, blending cutting-edge education with real-world application to help them succeed in a fast-paced, digital-first world.</p>
               </div>
             </div>
           </div>
