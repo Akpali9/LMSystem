@@ -1224,7 +1224,7 @@ function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[] }) {
-  // --- Refs for scroll animation sections ---
+  // ─── Refs for scroll animation sections ──────────────────────────────
   const homeRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
   const coursesRef = useRef<HTMLDivElement>(null);
@@ -1235,9 +1235,10 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
   const testimonialsRef = useRef<HTMLDivElement>(null);
   const teamRef = useRef<HTMLDivElement>(null);
   const blogRef = useRef<HTMLDivElement>(null);
-  const contactRef = useRef<HTMLDivElement>(null); 
+  const contactRef = useRef<HTMLDivElement>(null);
+  const counterRef = useRef<HTMLDivElement>(null); // <── NEW
 
-  // --- Visibility state ---
+  // ─── Visibility state ────────────────────────────────────────────────
   const [visible, setVisible] = useState<Record<string, boolean>>({
     home: true,
     about: false,
@@ -1250,9 +1251,10 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
     team: false,
     blog: false,
     contact: false,
+    counter: false, // <── NEW
   });
 
-  // --- Counter state ---
+  // ─── Counter state ──────────────────────────────────────────────────
   const [counters, setCounters] = useState({
     students: 0,
     programs: 0,
@@ -1261,7 +1263,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
   });
   const [countersStarted, setCountersStarted] = useState(false);
 
-  // --- Intersection Observer ---
+  // ─── Intersection Observer ──────────────────────────────────────────
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -1275,13 +1277,14 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           }
         });
       },
-      {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px',
-      }
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     );
 
-    const refs = [homeRef, aboutRef, coursesRef, featuresRef, whyRef, topicsRef, eventsRef, testimonialsRef, teamRef, blogRef, contactRef, counterRef];
+    const refs = [
+      homeRef, aboutRef, coursesRef, featuresRef, whyRef,
+      topicsRef, eventsRef, testimonialsRef, teamRef, blogRef,
+      contactRef, counterRef // <── include counter
+    ];
     refs.forEach((ref) => {
       if (ref.current) observer.observe(ref.current);
     });
@@ -1289,9 +1292,9 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
     return () => observer.disconnect();
   }, []);
 
-  // --- Counter animation ---
+  // ─── Counter animation (triggers when counter section becomes visible) ──
   useEffect(() => {
-    if (visible.about && !countersStarted) {
+    if (visible.counter && !countersStarted) {
       setCountersStarted(true);
       const targetStudents = 8232;
       const targetPrograms = 521;
@@ -1323,8 +1326,9 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       }, stepTime);
       return () => clearInterval(interval);
     }
-  }, [visible.about, countersStarted]);
+  }, [visible.counter, countersStarted]);
 
+  // ─── Render ──────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
       {/* Navbar */}
@@ -1334,13 +1338,16 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <a href="#home" className="hover:text-white transition-colors"></a>
-            <a href="#about" className="hover:text-white transition-colors"></a>
-            <a href="#courses" className="hover:text-white transition-colors"></a>
-            <a href="#features" className="hover:text-white transition-colors"></a>
-            <a href="#topics" className="hover:text-white transition-colors"></a>
-            <a href="#events" className="hover:text-white transition-colors"></a>
-           
+            <a href="#home" className="hover:text-white transition-colors">Home</a>
+            <a href="#about" className="hover:text-white transition-colors">About</a>
+            <a href="#courses" className="hover:text-white transition-colors">Courses</a>
+            <a href="#features" className="hover:text-white transition-colors">Why Us</a>
+            <a href="#topics" className="hover:text-white transition-colors">Topics</a>
+            <a href="#events" className="hover:text-white transition-colors">Events</a>
+            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
+            <a href="#team" className="hover:text-white transition-colors">Team</a>
+            <a href="#blog" className="hover:text-white transition-colors">Blog</a>
+            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
           </div>
           <button
             onClick={onAuth}
@@ -1352,25 +1359,20 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </nav>
 
-      {/* HOME / HERO SECTION */}
-      <section
-        id="home"
-        ref={homeRef}
-        data-section="home"
-        className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 grid lg:grid-cols-2 gap-16 items-center"
-      >
+      {/* HOME / HERO */}
+      <section id="home" ref={homeRef} data-section="home" className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 grid lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-8">
-          <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5 animate__animated animate__fadeIn" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
+          <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
             <Star className="w-3.5 h-3.5 fill-current" style={{ color: '#f7530b' }} />
             <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: '#f7530b' }}>Globally Certified Programs</span>
           </div>
-          <h1 className="text-5xl lg:text-6xl animate__animated animate__slideInRight font-bold leading-[1.1]" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+          <h1 className="text-5xl lg:text-6xl font-bold leading-[1.1]" style={{ color: '#333333' }}>
             Better <span className="italic" style={{ color: '#f7530b' }}>Learning Future</span> Starts With Pruta Academy
           </h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl animate__animated animate__slideInUp">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl">
             It is a long established fact that reader will be distracted readable content of a page when.
           </p>
-          <div className="flex flex-wrap gap-4 animate__animated animate__slideInUp">
+          <div className="flex flex-wrap gap-4">
             <button
               onClick={onAuth}
               className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:opacity-90 transition-all hover:shadow-lg"
@@ -1379,21 +1381,17 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               Explore Courses <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex items-center gap-8 pt-2 animate__animated animate__slideInRight">
+          <div className="flex items-center gap-8 pt-2">
             <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>1,200+</p><p className="text-xs text-gray-500">Students Enrolled</p></div>
             <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>96%</p><p className="text-xs text-gray-500">Completion Rate</p></div>
             <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>4.9★</p><p className="text-xs text-gray-500">Avg. Rating</p></div>
           </div>
         </div>
         <div className="relative">
-          <div className="rounded-2xl overflow-hidden shadow-2xl border animate__animated animate__zoomIn" style={{ borderColor: '#e0e0e0' }}>
-            <img
-              src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format"
-              alt="Students learning"
-              className="w-full object-cover"
-            />
+          <div className="rounded-2xl overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
+            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&h=500&fit=crop&auto=format" alt="Students learning" className="w-full object-cover" />
           </div>
-          <div className="absolute -bottom-6 -left-6 bg-white rounded-xl border shadow-xl p-4 flex items-center gap-3 animate__animated animate__slideInLeft" style={{ borderColor: '#e0e0e0' }}>
+          <div className="absolute -bottom-6 -left-6 bg-white rounded-xl border shadow-xl p-4 flex items-center gap-3" style={{ borderColor: '#e0e0e0' }}>
             <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
@@ -1409,35 +1407,20 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
         </div>
       </section>
 
-      {/* TOP PROMO FEATURES */}
-      <section
-        id="features"
-        ref={featuresRef}
-        data-section="features"
-        className={cn(
-          "py-16 transition-all duration-1000",
-          visible.features ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
+      {/* TOP PROMO FEATURES – FIXED MAP SYNTAX */}
+      <section id="features" ref={featuresRef} data-section="features" className={cn("py-16 transition-all duration-1000", visible.features ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="container-fluid px-0 max-w-7xl mx-auto">
           <div className="grid md:grid-cols-3 gap-0">
             {[
-              { title: "Quality Education", desc: "We deliver industry‑aligned curricula crafted by experts to ensure you gain practical, job‑ready skills.", icon: <BookOpen className="w-6 h-6" style={{ color: '#f7530b' }} /> },          
-              { title: "Experienced Teachers", desc: "Learn from professionals with years of real‑world experience who are passionate about mentoring the next generation.", icon: <Users className="w-6 h-6" style={{ color: '#f7530b' }} /> },       
+              { title: "Quality Education", desc: "We deliver industry‑aligned curricula crafted by experts to ensure you gain practical, job‑ready skills.", icon: <BookOpen className="w-6 h-6" style={{ color: '#f7530b' }} /> },
+              { title: "Experienced Teachers", desc: "Learn from professionals with years of real‑world experience who are passionate about mentoring the next generation.", icon: <Users className="w-6 h-6" style={{ color: '#f7530b' }} /> },
               { title: "Healthy Learning Environment", desc: "Our supportive community and structured programs keep you motivated, with access to resources whenever you need them.", icon: <Gift className="w-6 h-6" style={{ color: '#f7530b' }} /> },
-              <div
-                key={idx}
-                className="p-8 text-center border-r border-b md:border-b-0 transition-all hover:shadow-lg"
-                style={{ backgroundColor: '#ffffff', borderColor: '#e0e0e0' }}
-              >
+            ].map((item, idx) => (
+              <div key={idx} className="p-8 text-center border-r border-b md:border-b-0 transition-all hover:shadow-lg" style={{ backgroundColor: '#ffffff', borderColor: '#e0e0e0' }}>
                 <div className="inline-block p-3 rounded-lg mb-4" style={{ backgroundColor: '#fdddce' }}>{item.icon}</div>
                 <h3 className="text-xl font-bold text-gray-800 mb-3">{item.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
-                <button
-                  onClick={onAuth}
-                  className="mt-4 inline-flex items-center gap-2 text-sm font-medium hover:underline"
-                  style={{ color: '#f7530b' }}
-                >
+                <button onClick={onAuth} className="mt-4 inline-flex items-center gap-2 text-sm font-medium hover:underline" style={{ color: '#f7530b' }}>
                   Explore <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
@@ -1447,21 +1430,9 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       </section>
 
       {/* ABOUT US */}
-      <section
-        id="about"
-        ref={aboutRef}
-        data-section="about"
-        className={cn(
-          "py-20 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center transition-all duration-1000",
-          visible.about ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
+      <section id="about" ref={aboutRef} data-section="about" className={cn("py-20 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center transition-all duration-1000", visible.about ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="relative">
-          <img
-            src="https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600&h=450&fit=crop&auto=format"
-            alt="About us"
-            className="rounded-2xl shadow-xl w-full object-cover"
-          />
+          <img src="https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600&h=450&fit=crop&auto=format" alt="About us" className="rounded-2xl shadow-xl w-full object-cover" />
           <div className="absolute -bottom-6 -right-6 bg-white rounded-xl border shadow-xl p-4" style={{ borderColor: '#e0e0e0' }}>
             <p className="text-2xl font-bold" style={{ color: '#f7530b' }}>6k+</p>
             <p className="text-xs text-gray-500">Happy Clients</p>
@@ -1488,34 +1459,68 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
               </div>
             </div>
           </div>
-          <button
-            onClick={onAuth}
-            className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors"
-            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-          >
+          <button onClick={onAuth} className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
             Discover More
           </button>
         </div>
       </section>
 
-       
-      {/* WHY CHOOSE US (features grid) */}
+      {/* ─── COUNTER / FUN FACTS ─── (NEW) */}
       <section
-        id="why"
-        ref={whyRef}
-        data-section="why"
+        ref={counterRef}
+        data-section="counter"
         className={cn(
-          "py-20 max-w-7xl mx-auto px-6 transition-all duration-1000",
-          visible.why ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          "py-20 bg-white transition-all duration-1000",
+          visible.counter ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         )}
       >
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <div className="mb-12">
+            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Some Fun Facts</h2>
+            <p className="text-gray-500 mt-2">Our Great <span style={{ color: '#f7530b' }}><u>Achievement</u></span></p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+              <i className="ti-face-smile text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.students.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Enrolled Students</p>
+              </div>
+            </div>
+            <div>
+              <i className="ti-files text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.programs.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Academic Programs</p>
+              </div>
+            </div>
+            <div>
+              <i className="ti-headphone-alt text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.awards.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Industry Awards</p>
+              </div>
+            </div>
+            <div>
+              <i className="ti-user text-4xl" style={{ color: '#f7530b' }}></i>
+              <div className="mt-2">
+                <span className="text-3xl font-bold" style={{ color: '#333333' }}>{counters.certified.toLocaleString()}</span>
+                <p className="text-sm text-gray-500">Certified Graduates</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* WHY CHOOSE US */}
+      <section id="why" ref={whyRef} data-section="why" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.why ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Why Choose Pruta Academy</h2>
           <p className="text-gray-500 mt-2">Find the <span style={{ color: '#f7530b' }}>best features</span> of Pruta Academy.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-             { icon: <BookOpen />, title: "Learn Anywhere", desc: "Access your courses from any device, anytime—study at your own pace, wherever you are." },
+            { icon: <BookOpen />, title: "Learn Anywhere", desc: "Access your courses from any device, anytime—study at your own pace, wherever you are." },
             { icon: <Heart />, title: "Expert Instructors", desc: "Our teachers are industry professionals with a passion for teaching and mentoring." },
             { icon: <Users />, title: "Team Management", desc: "Collaborate with peers and instructors through group projects and live discussions." },
             { icon: <Eye />, title: "Course Planning", desc: "Structured timelines and clear milestones keep you on track toward your goals." },
@@ -1536,15 +1541,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       </section>
 
       {/* COURSES */}
-      <section
-        id="courses"
-        ref={coursesRef}
-        data-section="courses"
-        className={cn(
-          "py-20 bg-white transition-all duration-1000",
-          visible.courses ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
+      <section id="courses" ref={coursesRef} data-section="courses" className={cn("py-20 bg-white transition-all duration-1000", visible.courses ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Popular Courses</h2>
@@ -1560,7 +1557,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
-                    ${course.price}
+                    {formatNaira(course.price)}
                   </div>
                 </div>
                 <div className="p-5">
@@ -1572,11 +1569,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
                     <span><i className="fa fa-clock-o mr-1"></i>3h 45m</span>
                     <span><i className="fa fa-star mr-1" style={{ color: '#f7530b' }}></i>4.9</span>
                   </div>
-                  <button
-                    onClick={onAuth}
-                    className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors"
-                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-                  >
+                  <button onClick={onAuth} className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
                     Enroll Now
                   </button>
                 </div>
@@ -1584,11 +1577,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
             ))}
           </div>
           <div className="text-center mt-10">
-            <button
-              onClick={onAuth}
-              className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors"
-              style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-            >
+            <button onClick={onAuth} className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
               View All Course
             </button>
           </div>
@@ -1596,76 +1585,103 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       </section>
 
       {/* COURSE PROMOTION */}
-      
-       <section className="py-20 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+      <section className="py-20 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
           <h4 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#f7530b' }}>Best Online Learning Platform</h4>
           <h2 className="text-3xl font-bold leading-tight" style={{ color: '#333333' }}>
             One Platform & Many <span style={{ color: '#f7530b' }}>Courses</span> For You
           </h2>
-          <p className="text-gray-500">
-            From interactive video lessons to hands‑on projects, we provide everything you need to master new skills and advance your career.
-          </p>
+          <p className="text-gray-500">From interactive video lessons to hands‑on projects, we provide everything you need to master new skills and advance your career.</p>
           <ul className="space-y-2">
             <li className="flex items-center gap-2 text-gray-700"><CheckCircle className="w-4 h-4" style={{ color: '#f7530b' }} /> 9/10 Average Satisfaction Rate</li>
             <li className="flex items-center gap-2 text-gray-700"><CheckCircle className="w-4 h-4" style={{ color: '#f7530b' }} /> 96% Course Completion Rate</li>
             <li className="flex items-center gap-2 text-gray-700"><CheckCircle className="w-4 h-4" style={{ color: '#f7530b' }} /> Friendly Environment & Expert Teachers</li>
           </ul>
-          <button
-            onClick={onAuth}
-            className="inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors"
-            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-          >
+          <button onClick={onAuth} className="inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
             Explore Our Courses <ArrowRight className="w-4 h-4" />
           </button>
         </div>
         <div className="relative">
-          <img
-            src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&h=400&fit=crop&auto=format"
-            alt="Promo"
-            className="rounded-2xl shadow-xl w-full object-cover"
-          />
+          <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&h=400&fit=crop&auto=format" alt="Promo" className="rounded-2xl shadow-xl w-full object-cover" />
         </div>
       </section>
-      
+
       {/* NEWSLETTER */}
       <section className="py-20 bg-white">
         <div className="max-w-2xl mx-auto px-6 text-center">
           <h3 className="text-2xl font-bold text-gray-800 mb-2">Subscribe to our newsletter, We don't make any spam.</h3>
           <p className="text-gray-500 mb-6">Get the latest course updates, tips, and exclusive offers delivered to your inbox.</p>
           <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Enter your Email Address"
-              className="flex-1 px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-orange-400/50"
-              style={{ borderColor: '#e0e0e0' }}
-            />
-            <button
-              className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors"
-              style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-            >
+            <input type="email" placeholder="Enter your Email Address" className="flex-1 px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-orange-400/50" style={{ borderColor: '#e0e0e0' }} />
+            <button className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
               <Send className="w-4 h-4 inline mr-1" /> Subscribe
             </button>
           </div>
         </div>
       </section>
- 
+
+      {/* TOPICS */}
+      <section id="topics" ref={topicsRef} data-section="topics" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.topics ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Start Learning Today</h2>
+          <p className="text-gray-500 mt-2">Popular <span style={{ color: '#f7530b' }}>Topics To Learn</span> From Today.</p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {['UI/UX Design', 'Digital Marketing', 'Finance & Accounting', 'Modern Physics', 'Music Production', 'Data Science'].map((topic, idx) => (
+            <div key={idx} className="bg-white p-6 rounded-xl border text-center hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
+              <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: '#fdddce' }}>
+                <span className="text-2xl">📚</span>
+              </div>
+              <h3 className="font-semibold text-gray-800">{topic}</h3>
+              <p className="text-sm text-gray-500">{Math.floor(Math.random() * 50 + 30)} Courses</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* EVENTS */}
+      <section id="events" ref={eventsRef} data-section="events" className={cn("py-20 bg-white transition-all duration-1000", visible.events ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Upcoming Events</h2>
+            <p className="text-gray-500 mt-2">Join With Us <span style={{ color: '#f7530b' }}>Our Events</span></p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { title: "Electrical Engineering Workshop", date: "20 Oct", time: "10.00AM - 12.00PM", location: "Virtual Event" },
+              { title: "Architecture Design International Art Fair", date: "22 Oct", time: "10.00AM - 12.00PM", location: "Lagos, Nigeria" },
+              { title: "Chiter Astana – Coding Bootcamp", date: "26 Oct", time: "10.00AM - 12.00PM", location: "Online" },
+            ].map((ev, idx) => (
+              <div key={idx} className="bg-white rounded-xl border overflow-hidden hover:shadow-xl transition-all" style={{ borderColor: '#e0e0e0' }}>
+                <div className="relative h-48 bg-gray-100">
+                  <img src={`https://picsum.photos/seed/event${idx}/600/300`} alt="" className="w-full h-full object-cover" />
+                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 text-center shadow-lg">
+                    <span className="block text-2xl font-bold" style={{ color: '#f7530b' }}>{ev.date.split(' ')[0]}</span>
+                    <span className="text-xs font-medium text-gray-600">{ev.date.split(' ')[1]}</span>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <h3 className="font-semibold text-gray-800">{ev.title}</h3>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                    <span><Clock className="w-4 h-4 inline mr-1" />{ev.time}</span>
+                    <span><MapPin className="w-4 h-4 inline mr-1" />{ev.location}</span>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">Join us for an insightful session and network with fellow learners.</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* TESTIMONIALS */}
-      <section
-        id="testimonials"
-        ref={testimonialsRef}
-        data-section="testimonials"
-        className={cn(
-          "py-20 max-w-7xl mx-auto px-6 transition-all duration-1000",
-          visible.testimonials ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
+      <section id="testimonials" ref={testimonialsRef} data-section="testimonials" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.testimonials ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Testimonial</h2>
           <p className="text-gray-500 mt-2">What Says <span style={{ color: '#f7530b' }}>Our Students</span></p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
-           {[
+          {[
             { name: "James Okoye", role: "Design Expert", text: "The UI/UX course completely transformed my design thinking. I landed a job within weeks of completing the program." },
             { name: "Chidubem Nweke", role: "Marketing Expert", text: "Pruta Academy's digital marketing course gave me the practical skills I needed to double my client base in just 3 months." },
             { name: "Usman Galadima", role: "Student", text: "The mentorship and community support are incredible. I've recommended Pruta to all my colleagues." },
@@ -1688,15 +1704,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       </section>
 
       {/* TEAM */}
-      <section
-        id="team"
-        ref={teamRef}
-        data-section="team"
-        className={cn(
-          "py-20 bg-white transition-all duration-1000",
-          visible.team ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-      >
+      <section id="team" ref={teamRef} data-section="team" className={cn("py-20 bg-white transition-all duration-1000", visible.team ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Team Member</h2>
@@ -1725,18 +1733,35 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
           </div>
         </div>
       </section>
- 
-      {/* CONTACT (already exists) */}
-      <section
-        id="contact"
-        ref={contactRef}
-        data-section="contact"
-        className={cn(
-          "py-20 border-t max-w-7xl mx-auto px-6 transition-all duration-1000",
-          visible.contact ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        )}
-        style={{ borderColor: '#e0e0e0' }}
-      >
+
+      {/* BLOG */}
+      <section id="blog" ref={blogRef} data-section="blog" className={cn("py-20 max-w-7xl mx-auto px-6 transition-all duration-1000", visible.blog ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>News</h2>
+          <p className="text-gray-500 mt-2">Our Latest <span style={{ color: '#f7530b' }}>Blogs</span></p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            { title: "Professional Mobile Painting and Sculpting", date: "August 25, 2023", category: "Design", img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=250&fit=crop&auto=format" },
+            { title: "Professional Ceramic Moulding for Beginners", date: "August 26, 2023", category: "Education", img: "https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=250&fit=crop&auto=format" },
+            { title: "Education Is About Creating Leaders for Tomorrow", date: "August 28, 2023", category: "Programming", img: "https://images.unsplash.com/photo-1523050854058-8df90110c7f1?w=400&h=250&fit=crop&auto=format" },
+          ].map((post, idx) => (
+            <div key={idx} className="bg-white rounded-xl border overflow-hidden hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
+              <img src={post.img} alt="" className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="p-5">
+                <p className="text-xs text-gray-500">{post.date} | <a href="#" style={{ color: '#f7530b' }}>{post.category}</a></p>
+                <h3 className="font-semibold text-gray-800 mt-2 leading-snug">{post.title}</h3>
+                <button onClick={onAuth} className="mt-3 inline-flex items-center gap-2 text-sm font-medium hover:underline" style={{ color: '#f7530b' }}>
+                  Read More <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CONTACT */}
+      <section id="contact" ref={contactRef} data-section="contact" className={cn("py-20 border-t max-w-7xl mx-auto px-6 transition-all duration-1000", visible.contact ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")} style={{ borderColor: '#e0e0e0' }}>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Contact Us</h2>
           <p className="text-gray-500 max-w-xl mx-auto mt-2">Have questions? Reach out to us and we'll get back to you as soon as possible.</p>
@@ -1781,7 +1806,6 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
     </div>
   );
 }
-
 
 // ─── Auth Page ────────────────────────────────────────────────────────────────
 
