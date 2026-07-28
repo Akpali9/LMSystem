@@ -1235,7 +1235,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
   const testimonialsRef = useRef<HTMLDivElement>(null);
   const teamRef = useRef<HTMLDivElement>(null);
   const blogRef = useRef<HTMLDivElement>(null);
-  const contactRef = useRef<HTMLDivElement>(null);
+  const contactRef = useRef<HTMLDivElement>(null); 
 
   // --- Visibility state ---
   const [visible, setVisible] = useState<Record<string, boolean>>({
@@ -1281,7 +1281,7 @@ function LandingPage({ onAuth, courses }: { onAuth: () => void; courses: Course[
       }
     );
 
-    const refs = [homeRef, aboutRef, coursesRef, featuresRef, whyRef, topicsRef, eventsRef, testimonialsRef, teamRef, blogRef, contactRef];
+    const refs = [homeRef, aboutRef, coursesRef, featuresRef, whyRef, topicsRef, eventsRef, testimonialsRef, teamRef, blogRef, contactRef, counterRef];
     refs.forEach((ref) => {
       if (ref.current) observer.observe(ref.current);
     });
