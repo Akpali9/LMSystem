@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import type {
   Profile,
@@ -73,7 +73,6 @@ import {
 // ─── Console Protection ──────────────────────────────────────────────────────
 
 function protectConsole() {
-  // Store original console methods
   const originalConsole = {
     log: console.log,
     warn: console.warn,
@@ -82,18 +81,12 @@ function protectConsole() {
     debug: console.debug,
   };
 
-  // Override console methods to filter out sensitive info
   console.log = function(...args: any[]) {
-    // Filter out Supabase URLs and keys
     const filteredArgs = args.map(arg => {
       if (typeof arg === 'string') {
-        // Remove Supabase URLs
         let filtered = arg.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
-        // Remove API keys
         filtered = filtered.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
-        // Remove email addresses
         filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
-        // Remove phone numbers
         filtered = filtered.replace(/\+?[0-9]{10,15}/g, '[PHONE REDACTED]');
         return filtered;
       }
@@ -144,7 +137,6 @@ function protectConsole() {
     originalConsole.info.apply(console, filteredArgs);
   };
 
-  // Prevent console.log from showing in production
   if (process.env.NODE_ENV === 'production') {
     console.log = function() {};
     console.warn = function() {};
@@ -152,25 +144,18 @@ function protectConsole() {
     console.debug = function() {};
   }
 
-  // Return original console for debugging if needed
   return originalConsole;
 }
 
 // ─── Supabase Client Protection ─────────────────────────────────────────────
 
 function protectSupabaseClient() {
-  // Override the supabase client's request/response logging
   if (typeof window !== 'undefined') {
-    // Store original fetch
     const originalFetch = window.fetch;
-    
     window.fetch = function(...args: any[]) {
-      // Filter out Supabase URLs from being logged
       const url = args[0];
       if (typeof url === 'string' && url.includes('supabase.co')) {
-        // Still make the request but don't log it
         return originalFetch.apply(this, args).catch((error) => {
-          // Filter error messages
           if (error.message) {
             error.message = error.message.replace(/https?:\/\/[a-zA-Z0-9-]+\.supabase\.co\/[^\s"]*/g, '[REDACTED]');
           }
@@ -186,15 +171,12 @@ function protectSupabaseClient() {
 
 function ProtectionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Disable right-click
     const disableRightClick = (e: MouseEvent) => {
       e.preventDefault();
       return false;
     };
 
-    // Disable keyboard shortcuts for dev tools
     const disableKeyboardShortcuts = (e: KeyboardEvent) => {
-      // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S
       if (
         e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
@@ -213,11 +195,9 @@ function ProtectionProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Disable context menu
     document.addEventListener('contextmenu', disableRightClick);
     document.addEventListener('keydown', disableKeyboardShortcuts);
 
-    // Disable drag events
     const disableDrag = (e: DragEvent) => {
       e.preventDefault();
       return false;
@@ -225,13 +205,11 @@ function ProtectionProvider({ children }: { children: React.ReactNode }) {
     document.addEventListener('dragstart', disableDrag);
     document.addEventListener('drop', disableDrag);
 
-    // Disable text selection globally
     document.body.style.userSelect = 'none';
     document.body.style.webkitUserSelect = 'none';
     document.body.style.msUserSelect = 'none';
     document.body.style.mozUserSelect = 'none';
 
-    // Add CSS to prevent selection and copying
     const style = document.createElement('style');
     style.textContent = `
       * {
@@ -247,19 +225,16 @@ function ProtectionProvider({ children }: { children: React.ReactNode }) {
         -webkit-user-select: text !important;
         user-select: text !important;
       }
-      /* Prevent image dragging */
       img {
         -webkit-user-drag: none;
         user-drag: none;
       }
-      /* Hide dev tools indicator */
       [data-devtools] {
         display: none !important;
       }
     `;
     document.head.appendChild(style);
 
-    // Detect DevTools opening (optional)
     let devtoolsOpen = false;
     const checkDevTools = () => {
       const threshold = 160;
@@ -268,14 +243,11 @@ function ProtectionProvider({ children }: { children: React.ReactNode }) {
       if (widthThreshold || heightThreshold) {
         if (!devtoolsOpen) {
           devtoolsOpen = true;
-          // Optional: redirect or show warning
-          // window.location.href = '/';
         }
       } else {
         devtoolsOpen = false;
       }
     };
-
     const devtoolsInterval = setInterval(checkDevTools, 1000);
 
     return () => {
@@ -285,8 +257,6 @@ function ProtectionProvider({ children }: { children: React.ReactNode }) {
       document.removeEventListener('drop', disableDrag);
       document.head.removeChild(style);
       clearInterval(devtoolsInterval);
-      
-      // Reset body styles
       document.body.style.userSelect = '';
       document.body.style.webkitUserSelect = '';
       document.body.style.msUserSelect = '';
@@ -372,7 +342,7 @@ function ToastContainer() {
     switch (type) {
       case "success": return "bg-green-50 border-green-200";
       case "error": return "bg-red-50 border-red-200";
-      case "warning": return ""; // handled via inline styles
+      case "warning": return "";
       default: return "bg-blue-50 border-blue-200";
     }
   };
@@ -381,7 +351,7 @@ function ToastContainer() {
     switch (type) {
       case "success": return "text-green-800";
       case "error": return "text-red-800";
-      case "warning": return "text-gray-800"; // readable on white background
+      case "warning": return "text-gray-800";
       default: return "text-blue-800";
     }
   };
@@ -482,7 +452,7 @@ function ConfirmDialog() {
         };
       case "warning":
         return {
-          bg: "", // handled via inline styles
+          bg: "",
           icon: <AlertCircle className="w-6 h-6" style={{ color: '#fcba9d' }} />,
           button: "hover:opacity-90 text-white",
         };
@@ -556,8 +526,8 @@ function ConfirmDialog() {
 type View =
   | "landing"
   | "auth"
-  | "public-courses"           
-  | "public-course-detail" 
+  | "public-courses"
+  | "public-course-detail"
   | "student-dashboard"
   | "student-courses"
   | "student-module"
@@ -625,7 +595,6 @@ function formatTime(dateStr: string) {
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
   
-  // Check if it's today
   if (date.toDateString() === today.toDateString()) {
     return "Today at " + date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -633,7 +602,6 @@ function formatTime(dateStr: string) {
     });
   }
   
-  // Check if it's yesterday
   if (date.toDateString() === yesterday.toDateString()) {
     return "Yesterday at " + date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -641,7 +609,6 @@ function formatTime(dateStr: string) {
     });
   }
   
-  // Show full date and time for older messages
   return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -1221,266 +1188,14 @@ function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
     </>
   );
 }
-function PublicCoursesPage({ courses, onNavigate }: { courses: Course[]; onNavigate: (v: View, data?: any) => void }) {
-  const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-
-  const categories = useMemo(() => {
-    const cats = ["all", ...new Set(courses.map(c => c.category || "Uncategorized"))];
-    return cats;
-  }, [courses]);
-
-  const filtered = useMemo(() => {
-    let result = courses;
-    if (filterCategory !== "all") {
-      result = result.filter(c => (c.category || "Uncategorized") === filterCategory);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      result = result.filter(c =>
-        c.title.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [courses, filterCategory, search]);
-
-  return (
-    <div className="min-h-screen bg-[#eeeeee]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <nav className="sticky top-0 z-40 bg-[#333333] border-b border-[#444444] backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onNavigate("landing")}>
-            <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
-          </div>
-          <button
-            onClick={() => onNavigate("auth")}
-            className="px-5 py-2.5 text-sm font-semibold rounded-lg hover:opacity-90 transition-colors"
-            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-          >
-            Sign In / Enroll
-          </button>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-6 py-10">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">All Courses</h1>
-            <p className="text-gray-500 text-sm">{filtered.length} courses available</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search courses..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm w-48 md:w-64 focus:outline-none focus:ring-2 focus:ring-orange-400/50"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2 mb-8">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilterCategory(cat)}
-              className={`px-4 py-2 text-sm font-medium rounded-full transition-all ${
-                filterCategory === cat
-                  ? "bg-orange-500 text-white shadow-md"
-                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {cat === "all" ? "All" : cat}
-            </button>
-          ))}
-        </div>
-
-        {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: '#e0e0e0' }}>
-            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-xl font-semibold text-gray-700">No courses found</h3>
-            <p className="text-gray-500">Try adjusting your search or filter.</p>
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map(course => (
-              <div
-                key={course.id}
-                className="bg-white rounded-xl border overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer"
-                style={{ borderColor: '#e0e0e0' }}
-                onClick={() => onNavigate("public-course-detail", { courseId: course.id })}
-              >
-                <div className="relative h-48 bg-gray-100 overflow-hidden">
-                  <img
-                    src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"}
-                    alt={course.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
-                    {formatNaira(course.price)}
-                  </div>
-                </div>
-                <div className="p-5">
-                  <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-600">
-                    {course.category || "Course"}
-                  </span>
-                  <h3 className="font-semibold text-gray-800 text-base mt-2 leading-snug">{course.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
-                  <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
-                    <span><i className="fa-regular fa-clock mr-1"></i> {course.duration_months || 3} months</span>
-                    <span><i className="fa-regular fa-user mr-1"></i> 100+ students</span>
-                    <span><i className="fa-solid fa-star mr-1 text-yellow-400"></i> 4.9</span>
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onNavigate("auth"); }}
-                    className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors bg-orange-500 text-white"
-                  >
-                    Enroll Now
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PublicCourseDetailPage({ course, onNavigate }: { course: Course | null; onNavigate: (v: View) => void }) {
-  if (!course) {
-    return (
-      <div className="min-h-screen bg-[#eeeeee] flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-700">Course not found</h2>
-          <button onClick={() => onNavigate("public-courses")} className="mt-4 text-orange-500 hover:underline">
-            Back to courses
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#eeeeee]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <nav className="sticky top-0 z-40 bg-[#333333] border-b border-[#444444] backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onNavigate("landing")}>
-            <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
-          </div>
-          <button
-            onClick={() => onNavigate("auth")}
-            className="px-5 py-2.5 text-sm font-semibold rounded-lg hover:opacity-90 transition-colors"
-            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-          >
-            Sign In / Enroll
-          </button>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-6 py-10">
-        <button
-          onClick={() => onNavigate("public-courses")}
-          className="inline-flex items-center gap-2 text-gray-500 hover:text-orange-500 transition-colors mb-6"
-        >
-          <ChevronLeft className="w-4 h-4" /> Back to Courses
-        </button>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl overflow-hidden border" style={{ borderColor: '#e0e0e0' }}>
-              <img
-                src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=500&fit=crop&auto=format"}
-                alt={course.title}
-                className="w-full h-64 md:h-80 object-cover"
-              />
-              <div className="p-6 md:p-8">
-                <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-600">
-                  {course.category || "Course"}
-                </span>
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mt-3">{course.title}</h1>
-                <div className="flex flex-wrap items-center gap-6 mt-4 text-sm text-gray-500">
-                  <span><i className="fa-regular fa-clock mr-2"></i> {course.duration_months || 3} months</span>
-                  <span><i className="fa-regular fa-user mr-2"></i> 100+ students</span>
-                  <span><i className="fa-solid fa-star mr-1 text-yellow-400"></i> 4.9 (200+ reviews)</span>
-                </div>
-                <p className="text-gray-700 text-base mt-6 leading-relaxed">
-                  {course.description} This comprehensive course will equip you with the skills you need to excel.
-                </p>
-                <div className="mt-6 pt-6 border-t" style={{ borderColor: '#e0e0e0' }}>
-                  <h3 className="font-semibold text-gray-800 text-lg">What you'll learn</h3>
-                  <ul className="mt-4 grid sm:grid-cols-2 gap-3">
-                    {[1,2,3,4].map((i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
-                        <CheckCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
-                        <span>Practical skill #{i} – hands‑on project</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-1">
-            <div className="sticky top-8 bg-white rounded-2xl border p-6 shadow-lg" style={{ borderColor: '#e0e0e0' }}>
-              <div className="text-center">
-                <p className="text-sm text-gray-500">Course Price</p>
-                <p className="text-4xl font-bold text-orange-500 mt-1">{formatNaira(course.price)}</p>
-              </div>
-
-              <button
-                onClick={() => onNavigate("auth")}
-                className="w-full mt-6 py-3.5 text-center font-bold rounded-xl bg-orange-500 text-white hover:bg-orange-600 transition-colors text-base"
-              >
-                <GraduationCap className="w-5 h-5 inline mr-2" /> Enroll Now
-              </button>
-
-              <div className="mt-6 space-y-3 text-sm text-gray-500">
-                <div className="flex justify-between">
-                  <span><i className="fa-regular fa-clock mr-2"></i>Duration</span>
-                  <span className="text-gray-700 font-medium">{course.duration_months || 3} months</span>
-                </div>
-                <div className="flex justify-between">
-                  <span><i className="fa-regular fa-file-lines mr-2"></i>Lessons</span>
-                  <span className="text-gray-700 font-medium">~20</span>
-                </div>
-                <div className="flex justify-between">
-                  <span><i className="fa-regular fa-user mr-2"></i>Students</span>
-                  <span className="text-gray-700 font-medium">100+</span>
-                </div>
-                <div className="flex justify-between">
-                  <span><i className="fa-regular fa-star mr-1 text-yellow-400"></i>Rating</span>
-                  <span className="text-gray-700 font-medium">4.9 (200+)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span><i className="fa-regular fa-layer-group mr-2"></i>Level</span>
-                  <span className="text-gray-700 font-medium">All Levels</span>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <p className="text-xs text-gray-400 text-center">
-                  <i className="fa-solid fa-lock mr-1"></i> Secure enrollment. 30‑day money‑back guarantee.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
-
-function LandingPage({ onAuth, onNavigate, courses }: { onAuth: () => void;  onNavigate: (view: View, data?: any) => void;  courses: Course[] }) {
+function LandingPage({ onAuth, onNavigate, courses }: { 
+  onAuth: () => void; 
+  onNavigate: (view: View, data?: any) => void; 
+  courses: Course[];
+}) {
   // ─── Refs for scroll animation sections ──────────────────────────────
   const homeRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
@@ -1493,7 +1208,7 @@ function LandingPage({ onAuth, onNavigate, courses }: { onAuth: () => void;  onN
   const teamRef = useRef<HTMLDivElement>(null);
   const blogRef = useRef<HTMLDivElement>(null);
   const contactRef = useRef<HTMLDivElement>(null);
-  const counterRef = useRef<HTMLDivElement>(null); // for fun facts counter
+  const counterRef = useRef<HTMLDivElement>(null);
 
   // ─── Visibility state ────────────────────────────────────────────────
   const [visible, setVisible] = useState<Record<string, boolean>>({
@@ -1549,7 +1264,7 @@ function LandingPage({ onAuth, onNavigate, courses }: { onAuth: () => void;  onN
     return () => observer.disconnect();
   }, []);
 
-  // ─── Fun facts counter animation (triggers when counter section becomes visible) ──
+  // ─── Fun facts counter animation ──────────────────────────────────
   useEffect(() => {
     if (visible.counter && !countersStarted) {
       setCountersStarted(true);
@@ -1591,7 +1306,7 @@ function LandingPage({ onAuth, onNavigate, courses }: { onAuth: () => void;  onN
       {/* Navbar */}
       <nav className="sticky top-0 z-40 backdrop-blur-md border-b rounded-b-lg" style={{ backgroundColor: '#333333', borderBottomColor: '#444444' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onNavigate("landing")}>
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
@@ -1749,7 +1464,12 @@ function LandingPage({ onAuth, onNavigate, courses }: { onAuth: () => void;  onN
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.slice(0, 6).map((course) => (
-              <div key={course.id} className="bg-white rounded-xl border overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group" style={{ borderColor: '#e0e0e0' }}>
+              <div 
+                key={course.id} 
+                className="bg-white rounded-xl border overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer"
+                style={{ borderColor: '#e0e0e0' }}
+                onClick={() => onNavigate("public-course-detail", { courseId: course.id })}
+              >
                 <div className="relative h-48 bg-gray-100 overflow-hidden">
                   <img
                     src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"}
@@ -1769,7 +1489,11 @@ function LandingPage({ onAuth, onNavigate, courses }: { onAuth: () => void;  onN
                     <span><i className="fa fa-clock-o mr-1"></i></span>
                     <span><i className="fa fa-star mr-1" style={{ color: '#f7530b' }}></i>4.9</span>
                   </div>
-                  <button onClick={onAuth} className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onAuth(); }} 
+                    className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors" 
+                    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+                  >
                     Enroll Now
                   </button>
                 </div>
@@ -1777,7 +1501,11 @@ function LandingPage({ onAuth, onNavigate, courses }: { onAuth: () => void;  onN
             ))}
           </div>
           <div className="text-center mt-10">
-            <button onClick={onAuth} className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
+            <button 
+              onClick={() => onNavigate("public-courses")} 
+              className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" 
+              style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+            >
               View All Course
             </button>
           </div>
@@ -1869,7 +1597,6 @@ function LandingPage({ onAuth, onNavigate, courses }: { onAuth: () => void;  onN
                   <h3 className="font-semibold text-gray-800">{member.name}</h3>
                   <p className="text-sm text-gray-500">{member.role}</p>
                   <div className="flex justify-center gap-3 mt-3 text-gray-400">
-                   
                   </div>
                 </div>
               </div>
@@ -1921,6 +1648,265 @@ function LandingPage({ onAuth, onNavigate, courses }: { onAuth: () => void;  onN
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+// ─── Public Courses Page ─────────────────────────────────────────────────────
+
+function PublicCoursesPage({ courses, onNavigate }: { courses: Course[]; onNavigate: (v: View, data?: any) => void }) {
+  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+
+  const categories = useMemo(() => {
+    const cats = ["all", ...new Set(courses.map(c => c.category || "Uncategorized"))];
+    return cats;
+  }, [courses]);
+
+  const filtered = useMemo(() => {
+    let result = courses;
+    if (filterCategory !== "all") {
+      result = result.filter(c => (c.category || "Uncategorized") === filterCategory);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      result = result.filter(c =>
+        c.title.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [courses, filterCategory, search]);
+
+  return (
+    <div className="min-h-screen bg-[#eeeeee]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <nav className="sticky top-0 z-40 bg-[#333333] border-b border-[#444444] backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onNavigate("landing")}>
+            <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
+          </div>
+          <button
+            onClick={() => onNavigate("auth")}
+            className="px-5 py-2.5 text-sm font-semibold rounded-lg hover:opacity-90 transition-colors"
+            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+          >
+            Sign In / Enroll
+          </button>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">All Courses</h1>
+            <p className="text-gray-500 text-sm">{filtered.length} courses available</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search courses..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm w-48 md:w-64 focus:outline-none focus:ring-2 focus:ring-orange-400/50"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-8">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setFilterCategory(cat)}
+              className={`px-4 py-2 text-sm font-medium rounded-full transition-all ${
+                filterCategory === cat
+                  ? "bg-orange-500 text-white shadow-md"
+                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {cat === "all" ? "All" : cat}
+            </button>
+          ))}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: '#e0e0e0' }}>
+            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-xl font-semibold text-gray-700">No courses found</h3>
+            <p className="text-gray-500">Try adjusting your search or filter.</p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map(course => (
+              <div
+                key={course.id}
+                className="bg-white rounded-xl border overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer"
+                style={{ borderColor: '#e0e0e0' }}
+                onClick={() => onNavigate("public-course-detail", { courseId: course.id })}
+              >
+                <div className="relative h-48 bg-gray-100 overflow-hidden">
+                  <img
+                    src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format"}
+                    alt={course.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
+                    {formatNaira(course.price)}
+                  </div>
+                </div>
+                <div className="p-5">
+                  <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-600">
+                    {course.category || "Course"}
+                  </span>
+                  <h3 className="font-semibold text-gray-800 text-base mt-2 leading-snug">{course.title}</h3>
+                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
+                  <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+                    <span><i className="fa-regular fa-clock mr-1"></i> {course.duration_months || 3} months</span>
+                    <span><i className="fa-regular fa-user mr-1"></i> 100+ students</span>
+                    <span><i className="fa-solid fa-star mr-1 text-yellow-400"></i> 4.9</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onNavigate("auth"); }}
+                    className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors bg-orange-500 text-white"
+                  >
+                    Enroll Now
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Public Course Detail Page ──────────────────────────────────────────────
+
+function PublicCourseDetailPage({ course, onNavigate }: { course: Course | null; onNavigate: (v: View) => void }) {
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-[#eeeeee] flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-700">Course not found</h2>
+          <button onClick={() => onNavigate("public-courses")} className="mt-4 text-orange-500 hover:underline">
+            Back to courses
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#eeeeee]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <nav className="sticky top-0 z-40 bg-[#333333] border-b border-[#444444] backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onNavigate("landing")}>
+            <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
+          </div>
+          <button
+            onClick={() => onNavigate("auth")}
+            className="px-5 py-2.5 text-sm font-semibold rounded-lg hover:opacity-90 transition-colors"
+            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+          >
+            Sign In / Enroll
+          </button>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        <button
+          onClick={() => onNavigate("public-courses")}
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-orange-500 transition-colors mb-6"
+        >
+          <ChevronLeft className="w-4 h-4" /> Back to Courses
+        </button>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl overflow-hidden border" style={{ borderColor: '#e0e0e0' }}>
+              <img
+                src={course.thumbnail_url || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=500&fit=crop&auto=format"}
+                alt={course.title}
+                className="w-full h-64 md:h-80 object-cover"
+              />
+              <div className="p-6 md:p-8">
+                <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-600">
+                  {course.category || "Course"}
+                </span>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mt-3">{course.title}</h1>
+                <div className="flex flex-wrap items-center gap-6 mt-4 text-sm text-gray-500">
+                  <span><i className="fa-regular fa-clock mr-2"></i> {course.duration_months || 3} months</span>
+                  <span><i className="fa-regular fa-user mr-2"></i> 100+ students</span>
+                  <span><i className="fa-solid fa-star mr-1 text-yellow-400"></i> 4.9 (200+ reviews)</span>
+                </div>
+                <p className="text-gray-700 text-base mt-6 leading-relaxed">
+                  {course.description} This comprehensive course will equip you with the skills you need to excel.
+                </p>
+                <div className="mt-6 pt-6 border-t" style={{ borderColor: '#e0e0e0' }}>
+                  <h3 className="font-semibold text-gray-800 text-lg">What you'll learn</h3>
+                  <ul className="mt-4 grid sm:grid-cols-2 gap-3">
+                    {[1,2,3,4].map((i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
+                        <CheckCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+                        <span>Practical skill #{i} – hands‑on project</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-1">
+            <div className="sticky top-8 bg-white rounded-2xl border p-6 shadow-lg" style={{ borderColor: '#e0e0e0' }}>
+              <div className="text-center">
+                <p className="text-sm text-gray-500">Course Price</p>
+                <p className="text-4xl font-bold text-orange-500 mt-1">{formatNaira(course.price)}</p>
+              </div>
+
+              <button
+                onClick={() => onNavigate("auth")}
+                className="w-full mt-6 py-3.5 text-center font-bold rounded-xl bg-orange-500 text-white hover:bg-orange-600 transition-colors text-base"
+              >
+                <GraduationCap className="w-5 h-5 inline mr-2" /> Enroll Now
+              </button>
+
+              <div className="mt-6 space-y-3 text-sm text-gray-500">
+                <div className="flex justify-between">
+                  <span><i className="fa-regular fa-clock mr-2"></i>Duration</span>
+                  <span className="text-gray-700 font-medium">{course.duration_months || 3} months</span>
+                </div>
+                <div className="flex justify-between">
+                  <span><i className="fa-regular fa-file-lines mr-2"></i>Lessons</span>
+                  <span className="text-gray-700 font-medium">~20</span>
+                </div>
+                <div className="flex justify-between">
+                  <span><i className="fa-regular fa-user mr-2"></i>Students</span>
+                  <span className="text-gray-700 font-medium">100+</span>
+                </div>
+                <div className="flex justify-between">
+                  <span><i className="fa-regular fa-star mr-1 text-yellow-400"></i>Rating</span>
+                  <span className="text-gray-700 font-medium">4.9 (200+)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span><i className="fa-regular fa-layer-group mr-2"></i>Level</span>
+                  <span className="text-gray-700 font-medium">All Levels</span>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className="text-xs text-gray-400 text-center">
+                  <i className="fa-solid fa-lock mr-1"></i> Secure enrollment. 30‑day money‑back guarantee.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2208,7 +2194,6 @@ useEffect(() => {
   const checkMobile = () => {
     const mobile = window.innerWidth < 768;
     setIsMobile(mobile);
-    // On mobile: sidebar hidden (collapsed = true), on desktop: visible (collapsed = false)
     setCollapsed(mobile);
   };
   checkMobile();
@@ -11443,6 +11428,7 @@ export default function App() {
   const [students, setStudents] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingStudent, setViewingStudent] = useState<Profile | null>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
 const [submittedAssignmentsCount, setSubmittedAssignmentsCount] = useState(0);
 
@@ -12137,6 +12123,18 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
     if (data) setProgress(data as ModuleProgress[]);
   };
 
+  // ─── Navigation wrapper ──────────────────────────────────────────────────────
+  const handleNavigate = (newView: View, data?: any) => {
+    if (newView === "public-course-detail" && data?.courseId) {
+      setSelectedCourseId(data.courseId);
+      setView("public-course-detail");
+    } else if (newView === "public-courses") {
+      setView("public-courses");
+    } else {
+      setView(newView);
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center" style={{ backgroundColor: '#eeeeee' }}>
@@ -12145,8 +12143,29 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
     );
   }
 
-  if (view === "landing") return <LandingPage onAuth={() => setView("auth")} courses={courses} />;
+  // ─── Render public views ─────────────────────────────────────────────────────
+  if (view === "landing") {
+    return (
+      <LandingPage
+        onAuth={() => setView("auth")}
+        onNavigate={handleNavigate}
+        courses={courses}
+      />
+    );
+  }
+  
   if (view === "auth") return <AuthPage onLogin={handleLogin} />;
+  
+  if (view === "public-courses") {
+    return <PublicCoursesPage courses={courses} onNavigate={handleNavigate} />;
+  }
+  
+  if (view === "public-course-detail") {
+    const course = courses.find(c => c.id === selectedCourseId);
+    return <PublicCourseDetailPage course={course || null} onNavigate={handleNavigate} />;
+  }
+
+  // ─── Protected views ──────────────────────────────────────────────────────
   if (!profile) return <AuthPage onLogin={handleLogin} />;
 
   const modulesByCourse = modules.reduce((acc, m) => {
