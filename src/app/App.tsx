@@ -1420,7 +1420,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
           </p>
           <div className="flex flex-wrap gap-4">
             <button
-              onClick={onAuth}
+               onClick={() => onNavigate("public-courses")}
               className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:opacity-90 transition-all hover:shadow-lg"
               style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
             >
@@ -1570,7 +1570,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
                     <span><i className="fa-solid fa-star mr-1 text-yellow-400"></i> 4.9</span>
                   </div>
                   <button
-                    onClick={onAuth}
+                    onClick={() => onNavigate("public-courses")}
                     className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
                   >
