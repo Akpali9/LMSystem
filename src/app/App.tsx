@@ -1207,7 +1207,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
       title: "Website Design (Front End) ",
       description: "Learn the foundations of web design, including HTML, CSS, JavaScript, and frameworks like Bootstrap, to create visually appealing and interactive websites.",
       price: 150000,
-      category: "General",
+      category: "all",
       duration_months: 2,
       thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
     },
