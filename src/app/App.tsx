@@ -1424,7 +1424,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
               className="inline-flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg hover:opacity-90 transition-all hover:shadow-lg"
               style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
             >
-              Explore Courses <ArrowRight className="w-4 h-4" />
+              Browse Courses <ArrowRight className="w-4 h-4" />
             </button>
           </div>
           <div className="flex items-center gap-8 pt-2">
@@ -1576,7 +1576,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
                     className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
                   >
-                    Enroll Now
+                   View details 
                   </button>
                 </div>
               </div>
