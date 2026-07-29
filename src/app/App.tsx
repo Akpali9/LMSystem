@@ -1552,7 +1552,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
                   <img
                     src={course.thumbnail_url}
                     alt={course.title}
-                     onClick={() => onNavigate("public-courses")}
+                      onClick={() => onNavigate("public-course-detail", { courseId: course.id })}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
