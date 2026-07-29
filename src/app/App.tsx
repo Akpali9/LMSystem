@@ -1546,8 +1546,8 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
             <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Explore our Courses</h2>
             <p className="text-gray-500 mt-2">Choose Our <span style={{ color: '#f7530b' }}>Top Courses</span></p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {STATIC_COURSES.slice(0, 6).map((course) => (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {STATIC_COURSES.slice(0, 3).map((course) => (
               <div
                 key={course.id}
                 className="bg-white rounded-xl border overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group"
