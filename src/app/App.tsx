@@ -1192,7 +1192,7 @@ function ToastAndConfirmProvider({ children }: { children: React.ReactNode }) {
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (v: View) => void }) {
   // ─── Static course data (from your screenshot) ──────────────────
-  const STATIC_COURSES = [
+const STATIC_COURSES: Course[] = [
     {
       id: 1,
       title: "Data Analysis",
@@ -1207,7 +1207,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
       title: "Website Design (Front End) ",
       description: "Learn the foundations of web design, including HTML, CSS, JavaScript, and frameworks like Bootstrap, to create visually appealing and interactive websites.",
       price: 150000,
-      category: "all",
+      category: "General",
       duration_months: 2,
       thumbnail_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop&auto=format",
     },
@@ -12239,11 +12239,11 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
   if (view === "auth") return <AuthPage onLogin={handleLogin} />;
   
   if (view === "public-courses") {
-    return <PublicCoursesPage courses={courses} onNavigate={handleNavigate} />;
+   return <PublicCoursesPage courses={STATIC_COURSES} onNavigate={handleNavigate} />;
   }
   
-  if (view === "public-course-detail") {
-    const course = courses.find(c => c.id === selectedCourseId);
+  if (view === "public-course-detail") {  
+    const course = STATIC_COURSES.find(c => c.id === selectedCourseId);
     return <PublicCourseDetailPage course={course || null} onNavigate={handleNavigate} />;
   }
 
