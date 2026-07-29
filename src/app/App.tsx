@@ -1479,10 +1479,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
       <section id="about" ref={aboutRef} data-section="about" className={cn("py-20 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center transition-all duration-1000", visible.about ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="relative">
           <img src="https://i.postimg.cc/gkBtmk5C/Screenshot-2026-07-28-163547.jpg" alt="About us" className="rounded-2xl shadow-xl w-full object-cover" />
-          <div className="absolute -bottom-6 -right-6 bg-white rounded-xl border shadow-xl p-4" style={{ borderColor: '#e0e0e0' }}>
-            <p className="text-2xl font-bold" style={{ color: '#f7530b' }}>6k+</p>
-            <p className="text-xs text-gray-500">Happy Clients</p>
-          </div>
+          
         </div>
         <div className="space-y-6">
           <h2 className="text-3xl font-bold leading-tight" style={{ color: '#333333' }}>
@@ -1505,9 +1502,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
               </div>
             </div>
           </div>
-          <button onClick={onAuth} className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
-            Discover More
-          </button>
+         
         </div>
       </section>
 
