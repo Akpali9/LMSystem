@@ -1538,7 +1538,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
       <section id="courses" ref={coursesRef} data-section="courses" className={cn("py-20 bg-white transition-all duration-1000", visible.courses ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Explore our Courses</h2>
+            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}></h2>
             <p className="text-gray-500 mt-2">Choose Our <span style={{ color: '#f7530b' }}>Top Courses</span></p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1572,7 +1572,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
                     <span><i className="fa-solid fa-star mr-1 text-yellow-400"></i> 4.9</span>
                   </div>
                   <button
-                    onClick={() => onNavigate("public-courses")}
+                     onClick={() => onNavigate("public-course-detail", { courseId: course.id })}
                     className="mt-4 w-full py-2.5 text-center font-medium rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
                   >
