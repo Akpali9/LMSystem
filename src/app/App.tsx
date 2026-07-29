@@ -1671,10 +1671,10 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { name: "Akpali Francis Ezennaya", role: "Developer", img: "https://i.postimg.cc/B6PdffYR/IMG-20260717-WA0008.jpg" },
-              { name: "Ayoub Fennouni", role: "Logo Expert", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&auto=format" },
-              { name: "Mark Linomi", role: "Marketer", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&auto=format" },
-              { name: "Amira Yerden", role: "UI/UX Designer", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&auto=format" },
+              { name: "Engr. Akpali Francis Ezennaya", role: "Developer", img: "https://i.postimg.cc/B6PdffYR/IMG-20260717-WA0008.jpg" },
+              { name: "Prince Ugorji", role: "Creative Head", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&auto=format" },
+              { name: "Daniel Ogbonnaya", role: "Graphics Designer", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&auto=format" },
+              { name: "Ikechukwu Anthony", role: "UI/UX Designer", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&auto=format" },
             ].map((member, idx) => (
               <div key={idx} className="bg-white rounded-xl border overflow-hidden text-center hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
                 <img src={member.img} alt="" className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
