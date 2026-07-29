@@ -1586,7 +1586,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
               className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors"
               style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
             >
-              View All Course
+             Browse Course
             </button>
           </div>
         </div>
