@@ -11,7 +11,6 @@ import type {
   Assignment,
   ModuleContent,
 } from "../lib/supabase";
-
 import {
   BookOpen,
   GraduationCap,
@@ -2006,17 +2005,7 @@ function PublicCourseDetailPage({ course, onNavigate }: { course: Course | null;
                 <p className="text-gray-700 text-base mt-6 leading-relaxed">
                   {course.description} This comprehensive course will equip you with the skills you need to excel.
                 </p>
-                <div className="mt-6 pt-6 border-t" style={{ borderColor: '#e0e0e0' }}>
-                  <h3 className="font-semibold text-gray-800 text-lg">What you'll learn</h3>
-                  <ul className="mt-4 grid sm:grid-cols-2 gap-3">
-                    {[1,2,3,4].map((i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
-                        <CheckCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
-                        <span>Practical skill #{i} – hands‑on project</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              
               </div>
             </div>
           </div>
