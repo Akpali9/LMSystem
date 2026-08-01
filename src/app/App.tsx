@@ -93,7 +93,7 @@ const STATIC_COURSES: Course[] = [
     {
       id: 3,
       title: "Website Design (FULL-STACK DEV) ",
-      description: "Learn to build and deploy fully functional web applications with modern technologies. This course covers both front-end and back-end development, including MongoDB, Node.js, React, and more, along with SEO optimization and Cpanel hosting.",
+      description: "Learn to build and deploy fully functional web applications with modern technologies. This course covers both front-end and -end development, including MongoDB, Node.js, React, and more, along with SEO optimization and Cpanel hosting.",
       price: 250000,
       category: "Website Design",
       duration_months: 4,
@@ -457,7 +457,7 @@ function ToastContainer() {
           )}
           style={
             t.type === "warning"
-              ? { backgroundColor: '#ffffff', borderColor: '#fdddce' }
+              ? { groundColor: '#ffffff', borderColor: '#fdddce' }
               : undefined
           }
         >
@@ -1780,7 +1780,11 @@ function PublicCoursesPage({ courses, onNavigate }: { courses: Course[]; onNavig
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
+           <button onClick={() => onNavigate("landing")} className="mt-4 text-orange-500 hover:underline">
+            Back to Home
+          </button>
             <h1 className="text-3xl font-bold text-gray-800">All Courses</h1>
+         
             <p className="text-gray-500 text-sm">{filtered.length} courses available</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
