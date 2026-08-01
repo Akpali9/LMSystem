@@ -46,6 +46,7 @@ import {
   Video,
   Loader2,
   ArrowRight,
+  ArrowLeft,
   ClipboardList,
   XCircle,
   RefreshCw,
@@ -1854,7 +1855,7 @@ function PublicCoursesPage({ courses, onNavigate }: { courses: Course[]; onNavig
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
            <button onClick={() => onNavigate("landing")} className="inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ color: '#f7530b'}}>
-            Back <ArrowRight className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4" />  Back 
           </button>
             <h1 className="text-3xl font-bold text-gray-800">All Courses</h1>
          
