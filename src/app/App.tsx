@@ -156,7 +156,58 @@ const STATIC_COURSES: Course[] = [
   
   
   ];
+// ─── Add these states at the top of the component ──────────────
+const [newsletterEmail, setNewsletterEmail] = useState("");
+const [newsletterLoading, setNewsletterLoading] = useState(false);
 
+// ─── Handler for newsletter subscription ────────────────────────
+const handleNewsletterSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const trimmedEmail = newsletterEmail.trim();
+  if (!trimmedEmail || !trimmedEmail.includes('@')) {
+    toast({
+      type: "error",
+      title: "Invalid Email",
+      message: "Please enter a valid email address.",
+    });
+    return;
+  }
+
+  setNewsletterLoading(true);
+  try {
+    const { error } = await supabase
+      .from("newsletter_subscribers")
+      .insert({ email: trimmedEmail });
+
+    if (error) {
+      // Handle duplicate email (PostgreSQL unique violation)
+      if (error.code === '23505') {
+        toast({
+          type: "warning",
+          title: "Already Subscribed",
+          message: "This email is already on our list.",
+        });
+      } else {
+        throw error;
+      }
+    } else {
+      toast({
+        type: "success",
+        title: "Subscribed! 🎉",
+        message: "You've been added to our newsletter.",
+      });
+      setNewsletterEmail(""); // Clear input
+    }
+  } catch (err: any) {
+    toast({
+      type: "error",
+      title: "Subscription Failed",
+      message: err.message || "Please try again later.",
+    });
+  } finally {
+    setNewsletterLoading(false);
+  }
+};
 
 // ─── Console Protection ──────────────────────────────────────────────────────
 
@@ -1621,10 +1672,33 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
           <h3 className="text-2xl font-bold text-gray-800 mb-2">Subscribe to our newsletter, We don't make any spam.</h3>
           <p className="text-gray-500 mb-6">Get the latest course updates, tips, and exclusive offers delivered to your inbox.</p>
           <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-            <input type="email" placeholder="Enter your Email Address" className="flex-1 px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-orange-400/50" style={{ borderColor: '#e0e0e0' }} />
-            <button className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
-              <Send className="w-4 h-4 inline mr-1" /> Subscribe
-            </button>
+           <form
+  onSubmit={handleNewsletterSubmit}
+  className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
+>
+  <input
+    type="email"
+    placeholder="Enter your Email Address"
+    value={newsletterEmail}
+    onChange={(e) => setNewsletterEmail(e.target.value)}
+    className="flex-1 px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-orange-400/50"
+    style={{ borderColor: '#e0e0e0' }}
+    required
+  />
+  <button
+    type="submit"
+    disabled={newsletterLoading}
+    className="px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+    style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+  >
+    {newsletterLoading ? (
+      <Loader2 className="w-4 h-4 animate-spin" />
+    ) : (
+      <Send className="w-4 h-4" />
+    )}
+    Subscribe
+  </button>
+</form>
           </div>
         </div>
       </section>
@@ -1780,8 +1854,8 @@ function PublicCoursesPage({ courses, onNavigate }: { courses: Course[]; onNavig
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
-           <button onClick={() => onNavigate("landing")} className="mt-4 text-orange-500 hover:underline">
-            Back to Home
+           <button onClick={() => onNavigate("landing")} className="mt-4 text-orange-500 ">
+            Back to Home <ArrowRight className="w-4 h-4" />
           </button>
             <h1 className="text-3xl font-bold text-gray-800">All Courses</h1>
          
