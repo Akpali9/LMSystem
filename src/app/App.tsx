@@ -2004,7 +2004,9 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-    // Slides data
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Slides data (same as before)
   const slides = [
     {
       image: "https://i.postimg.cc/7LSH8RB7/Screenshot-2026-07-28-161405.jpg",
@@ -2036,6 +2038,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
     return () => clearInterval(interval);
   }, []);
 
+  // ─── Auth logic ────────────────────────────────────────────────────────────
   const ensureProfile = async (userId: string, userEmail: string, userName: string) => {
     const { data: existing } = await supabase
       .from("profiles")
@@ -2189,7 +2192,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
                 <div className="flex items-center gap-2.5 mb-8">
                   <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain p-1" />
                 </div>
-                <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <blockquote className="text-2xl font-medium italic leading-relaxed mb-4">
                   "{slide.quote}"
                 </blockquote>
                 <p className="text-white/60 text-sm">— {slide.author}</p>
@@ -2211,13 +2214,43 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
         </div>
       </div>
 
+      {/* RIGHT SIDE - AUTH FORM */}
       <div className="flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="mb-8">
             <div className="flex items-center gap-2.5 mb-8 lg:hidden">
               <img src="https://i.postimg.cc/Qd3jCBQp/PRUTALOGO.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain" />
             </div>
-            <h1 className="text-3xl font-bold mb-2" style={{ color: '#333333', fontFamily: "'Poppins', sans-serif" }}>
+
+            {/* ─── NEW SLIDER TOGGLE ─── */}
+            <div className="relative flex w-full p-1 bg-gray-100 rounded-lg mb-6">
+              <div
+                className="absolute top-1 bottom-1 w-1/2 rounded-lg transition-all duration-300 ease-in-out"
+                style={{
+                  backgroundColor: '#f7530b',
+                  left: mode === 'login' ? '4px' : 'calc(50% + 4px)',
+                  width: 'calc(50% - 8px)',
+                }}
+              />
+              <button
+                onClick={() => setMode('login')}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg relative z-10 transition-colors ${
+                  mode === 'login' ? 'text-white' : 'text-gray-600'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => setMode('register')}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg relative z-10 transition-colors ${
+                  mode === 'register' ? 'text-white' : 'text-gray-600'
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
+
+            <h1 className="text-3xl font-bold mb-2" style={{ color: '#333333' }}>
               {mode === "login" ? "Welcome back" : "Join Pruta Academy"}
             </h1>
             <p className="text-gray-500">
@@ -2253,7 +2286,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
           <div className="mt-4">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t" style={{ borderColor: '#e0e0e0' }}></div>
+                <div className="w-full border-t" style={{ borderColor: '#e0e0e0' }} />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-[#eeeeee] px-2 text-gray-500">Or continue with</span>
@@ -2276,6 +2309,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
             </button>
           </div>
 
+          {/* Still keep the text toggle as fallback (optional) */}
           <div className="mt-6 text-center">
             <button
               onClick={() => setMode(mode === "login" ? "register" : "login")}
