@@ -2004,6 +2004,37 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+    // Slides data
+  const slides = [
+    {
+      image: "https://i.postimg.cc/7LSH8RB7/Screenshot-2026-07-28-161405.jpg",
+      quote: "Education is the most powerful weapon you can use to change the world.",
+      author: "Nelson Mandela",
+    },
+    {
+      image: "https://i.postimg.cc/Y0dgN0YW/Screenshot-2026-07-28-162236.jpg",
+      quote: "The beautiful thing about learning is that nobody can take it away from you.",
+      author: "B.B. King",
+    },
+    {
+      image: "https://i.postimg.cc/XvBTTyv6/Screenshot-2026-07-28-163157.jpg",
+      quote: "Live as if you were to die tomorrow. Learn as if you were to live forever.",
+      author: "Mahatma Gandhi",
+    },
+    {
+      image: "https://i.postimg.cc/gkBtmk5C/Screenshot-2026-07-28-163547.jpg",
+      quote: "The capacity to learn is a gift; the ability to learn is a skill; the willingness to learn is a choice.",
+      author: "Brian Herbert",
+    },
+  ];
+
+  // Auto-slide effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const ensureProfile = async (userId: string, userEmail: string, userName: string) => {
     const { data: existing } = await supabase
@@ -2142,21 +2173,41 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
-      <div className="hidden lg:block relative overflow-hidden">
-        <img
-          src="https://i.postimg.cc/7LSH8RB7/Screenshot-2026-07-28-161405.jpg"
-          alt="Student in a library"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-        <div className="absolute bottom-0 left-0 p-10 text-white">
-          <div className="flex items-center gap-2.5 mb-8">
-            <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain p-1" />
+      {/* LEFT SIDE - SLIDER */}
+      <div className="hidden lg:block relative overflow-hidden h-full">
+        <div className="relative h-full w-full">
+          {slides.map((slide, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-1000 ${
+                index === currentSlide ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <img src={slide.image} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+              <div className="absolute bottom-0 left-0 p-10 text-white">
+                <div className="flex items-center gap-2.5 mb-8">
+                  <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" alt="Pruta Academy" className="h-12 w-22 rounded object-contain p-1" />
+                </div>
+                <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  "{slide.quote}"
+                </blockquote>
+                <p className="text-white/60 text-sm">— {slide.author}</p>
+              </div>
+            </div>
+          ))}
+          {/* Dots */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+            {slides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentSlide(idx)}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  idx === currentSlide ? "bg-white w-4" : "bg-white/50"
+                }`}
+              />
+            ))}
           </div>
-          <blockquote className="text-2xl font-medium italic leading-relaxed mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
-            "Education is the most powerful weapon you can use to change the world."
-          </blockquote>
-          <p className="text-white/60 text-sm">— Nelson Mandela</p>
         </div>
       </div>
 
