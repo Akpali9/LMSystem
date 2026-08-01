@@ -1855,7 +1855,7 @@ function PublicCoursesPage({ courses, onNavigate }: { courses: Course[]; onNavig
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
            <button onClick={() => onNavigate("landing")} className="mt-4 text-orange-500 ">
-            Back to Home <ArrowRight className="w-4 h-4" />
+            Back <ArrowRight className="w-4 h-4" />
           </button>
             <h1 className="text-3xl font-bold text-gray-800">All Courses</h1>
          
