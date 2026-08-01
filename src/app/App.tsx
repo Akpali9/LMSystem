@@ -156,58 +156,6 @@ const STATIC_COURSES: Course[] = [
   
   
   ];
-// ─── Add these states at the top of the component ──────────────
-const [newsletterEmail, setNewsletterEmail] = useState("");
-const [newsletterLoading, setNewsletterLoading] = useState(false);
-
-// ─── Handler for newsletter subscription ────────────────────────
-const handleNewsletterSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const trimmedEmail = newsletterEmail.trim();
-  if (!trimmedEmail || !trimmedEmail.includes('@')) {
-    toast({
-      type: "error",
-      title: "Invalid Email",
-      message: "Please enter a valid email address.",
-    });
-    return;
-  }
-
-  setNewsletterLoading(true);
-  try {
-    const { error } = await supabase
-      .from("newsletter_subscribers")
-      .insert({ email: trimmedEmail });
-
-    if (error) {
-      // Handle duplicate email (PostgreSQL unique violation)
-      if (error.code === '23505') {
-        toast({
-          type: "warning",
-          title: "Already Subscribed",
-          message: "This email is already on our list.",
-        });
-      } else {
-        throw error;
-      }
-    } else {
-      toast({
-        type: "success",
-        title: "Subscribed! 🎉",
-        message: "You've been added to our newsletter.",
-      });
-      setNewsletterEmail(""); // Clear input
-    }
-  } catch (err: any) {
-    toast({
-      type: "error",
-      title: "Subscription Failed",
-      message: err.message || "Please try again later.",
-    });
-  } finally {
-    setNewsletterLoading(false);
-  }
-};
 
 // ─── Console Protection ──────────────────────────────────────────────────────
 
@@ -1372,6 +1320,58 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
     certified: 0,
   });
   const [countersStarted, setCountersStarted] = useState(false);
+// ─── Add these states at the top of the component ──────────────
+const [newsletterEmail, setNewsletterEmail] = useState("");
+const [newsletterLoading, setNewsletterLoading] = useState(false);
+
+// ─── Handler for newsletter subscription ────────────────────────
+const handleNewsletterSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const trimmedEmail = newsletterEmail.trim();
+  if (!trimmedEmail || !trimmedEmail.includes('@')) {
+    toast({
+      type: "error",
+      title: "Invalid Email",
+      message: "Please enter a valid email address.",
+    });
+    return;
+  }
+
+  setNewsletterLoading(true);
+  try {
+    const { error } = await supabase
+      .from("newsletter_subscribers")
+      .insert({ email: trimmedEmail });
+
+    if (error) {
+      // Handle duplicate email (PostgreSQL unique violation)
+      if (error.code === '23505') {
+        toast({
+          type: "warning",
+          title: "Already Subscribed",
+          message: "This email is already on our list.",
+        });
+      } else {
+        throw error;
+      }
+    } else {
+      toast({
+        type: "success",
+        title: "Subscribed! 🎉",
+        message: "You've been added to our newsletter.",
+      });
+      setNewsletterEmail(""); // Clear input
+    }
+  } catch (err: any) {
+    toast({
+      type: "error",
+      title: "Subscription Failed",
+      message: err.message || "Please try again later.",
+    });
+  } finally {
+    setNewsletterLoading(false);
+  }
+};
 
   // ─── Intersection Observer ──────────────────────────────────────
   useEffect(() => {
