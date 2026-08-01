@@ -1467,9 +1467,7 @@ function LandingPage({ onAuth, onNavigate }: { onAuth: () => void; onNavigate: (
                 <div className="inline-block p-3 rounded-lg mb-4" style={{ backgroundColor: '#fdddce' }}>{item.icon}</div>
                 <h3 className="text-xl font-bold text-gray-800 mb-3">{item.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
-                <button onClick={onAuth} className="mt-4 inline-flex items-center gap-2 text-sm font-medium hover:underline" style={{ color: '#f7530b' }}>
-                  Explore <ArrowRight className="w-3 h-3" />
-                </button>
+               
               </div>
             ))}
           </div>
