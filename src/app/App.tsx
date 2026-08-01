@@ -1853,7 +1853,7 @@ function PublicCoursesPage({ courses, onNavigate }: { courses: Course[]; onNavig
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
-           <button onClick={() => onNavigate("landing")} className="mt-4 text-orange-500 ">
+           <button onClick={() => onNavigate("landing")} className="inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ color: '#f7530b'}}>
             Back <ArrowRight className="w-4 h-4" />
           </button>
             <h1 className="text-3xl font-bold text-gray-800">All Courses</h1>
