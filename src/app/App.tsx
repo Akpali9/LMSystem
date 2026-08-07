@@ -70,6 +70,7 @@ import {
   Twitter,
   Instagram,
   MapPin,
+  Image,
 } from "lucide-react";
   // ─── Static course data ──────────────────
 const STATIC_COURSES: Course[] = [
@@ -635,6 +636,26 @@ type View =
   | "admin-quizzes"
   | "admin-chat"
   | "admin-scholarship";
+  | "admin-adverts"    // New
+  | "admin-bible";      // New
+
+interface Advert {
+  id: string;
+  title: string;
+  image_url?: string;
+  content: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BibleVerse {
+  id: string;
+  verse: string;
+  reference: string;
+  date: string;
+  created_at: string;
+}
 
 interface Scholarship {
   id: string;
@@ -1179,6 +1200,321 @@ function PhoneInput({ label, value, onChange, placeholder, required, disabled, c
         <p className="text-xs text-red-500">Please enter a valid phone number (at least 7 digits after country code)</p>
       )}
       <p className="text-xs text-gray-400">Example: {selectedCode} 812 345 6789</p>
+    </div>
+  );
+}
+// ─── AdminAdverts Component ──────────────
+function AdminAdverts() {
+  const [adverts, setAdverts] = useState<Advert[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<Advert | null>(null);
+  const [form, setForm] = useState({ title: "", content: "", imageFile: null as File | null });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchAdverts();
+  }, []);
+
+  const fetchAdverts = async () => {
+    const { data } = await supabase
+      .from("adverts")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setAdverts(data as Advert[]);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.title || !form.content) {
+      toast({ type: "warning", title: "Missing Fields", message: "Title and content are required." });
+      return;
+    }
+    setLoading(true);
+    let imageUrl = null;
+    if (form.imageFile) {
+      const ext = form.imageFile.name.split('.').pop();
+      const fileName = `advert-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("adverts").upload(fileName, form.imageFile);
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from("adverts").getPublicUrl(fileName);
+        imageUrl = publicUrl;
+      }
+    }
+    const payload = { title: form.title, content: form.content, image_url: imageUrl, is_active: true };
+    if (editing) {
+      await supabase.from("adverts").update(payload).eq("id", editing.id);
+      toast({ type: "success", title: "Updated", message: "Advert updated." });
+    } else {
+      await supabase.from("adverts").insert(payload);
+      toast({ type: "success", title: "Created", message: "Advert created." });
+    }
+    setShowModal(false);
+    setForm({ title: "", content: "", imageFile: null });
+    setEditing(null);
+    await fetchAdverts();
+    setLoading(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    showConfirm({
+      title: "Delete Advert",
+      message: "Are you sure?",
+      confirmLabel: "Delete",
+      type: "danger",
+      onConfirm: async () => {
+        await supabase.from("adverts").delete().eq("id", id);
+        toast({ type: "success", title: "Deleted", message: "Advert deleted." });
+        await fetchAdverts();
+      },
+    });
+  };
+
+  const toggleActive = async (id: string, current: boolean) => {
+    await supabase.from("adverts").update({ is_active: !current }).eq("id", id);
+    await fetchAdverts();
+  };
+
+  return (
+    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333' }}>Advertisements</h1>
+          <p className="text-gray-500 mt-1 text-sm md:text-base">Manage adverts shown on student dashboard.</p>
+        </div>
+        <button
+          onClick={() => { setEditing(null); setForm({ title: "", content: "", imageFile: null }); setShowModal(true); }}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg hover:opacity-90 transition-colors w-full sm:w-auto justify-center"
+          style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+        >
+          <Plus className="w-4 h-4" /> New Advert
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {adverts.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Image className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No adverts yet. Create one to display on student dashboards.</p>
+          </Card>
+        ) : (
+          adverts.map((ad) => (
+            <Card key={ad.id} className="p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                {ad.image_url && (
+                  <img src={ad.image_url} alt={ad.title} className="w-24 h-16 object-cover rounded-lg shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
+                    <h3 className="font-semibold text-gray-800 text-lg">{ad.title}</h3>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={ad.is_active ? "success" : "muted"}>{ad.is_active ? "Active" : "Inactive"}</Badge>
+                      <button
+                        onClick={() => toggleActive(ad.id, ad.is_active)}
+                        className="text-xs underline"
+                        style={{ color: '#f7530b' }}
+                      >
+                        {ad.is_active ? "Deactivate" : "Activate"}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">{ad.content}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => { setEditing(ad); setForm({ title: ad.title, content: ad.content, imageFile: null }); setShowModal(true); }}
+                    className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
+                  >
+                    <Edit className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(ad.id)}
+                    className="px-3 py-1.5 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? "Edit Advert" : "New Advert"}>
+        <div className="space-y-4">
+          <Input label="Title" value={form.title} onChange={(v) => setForm({ ...form, title: v })} placeholder="Advert title" required />
+          <Textarea label="Content" value={form.content} onChange={(v) => setForm({ ...form, content: v })} placeholder="Advert message..." rows={3} required />
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-gray-700">Image (optional)</label>
+            <div
+              className="border-2 border-dashed rounded-lg p-4 text-center hover:border-orange-400 transition-colors cursor-pointer"
+              style={{ borderColor: '#e0e0e0' }}
+              onClick={() => document.getElementById("advert-image")?.click()}
+            >
+              {form.imageFile ? (
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span className="text-sm text-gray-700">{form.imageFile.name}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setForm({ ...form, imageFile: null }); }}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Click to upload an image</p>
+                  <p className="text-xs text-gray-400">JPG, PNG • Max 2MB</p>
+                </>
+              )}
+              <input
+                id="advert-image"
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] || null })}
+              />
+            </div>
+          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || !form.title || !form.content}
+            className="w-full py-3 font-semibold rounded-lg hover:opacity-90 transition-colors text-sm disabled:opacity-50"
+            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (editing ? "Update Advert" : "Create Advert")}
+          </button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ─── AdminBible Component ─────────────────
+function AdminBible() {
+  const [verses, setVerses] = useState<BibleVerse[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<BibleVerse | null>(null);
+  const [form, setForm] = useState({ verse: "", reference: "", date: "" });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchVerses();
+  }, []);
+
+  const fetchVerses = async () => {
+    const { data } = await supabase
+      .from("bible_verses")
+      .select("*")
+      .order("date", { ascending: false });
+    if (data) setVerses(data as BibleVerse[]);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.verse || !form.reference) {
+      toast({ type: "warning", title: "Missing Fields", message: "Verse and reference are required." });
+      return;
+    }
+    setLoading(true);
+    const payload = {
+      verse: form.verse,
+      reference: form.reference,
+      date: form.date || new Date().toISOString().split('T')[0],
+    };
+    if (editing) {
+      await supabase.from("bible_verses").update(payload).eq("id", editing.id);
+      toast({ type: "success", title: "Updated", message: "Verse updated." });
+    } else {
+      await supabase.from("bible_verses").insert(payload);
+      toast({ type: "success", title: "Created", message: "Verse created." });
+    }
+    setShowModal(false);
+    setForm({ verse: "", reference: "", date: "" });
+    setEditing(null);
+    await fetchVerses();
+    setLoading(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    showConfirm({
+      title: "Delete Verse",
+      message: "Are you sure?",
+      confirmLabel: "Delete",
+      type: "danger",
+      onConfirm: async () => {
+        await supabase.from("bible_verses").delete().eq("id", id);
+        toast({ type: "success", title: "Deleted", message: "Verse deleted." });
+        await fetchVerses();
+      },
+    });
+  };
+
+  return (
+    <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333' }}>Bible Verses</h1>
+          <p className="text-gray-500 mt-1 text-sm md:text-base">Manage daily Bible verses shown on student dashboard.</p>
+        </div>
+        <button
+          onClick={() => { setEditing(null); setForm({ verse: "", reference: "", date: "" }); setShowModal(true); }}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg hover:opacity-90 transition-colors w-full sm:w-auto justify-center"
+          style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+        >
+          <Plus className="w-4 h-4" /> New Verse
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {verses.length === 0 ? (
+          <Card className="p-12 text-center">
+            <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No Bible verses yet. Add a verse to be displayed daily.</p>
+          </Card>
+        ) : (
+          verses.map((v) => (
+            <Card key={v.id} className="p-4 md:p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <p className="text-lg font-semibold text-gray-800">"{v.verse}"</p>
+                  <p className="text-sm text-gray-500 mt-1">— {v.reference}</p>
+                  <p className="text-xs text-gray-400 mt-1">Date: {v.date}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => { setEditing(v); setForm({ verse: v.verse, reference: v.reference, date: v.date }); setShowModal(true); }}
+                    className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
+                  >
+                    <Edit className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(v.id)}
+                    className="px-3 py-1.5 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? "Edit Verse" : "New Verse"}>
+        <div className="space-y-4">
+          <Textarea label="Verse" value={form.verse} onChange={(v) => setForm({ ...form, verse: v })} placeholder="Enter the verse text..." rows={3} required />
+          <Input label="Reference" value={form.reference} onChange={(v) => setForm({ ...form, reference: v })} placeholder="John 3:16" required />
+          <Input label="Date (optional)" type="date" value={form.date} onChange={(v) => setForm({ ...form, date: v })} placeholder="YYYY-MM-DD" />
+          <button
+            onClick={handleSubmit}
+            disabled={loading || !form.verse || !form.reference}
+            className="w-full py-3 font-semibold rounded-lg hover:opacity-90 transition-colors text-sm disabled:opacity-50"
+            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (editing ? "Update Verse" : "Create Verse")}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -3020,6 +3356,8 @@ const adminNavItems = [];
 
 adminNavItems.push({ view: "admin-dashboard" as View, icon: LayoutDashboard, label: "Dashboard", key: "admin-dashboard" });
 adminNavItems.push({ view: "admin-courses" as View, icon: BookOpen, label: "Courses & Modules", key: "admin-courses" });
+    adminNavItems.push({ view: "admin-adverts" as View, icon: Image, label: "Adverts", key: "admin-adverts" });
+  adminNavItems.push({ view: "admin-bible" as View, icon: BookOpen, label: "Bible Verses", key: "admin-bible" });
 
 // --- ADMIN STUDENTS ---
 const showStudentsBadge = shouldShowAdminNotification('admin-students', adminPendingEnrollmentsCount);
@@ -4109,6 +4447,45 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   modules: Module[];
   courses: Course[];
 }) {
+    // ─── New state for adverts and bible verse ──
+  const [adverts, setAdverts] = useState<Advert[]>([]);
+  const [bibleVerse, setBibleVerse] = useState<{ verse: string; reference: string } | null>(null);
+
+  useEffect(() => {
+    fetchAdverts();
+    fetchBibleVerse();
+  }, []);
+
+  const fetchAdverts = async () => {
+    const { data } = await supabase
+      .from("adverts")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+    if (data) setAdverts(data as Advert[]);
+  };
+
+  const fetchBibleVerse = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from("bible_verses")
+      .select("*")
+      .eq("date", today)
+      .maybeSingle();
+    if (data) {
+      setBibleVerse({ verse: data.verse, reference: data.reference });
+    } else {
+      // fallback to latest
+      const { data: latest } = await supabase
+        .from("bible_verses")
+        .select("*")
+        .order("date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latest) setBibleVerse({ verse: latest.verse, reference: latest.reference });
+    }
+  };
+  
   const safeEnrollments = enrollments || [];
   const safeProgress = progress || [];
   const safeModules = modules || [];
@@ -4223,6 +4600,42 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
 
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+       {/* ─── New Adverts Marquee ─────────────────── */}
+      {adverts.length > 0 && (
+        <div className="bg-white rounded-xl border p-3 overflow-hidden shadow-sm" style={{ borderColor: '#e0e0e0' }}>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-semibold text-orange-500 shrink-0">📢 Adverts</span>
+            <div className="flex-1 overflow-hidden">
+              <div className="marquee whitespace-nowrap animate-marquee">
+                {adverts.map((ad, idx) => (
+                  <span key={ad.id} className="inline-flex items-center gap-3 mx-6">
+                    {ad.image_url && <img src={ad.image_url} alt={ad.title} className="h-8 w-auto rounded" />}
+                    <span className="text-sm text-gray-700">{ad.content}</span>
+                    {idx < adverts.length - 1 && <span className="text-gray-300 mx-2">•</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── New Bible Verse Card ──────────────── */}
+      {bibleVerse && (
+        <div className="bg-white rounded-xl border p-4 shadow-sm" style={{ borderColor: '#e0e0e0' }}>
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+              <BookOpen className="w-5 h-5 text-orange-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">📖 Daily Bible Verse</p>
+              <p className="text-base font-medium italic text-gray-800">"{bibleVerse.verse}"</p>
+              <p className="text-xs text-gray-500 mt-1">— {bibleVerse.reference}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scholarship banner */}
       <div 
         className={cn(
@@ -11667,7 +12080,7 @@ export default function App() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
 const [submittedAssignmentsCount, setSubmittedAssignmentsCount] = useState(0);
-
+  
   const ensureProfile = async (userId: string, userEmail: string, userName: string) => {
     const { data: existing } = await supabase
       .from("profiles")
@@ -12470,6 +12883,11 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
           return <AdminChat courses={courses || []} students={students || []} />;
         case "admin-scholarship":
           return <AdminScholarship />;
+           // ─── New admin views ──────────────
+        case "admin-adverts":
+          return <AdminAdverts />;
+        case "admin-bible":
+          return <AdminBible />;
         default:
           return <AdminDashboard onNavigate={setView} stats={{ students: 0, courses: 0, pendingPayments: 0, submittedAssignments: 0 }} />;
       }
@@ -12532,6 +12950,21 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
       }
     }
   };
+  useEffect(() => {
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-marquee {
+      display: inline-block;
+      animation: marquee 20s linear infinite;
+    }
+  `;
+  document.head.appendChild(style);
+  return () => { document.head.removeChild(style); };
+}, []);
 
   return (
     <ToastAndConfirmProvider>
