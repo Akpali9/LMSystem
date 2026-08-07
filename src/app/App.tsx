@@ -635,9 +635,9 @@ type View =
   | "admin-student-profile"
   | "admin-quizzes"
   | "admin-chat"
-  | "admin-scholarship";
+  | "admin-scholarship"
   | "admin-adverts"    // New
-  | "admin-bible";      // New
+  | "admin-bible" ;    // New
 
 interface Advert {
   id: string;
