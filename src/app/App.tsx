@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-
 import { supabase } from "../lib/supabase";
 import type {
   Profile,
@@ -1210,17 +1209,37 @@ function AdminAdverts() {
   const [editing, setEditing] = useState<Advert | null>(null);
   const [form, setForm] = useState({ title: "", content: "", imageFile: null as File | null });
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAdverts();
   }, []);
 
   const fetchAdverts = async () => {
-    const { data } = await supabase
-      .from("adverts")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (data) setAdverts(data as Advert[]);
+    setFetching(true);
+    setError(null);
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("adverts")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (fetchError) {
+        console.error("Supabase fetch error:", fetchError);
+        setError(fetchError.message);
+        toast({ type: "error", title: "Fetch Failed", message: fetchError.message });
+      } else {
+        console.log("Fetched adverts:", data); // ✅ Check console
+        setAdverts(data as Advert[]);
+      }
+    } catch (err: any) {
+      console.error("Unexpected error:", err);
+      setError(err.message || "Failed to load adverts");
+      toast({ type: "error", title: "Error", message: err.message });
+    } finally {
+      setFetching(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -1230,28 +1249,43 @@ function AdminAdverts() {
     }
     setLoading(true);
     let imageUrl = null;
-    if (form.imageFile) {
-      const ext = form.imageFile.name.split('.').pop();
-      const fileName = `advert-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("adverts").upload(fileName, form.imageFile);
-      if (!error) {
+    try {
+      if (form.imageFile) {
+        const ext = form.imageFile.name.split('.').pop();
+        const fileName = `advert-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("adverts").upload(fileName, form.imageFile);
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          toast({ type: "error", title: "Upload Failed", message: uploadError.message });
+          setLoading(false);
+          return;
+        }
         const { data: { publicUrl } } = supabase.storage.from("adverts").getPublicUrl(fileName);
         imageUrl = publicUrl;
       }
+
+      const payload = { title: form.title, content: form.content, image_url: imageUrl, is_active: true };
+
+      if (editing) {
+        const { error: updateError } = await supabase.from("adverts").update(payload).eq("id", editing.id);
+        if (updateError) throw updateError;
+        toast({ type: "success", title: "Updated", message: "Advert updated." });
+      } else {
+        const { error: insertError } = await supabase.from("adverts").insert(payload);
+        if (insertError) throw insertError;
+        toast({ type: "success", title: "Created", message: "Advert created." });
+      }
+
+      setShowModal(false);
+      setForm({ title: "", content: "", imageFile: null });
+      setEditing(null);
+      await fetchAdverts(); // ✅ Refresh list
+    } catch (err: any) {
+      console.error("Submit error:", err);
+      toast({ type: "error", title: "Operation Failed", message: err.message });
+    } finally {
+      setLoading(false);
     }
-    const payload = { title: form.title, content: form.content, image_url: imageUrl, is_active: true };
-    if (editing) {
-      await supabase.from("adverts").update(payload).eq("id", editing.id);
-      toast({ type: "success", title: "Updated", message: "Advert updated." });
-    } else {
-      await supabase.from("adverts").insert(payload);
-      toast({ type: "success", title: "Created", message: "Advert created." });
-    }
-    setShowModal(false);
-    setForm({ title: "", content: "", imageFile: null });
-    setEditing(null);
-    await fetchAdverts();
-    setLoading(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -1261,7 +1295,11 @@ function AdminAdverts() {
       confirmLabel: "Delete",
       type: "danger",
       onConfirm: async () => {
-        await supabase.from("adverts").delete().eq("id", id);
+        const { error } = await supabase.from("adverts").delete().eq("id", id);
+        if (error) {
+          toast({ type: "error", title: "Delete Failed", message: error.message });
+          return;
+        }
         toast({ type: "success", title: "Deleted", message: "Advert deleted." });
         await fetchAdverts();
       },
@@ -1269,7 +1307,11 @@ function AdminAdverts() {
   };
 
   const toggleActive = async (id: string, current: boolean) => {
-    await supabase.from("adverts").update({ is_active: !current }).eq("id", id);
+    const { error } = await supabase.from("adverts").update({ is_active: !current }).eq("id", id);
+    if (error) {
+      toast({ type: "error", title: "Update Failed", message: error.message });
+      return;
+    }
     await fetchAdverts();
   };
 
@@ -1279,18 +1321,39 @@ function AdminAdverts() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#333333' }}>Advertisements</h1>
           <p className="text-gray-500 mt-1 text-sm md:text-base">Manage adverts shown on student dashboard.</p>
+          {error && (
+            <div className="mt-2 text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg border border-red-200">
+              ⚠️ {error}
+              <button onClick={fetchAdverts} className="ml-2 underline font-medium">Retry</button>
+            </div>
+          )}
         </div>
-        <button
-          onClick={() => { setEditing(null); setForm({ title: "", content: "", imageFile: null }); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg hover:opacity-90 transition-colors w-full sm:w-auto justify-center"
-          style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-        >
-          <Plus className="w-4 h-4" /> New Advert
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchAdverts}
+            disabled={fetching}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${fetching ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+          <button
+            onClick={() => { setEditing(null); setForm({ title: "", content: "", imageFile: null }); setShowModal(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg hover:opacity-90 transition-colors w-full sm:w-auto justify-center"
+            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+          >
+            <Plus className="w-4 h-4" /> New Advert
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
-        {adverts.length === 0 ? (
+        {fetching && adverts.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
+            <p className="text-gray-500 mt-4">Loading adverts...</p>
+          </Card>
+        ) : adverts.length === 0 ? (
           <Card className="p-12 text-center">
             <Image className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No adverts yet. Create one to display on student dashboards.</p>
@@ -1359,6 +1422,11 @@ function AdminAdverts() {
                   >
                     <X className="w-4 h-4" />
                   </button>
+                </div>
+              ) : editing?.image_url ? (
+                <div>
+                  <img src={editing.image_url} alt="Current" className="max-h-24 mx-auto rounded" />
+                  <p className="text-xs text-gray-400 mt-1">Current image (upload a new one to replace)</p>
                 </div>
               ) : (
                 <>
