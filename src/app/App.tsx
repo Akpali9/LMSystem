@@ -6757,26 +6757,30 @@ const courseModules = currentEnrollment
 
   const canCompleteModule = hasPassedQuiz || hasGradedAssignment || hasNoRequirements;
 
-  if (!currentEnrollment || !currentModule) {
-    return (
-      <div className="p-8 text-center">
-        <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
-        <p className="text-gray-500 mt-4">Loading module...</p>
-      </div>
-    ):(
-       <div className="p-8 text-center">
-       
-        <p className="text-gray-500 mt-4">No modules yet </p>
-          <button
-            onClick={() => onNavigate("student-courses")}
-            className="mt-4 px-4 py-2 rounded-lg hover:opacity-90 transition-colors"
-            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
-          >
-            Browse Courses
-          </button>
-      </div>
-    );
-  }
+  if (!currentEnrollment) {
+  return (
+    <div className="p-8 text-center">
+      <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
+      <p className="text-gray-500 mt-4">Loading enrollment...</p>
+    </div>
+  );
+}
+
+if (courseModules.length === 0) {
+  return (
+    <div className="p-8 text-center">
+      <p className="text-gray-500 mt-4">No modules available for this course yet.</p>
+      <button
+        onClick={() => onNavigate("student-courses")}
+        className="mt-4 px-4 py-2 rounded-lg hover:opacity-90 transition-colors"
+        style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+      >
+        Browse Courses
+      </button>
+    </div>
+  );
+}
+  
   return (
     <div className="flex flex-col md:flex-row h-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
       {/* CONTENT - Comes FIRST on mobile (order-1), SECOND on desktop (md:order-2) */}
