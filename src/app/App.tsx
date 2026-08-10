@@ -4672,45 +4672,51 @@ const [showVerseModal, setShowVerseModal] = useState(false);
 
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
-     
-{/* ─── Adverts Grid ─────────────────── */}
+{/* ─── Adverts Marquee ─────────────────── */}
+      
 {adverts.length > 0 && (
   <div>
     <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
       <span className="text-orange-500">📢</span> Advertisements
     </h2>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {adverts.map((ad) => (
-        <div
-          key={ad.id}
-          onClick={() => { setSelectedAdvert(ad); setShowAdvertModal(true); }}
-          className="bg-white rounded-xl border shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group"
-          style={{ borderColor: '#e0e0e0' }}
-        >
-          {ad.image_url && (
-            <div className="w-full h-48 overflow-hidden bg-gray-100">
-              <img
-                src={ad.image_url}
-                alt={ad.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            </div>
-          )}
-          <div className="p-5">
-            <h3 className="font-bold text-gray-800 text-lg">{ad.title}</h3>
-            <p className="text-gray-600 text-sm mt-1 line-clamp-2">{ad.content}</p>
-            <div className="mt-4 flex justify-end">
-              <span className="text-orange-500 text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-                View details <ChevronRight className="w-4 h-4" />
+    <div className="bg-white rounded-xl border p-4 shadow-sm overflow-hidden" style={{ borderColor: '#e0e0e0' }}>
+      <div className="flex items-center gap-4">
+        <span className="text-sm font-bold text-orange-500 shrink-0 hidden sm:block">📢</span>
+        <div className="flex-1 overflow-hidden">
+          <div className="marquee whitespace-nowrap animate-marquee">
+            {adverts.map((ad, idx) => (
+              <span
+                key={ad.id}
+                onClick={() => { setSelectedAdvert(ad); setShowAdvertModal(true); }}
+                className="inline-flex items-center gap-4 mx-6 cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                {ad.image_url && (
+                  <img
+                    src={ad.image_url}
+                    alt={ad.title}
+                    className="h-16 w-auto rounded-lg object-cover shadow-sm"
+                  />
+                )}
+                <div className="inline-block text-left">
+                  <p className="text-base md:text-lg font-bold text-gray-800 truncate max-w-xs">
+                    {ad.title}
+                  </p>
+                  <p className="text-sm text-gray-600 truncate max-w-md">
+                    {ad.content}
+                  </p>
+                </div>
+                {idx < adverts.length - 1 && (
+                  <span className="text-gray-300 text-xl font-light mx-2">|</span>
+                )}
               </span>
-            </div>
+            ))}
           </div>
         </div>
-      ))}
+      </div>
     </div>
   </div>
 )}
-
+      
 {/* ─── Bible Verse Card ──────────────── */}
 {bibleVerse && (
   <div
