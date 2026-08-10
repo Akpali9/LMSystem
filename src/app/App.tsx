@@ -4673,7 +4673,7 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   <div className="bg-white rounded-xl border p-5 shadow-md overflow-hidden" style={{ borderColor: '#e0e0e0' }}>
     <div className="flex items-center gap-5">
       <span className="text-base font-bold text-orange-500 shrink-0 flex items-center gap-2">
-        📢 <span className="hidden sm:inline">Advertisements</span>
+        📢 <span className="hidden sm:inline">Adverts</span>
       </span>
       <div className="flex-1 overflow-hidden">
         <div className="marquee whitespace-nowrap animate-marquee">
@@ -12169,7 +12169,7 @@ const [submittedAssignmentsCount, setSubmittedAssignmentsCount] = useState(0);
       }
       .animate-marquee {
         display: inline-block;
-        animation: marquee 20s linear infinite;
+        animation: marquee 25s linear infinite;
       }
     `;
     document.head.appendChild(style);
