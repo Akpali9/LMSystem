@@ -4949,7 +4949,7 @@ const [showVerseModal, setShowVerseModal] = useState(false);
         “{selectedVerse.verse}”
       </p>
       <p className="text-lg text-gray-600">— {selectedVerse.reference}</p>
-      <p className="text-xs text-gray-400 mt-4">Click outside or press Esc to close</p>
+      
     </div>
   )}
 </Modal>
