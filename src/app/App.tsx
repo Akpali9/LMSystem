@@ -12816,6 +12816,21 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
 
   // ─── Protected views ──────────────────────────────────────────────────────
   if (!profile) return <AuthPage onLogin={handleLogin} />;
+   useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes marquee {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+      }
+      .animate-marquee {
+        display: inline-block;
+        animation: marquee 20s linear infinite;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
 
   const modulesByCourse = modules.reduce((acc, m) => {
     if (!acc[m.course_id]) acc[m.course_id] = [];
@@ -12950,21 +12965,7 @@ const handleGradeAssignment = async (assignmentId: string, score: number, feedba
       }
     }
   };
-  useEffect(() => {
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes marquee {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
-    }
-    .animate-marquee {
-      display: inline-block;
-      animation: marquee 20s linear infinite;
-    }
-  `;
-  document.head.appendChild(style);
-  return () => { document.head.removeChild(style); };
-}, []);
+ 
 
   return (
     <ToastAndConfirmProvider>
