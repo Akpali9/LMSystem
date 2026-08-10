@@ -4677,11 +4677,10 @@ const [showVerseModal, setShowVerseModal] = useState(false);
 {adverts.length > 0 && (
   <div>
     <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-      <span className="text-orange-500">📢</span> Advertisements
+      <span className="text-orange-500">📢</span> Adverts
     </h2>
     <div className="bg-white rounded-xl border p-4 shadow-sm overflow-hidden" style={{ borderColor: '#e0e0e0' }}>
       <div className="flex items-center gap-4">
-        <span className="text-sm font-bold text-orange-500 shrink-0 hidden sm:block">📢</span>
         <div className="flex-1 overflow-hidden">
           <div className="marquee whitespace-nowrap animate-marquee">
             {adverts.map((ad, idx) => (
