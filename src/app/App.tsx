@@ -6763,6 +6763,18 @@ const courseModules = currentEnrollment
         <Loader2 className="w-8 h-8 animate-spin mx-auto" style={{ color: '#f7530b' }} />
         <p className="text-gray-500 mt-4">Loading module...</p>
       </div>
+    ):(
+       <div className="p-8 text-center">
+       
+        <p className="text-gray-500 mt-4">No modules yet </p>
+          <button
+            onClick={() => onNavigate("student-courses")}
+            className="mt-4 px-4 py-2 rounded-lg hover:opacity-90 transition-colors"
+            style={{ backgroundColor: '#f7530b', color: '#ffffff' }}
+          >
+            Browse Courses
+          </button>
+      </div>
     );
   }
   return (
