@@ -4669,24 +4669,36 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-6xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
        {/* ─── New Adverts Marquee ─────────────────── */}
-      {adverts.length > 0 && (
-        <div className="bg-white rounded-xl border p-3 overflow-hidden shadow-sm" style={{ borderColor: '#e0e0e0' }}>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-orange-500 shrink-0">📢 Adverts</span>
-            <div className="flex-1 overflow-hidden">
-              <div className="marquee whitespace-nowrap animate-marquee">
-                {adverts.map((ad, idx) => (
-                  <span key={ad.id} className="inline-flex items-center gap-3 mx-6">
-                    {ad.image_url && <img src={ad.image_url} alt={ad.title} className="h-8 w-auto rounded" />}
-                    <span className="text-sm text-gray-700">{ad.content}</span>
-                    {idx < adverts.length - 1 && <span className="text-gray-300 mx-2">•</span>}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
+{adverts.length > 0 && (
+  <div className="bg-white rounded-xl border p-5 shadow-md overflow-hidden" style={{ borderColor: '#e0e0e0' }}>
+    <div className="flex items-center gap-5">
+      <span className="text-base font-bold text-orange-500 shrink-0 flex items-center gap-2">
+        📢 <span className="hidden sm:inline">Advertisements</span>
+      </span>
+      <div className="flex-1 overflow-hidden">
+        <div className="marquee whitespace-nowrap animate-marquee">
+          {adverts.map((ad, idx) => (
+            <span key={ad.id} className="inline-flex items-center gap-4 mx-8">
+              {ad.image_url && (
+                <img 
+                  src={ad.image_url} 
+                  alt={ad.title} 
+                  className="h-12 w-auto rounded-lg object-cover shadow-sm" 
+                />
+              )}
+              <span className="text-base md:text-lg font-medium text-gray-800">
+                {ad.content}
+              </span>
+              {idx < adverts.length - 1 && (
+                <span className="text-gray-300 text-xl font-light mx-2">|</span>
+              )}
+            </span>
+          ))}
         </div>
-      )}
+      </div>
+    </div>
+  </div>
+)}
 
       {/* ─── New Bible Verse Card ──────────────── */}
       {bibleVerse && (
