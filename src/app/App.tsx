@@ -2147,7 +2147,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { name: "Engr. Akpali Francis Ezennaya", role: "Developer", img: "https://i.postimg.cc/B6PdffYR/IMG-20260717-WA0008.jpg" },
-              { name: "Prince Ugorji", role: "Creative Head", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&auto=format" },
+              { name: "Prince Ugorji", role: "Creative Head", img: "https://i.postimg.cc/FHff8dmc/IMG-20260810-WA0000.jpg" },
               { name: "Daniel Ogbonnaya", role: "Graphics Designer", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&auto=format" },
               { name: "Ikechukwu Anthony", role: "UI/UX Designer", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&auto=format" },
             ].map((member, idx) => (
