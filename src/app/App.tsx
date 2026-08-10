@@ -5262,7 +5262,7 @@ const handleEnrollSubmit = async () => {
 
       {otherCourses.length > 0 && (
         <div>
-          <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-4">Explore Other Programs</h2>
+          <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-4">Explore Our Programs</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {otherCourses.map((course) => (
               <div key={course.id} className="bg-white rounded-xl border overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ borderColor: '#e0e0e0' }}>
