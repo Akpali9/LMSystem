@@ -4680,7 +4680,7 @@ const [showVerseModal, setShowVerseModal] = useState(false);
       <div>
        
         <div 
-          className="bg-white rounded-xl border shadow-sm overflow-hidden min-h-[140px] flex items-center"
+          className="bg-white rounded-xl border shadow-sm overflow-hidden min-h-[240px] flex items-center"
           style={{ borderColor: '#e0e0e0' }}
         >
           <div className="w-full px-5 py-4">
@@ -4697,14 +4697,14 @@ const [showVerseModal, setShowVerseModal] = useState(false);
                         <img
                           src={ad.image_url}
                           alt={ad.title}
-                          className="h-16 w-auto rounded-lg object-cover shadow-sm"
+                          className="h-26 w-auto rounded-lg object-cover shadow-sm"
                         />
                       )}
                       <div className="inline-block text-left">
-                        <p className="text-base md:text-lg font-bold text-gray-800 truncate max-w-xs">
+                        <p className="text-lg md:text-xl font-bold text-gray-800 truncate max-w-xs">
                           {ad.title}
                         </p>
-                        <p className="text-sm text-gray-600 truncate max-w-md">
+                        <p className="text-base md:text-lg text-gray-600 truncate max-w-md">
                           {ad.content}
                         </p>
                       </div>
@@ -4729,7 +4729,7 @@ const [showVerseModal, setShowVerseModal] = useState(false);
         
         <div
           onClick={() => { setSelectedVerse(bibleVerse); setShowVerseModal(true); }}
-          className="bg-white rounded-xl border shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer min-h-[140px] flex items-center p-5"
+          className="bg-white rounded-xl border shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer min-h-[240px] flex items-center p-5"
           style={{ borderColor: '#e0e0e0' }}
         >
           <div className="flex items-start gap-3 w-full">
@@ -4740,7 +4740,7 @@ const [showVerseModal, setShowVerseModal] = useState(false);
               <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <span className="text-xs text-gray-400 font-normal">(click to enlarge)</span>
               </p>
-              <p className="text-base md:text-lg font-medium italic text-gray-800 mt-1 line-clamp-3">
+              <p className="text-xl md:text-2xl font-medium italic text-gray-800 mt-1 line-clamp-3">
                 “{bibleVerse.verse}”
               </p>
               <p className="text-sm text-gray-500 mt-1">— {bibleVerse.reference}</p>
