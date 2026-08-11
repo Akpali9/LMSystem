@@ -4678,39 +4678,42 @@ const [showVerseModal, setShowVerseModal] = useState(false);
   <div className="md:col-span-7">
     {adverts.length > 0 && (
       <div>
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <span className="text-orange-500">📢</span> Adverts
-        </h2>
-        <div className="bg-white rounded-xl border p-4 shadow-sm overflow-hidden" style={{ borderColor: '#e0e0e0' }}>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 overflow-hidden">
-              <div className="marquee whitespace-nowrap animate-marquee">
-                {adverts.map((ad, idx) => (
-                  <span
-                    key={ad.id}
-                    onClick={() => { setSelectedAdvert(ad); setShowAdvertModal(true); }}
-                    className="inline-flex items-center gap-4 mx-6 cursor-pointer hover:opacity-80 transition-opacity"
-                  >
-                    {ad.image_url && (
-                      <img
-                        src={ad.image_url}
-                        alt={ad.title}
-                        className="h-16 w-auto rounded-lg object-cover shadow-sm"
-                      />
-                    )}
-                    <div className="inline-block text-left">
-                      <p className="text-base md:text-lg font-bold text-gray-800 truncate max-w-xs">
-                        {ad.title}
-                      </p>
-                      <p className="text-sm text-gray-600 truncate max-w-md">
-                        {ad.content}
-                      </p>
-                    </div>
-                    {idx < adverts.length - 1 && (
-                      <span className="text-gray-300 text-xl font-light mx-2">|</span>
-                    )}
-                  </span>
-                ))}
+       
+        <div 
+          className="bg-white rounded-xl border shadow-sm overflow-hidden min-h-[140px] flex items-center"
+          style={{ borderColor: '#e0e0e0' }}
+        >
+          <div className="w-full px-5 py-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 overflow-hidden">
+                <div className="marquee whitespace-nowrap animate-marquee">
+                  {adverts.map((ad, idx) => (
+                    <span
+                      key={ad.id}
+                      onClick={() => { setSelectedAdvert(ad); setShowAdvertModal(true); }}
+                      className="inline-flex items-center gap-4 mx-6 cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      {ad.image_url && (
+                        <img
+                          src={ad.image_url}
+                          alt={ad.title}
+                          className="h-16 w-auto rounded-lg object-cover shadow-sm"
+                        />
+                      )}
+                      <div className="inline-block text-left">
+                        <p className="text-base md:text-lg font-bold text-gray-800 truncate max-w-xs">
+                          {ad.title}
+                        </p>
+                        <p className="text-sm text-gray-600 truncate max-w-md">
+                          {ad.content}
+                        </p>
+                      </div>
+                      {idx < adverts.length - 1 && (
+                        <span className="text-gray-300 text-xl font-light mx-2">|</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -4723,19 +4726,17 @@ const [showVerseModal, setShowVerseModal] = useState(false);
   <div className="md:col-span-3">
     {bibleVerse && (
       <div>
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <span className="text-orange-500">📖</span> Daily Verse
-        </h2>
+        
         <div
           onClick={() => { setSelectedVerse(bibleVerse); setShowVerseModal(true); }}
-          className="bg-white rounded-xl border shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer p-4 h-full flex flex-col justify-center"
+          className="bg-white rounded-xl border shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer min-h-[140px] flex items-center p-5"
           style={{ borderColor: '#e0e0e0' }}
         >
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 w-full">
             <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
               <BookOpen className="w-5 h-5 text-orange-500" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <span className="text-xs text-gray-400 font-normal">(click to enlarge)</span>
               </p>
