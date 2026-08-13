@@ -72,6 +72,7 @@ import {
   Image,
 } from "lucide-react";
 
+
   // ─── Static course data ──────────────────
 const STATIC_COURSES: Course[] = [
     {
