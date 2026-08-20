@@ -1849,7 +1849,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 backdrop-blur-md border-b rounded-b-lg" style={{ backgroundColor: '#333333', borderBottomColor: '#444444' }}>
+      <nav className="sticky top-0 z-40 backdrop-blur-md border-b rounded-b-lg" style={{ backgroundColor: '#fdddce', borderBottomColor: '#444444' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onNavigate("landing")}>
             <img src="https://i.postimg.cc/rm9PfbBv/PRUTALOGO-2.png" className="h-12 w-22 rounded object-contain" />
@@ -2138,35 +2138,6 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
           ))}
         </div>
       </section>
-
-      {/* TEAM */}
-      <section id="team" ref={teamRef} data-section="team" className={cn("py-20 bg-white transition-all duration-1000", visible.team ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Team Member</h2>
-            <p className="text-gray-500 mt-2">Our Expert <span style={{ color: '#f7530b' }}>Instructors</span></p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { name: "Engr. Akpali Francis Ezennaya", role: "Developer", img: "https://i.postimg.cc/B6PdffYR/IMG-20260717-WA0008.jpg" },
-              { name: "Prince Ugorji", role: "Creative Head", img: "https://i.postimg.cc/FHff8dmc/IMG-20260810-WA0000.jpg" },
-              { name: "Daniel Ogbonnaya", role: "Graphics Designer", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&auto=format" },
-              { name: "Ikechukwu Anthony", role: "UI/UX Designer", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&auto=format" },
-            ].map((member, idx) => (
-              <div key={idx} className="bg-white rounded-xl border overflow-hidden text-center hover:shadow-xl transition-all group" style={{ borderColor: '#e0e0e0' }}>
-                <img src={member.img} alt="" className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-800">{member.name}</h3>
-                  <p className="text-sm text-gray-500">{member.role}</p>
-                  <div className="flex justify-center gap-3 mt-3 text-gray-400">
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CONTACT */}
       <section id="contact" ref={contactRef} data-section="contact" className={cn("py-20 border-t max-w-7xl mx-auto px-6 transition-all duration-1000", visible.contact ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")} style={{ borderColor: '#e0e0e0' }}>
         <div className="text-center mb-12">
