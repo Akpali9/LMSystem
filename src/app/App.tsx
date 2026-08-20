@@ -1865,7 +1865,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
       </nav>
 
       {/* HOME / HERO */}
-      <section id="home" ref={homeRef} data-section="home" className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 grid lg:grid-cols-2 gap-16 items-center">
+      <section id="home" ref={homeRef} data-section="home" className="relative max-w-7xl mx-auto px-6 pt-4 pb-20 grid lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-8">
           <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
             <Star className="w-3.5 h-3.5 fill-current" style={{ color: '#f7530b' }} />
