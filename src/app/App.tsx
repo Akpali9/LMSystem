@@ -1866,7 +1866,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
       </nav>
 
       {/* HOME / HERO */}
-      <section id="home" ref={homeRef} data-section="home" className="relative max-w-7xl mx-auto px-6 pt-8 pb-20 grid lg:grid-cols-2 gap-16 items-center">
+      <section id="home" ref={homeRef} data-section="home" className="relative max-w-7xl mx-auto px-6 pt-22 pb-20 grid lg:grid-cols-2 gap-16 items-center">
         <div className="space-y-8">
           <div className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5" style={{ backgroundColor: '#fdddce', borderColor: '#fcba9d' }}>
             <Star className="w-3.5 h-3.5 fill-current" style={{ color: '#f7530b' }} />
@@ -2140,7 +2140,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
         </div>
       </section>
       {/* CONTACT */}
-      <section id="contact" ref={contactRef} data-section="contact" className={cn("py-20 border-t max-w-7xl mx-auto px-6 transition-all duration-1000", visible.contact ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")} style={{ borderColor: '#e0e0e0' }}>
+      <section id="contact" ref={contactRef} data-section="contact" className={cn("py-10  max-w-7xl mx-auto px-6 transition-all duration-1000", visible.contact ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")} >
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold" style={{ color: '#333333' }}>Contact Us</h2>
           <p className="text-gray-500 max-w-xl mx-auto mt-2">Have questions? Reach out to us and we'll get back to you as soon as possible.</p>
