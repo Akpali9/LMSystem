@@ -160,6 +160,7 @@ const STATIC_COURSES: Course[] = [
   
   ];
 
+
 // ─── Console Protection ──────────────────────────────────────────────────────
 
 function protectConsole() {
