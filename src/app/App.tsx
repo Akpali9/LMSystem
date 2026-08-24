@@ -4486,6 +4486,25 @@ function StudentDashboard({ profile, onNavigate, enrollments, progress, modules,
 const [selectedVerse, setSelectedVerse] = useState<{ verse: string; reference: string } | null>(null);
 const [showAdvertModal, setShowAdvertModal] = useState(false);
 const [showVerseModal, setShowVerseModal] = useState(false);
+ const [currentAdIndex, setCurrentAdIndex] = useState(0);
+const [isPaused, setIsPaused] = useState(false);
+
+// Auto-slide effect (pause on hover)
+useEffect(() => {
+  if (adverts.length === 0 || isPaused) return;
+  const interval = setInterval(() => {
+    setCurrentAdIndex((prev) => (prev + 1) % adverts.length);
+  }, 5000); // 5 seconds per slide
+  return () => clearInterval(interval);
+}, [adverts, isPaused]);
+
+// Handlers for manual navigation
+const goToPrevAd = () => {
+  setCurrentAdIndex((prev) => (prev - 1 + adverts.length) % adverts.length);
+};
+const goToNextAd = () => {
+  setCurrentAdIndex((prev) => (prev + 1) % adverts.length);
+};
 
   useEffect(() => {
     fetchAdverts();
@@ -4639,53 +4658,63 @@ const [showVerseModal, setShowVerseModal] = useState(false);
 {/* ─── Adverts + Bible Verse (Grid) ─── */}
 <div className="grid grid-cols-1 md:grid-cols-10 gap-4 md:gap-6 mb-6">
   {/* Adverts – 70% */}
-  <div className="md:col-span-7">
-    {adverts.length > 0 && (
-      <div>
-       
-        <div 
-          className="bg-white rounded-xl border shadow-sm overflow-hidden min-h-[240px] flex items-center"
-          style={{ borderColor: '#e0e0e0' }}
-        >
-          <div className="w-full px-5 py-4">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 overflow-hidden">
-                <div className="marquee whitespace-nowrap animate-marquee">
-                  {adverts.map((ad, idx) => (
-                    <span
-                      key={ad.id}
-                      onClick={() => { setSelectedAdvert(ad); setShowAdvertModal(true); }}
-                      className="inline-flex items-center gap-4 mx-6 cursor-pointer hover:opacity-80 transition-opacity"
-                    >
-                      {ad.image_url && (
-                        <img
-                          src={ad.image_url}
-                          alt={ad.title}
-                          className="h-26 w-auto rounded-lg object-cover shadow-sm"
-                        />
-                      )}
-                      <div className="inline-block text-left">
-                        <p className="text-lg md:text-xl font-bold text-gray-800 truncate max-w-xs">
-                          {ad.title}
-                        </p>
-                        <p className="text-base md:text-lg text-gray-600 truncate max-w-md">
-                          {ad.content}
-                        </p>
-                      </div>
-                      {idx < adverts.length - 1 && (
-                        <span className="text-gray-300 text-xl font-light mx-2">|</span>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+<div className="md:col-span-7">
+  {adverts.length > 0 && (
+    <div 
+      className="bg-white rounded-xl border shadow-sm overflow-hidden relative group"
+      style={{ borderColor: '#e0e0e0' }}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="relative aspect-video bg-gray-100">
+        <img
+          src={adverts[currentAdIndex].image_url}
+          alt={adverts[currentAdIndex].title}
+          className="w-full h-full object-contain"
+        />
+        {/* Optional overlay text */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+          <h3 className="text-white font-semibold text-lg">{adverts[currentAdIndex].title}</h3>
+          <p className="text-white/80 text-sm">{adverts[currentAdIndex].content}</p>
         </div>
       </div>
-    )}
-  </div>
 
+      {/* Navigation arrows – visible on hover */}
+      {adverts.length > 1 && (
+        <>
+          <button
+            onClick={goToPrevAd}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={goToNextAd}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </>
+      )}
+
+      {/* Dot indicators */}
+      {adverts.length > 1 && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-2">
+          {adverts.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentAdIndex(idx)}
+              className={`w-2.5 h-2.5 rounded-full transition-all ${
+                idx === currentAdIndex ? 'bg-white w-6' : 'bg-white/50'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+</div>
+  
   {/* Bible Verse – 30% */}
   <div className="md:col-span-3">
     {bibleVerse && (
