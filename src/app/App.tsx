@@ -2425,10 +2425,6 @@ function PublicCourseDetailPage({ course, onNavigate }: { course: Course | null;
                   <span className="text-gray-700 font-medium">All Levels</span>
                 </div>
               </div>
-
-              <div className="mt-6 pt-6 border-t border-gray-200">
-               
-              </div>
             </div>
           </div>
         </div>
