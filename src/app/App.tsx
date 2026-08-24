@@ -1888,7 +1888,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
             </button>
           </div>
           <div className="flex items-center gap-8 pt-2">
-            <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>1,200+</p><p className="text-xs text-gray-500">Students Enrolled</p></div>
+            <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>100+</p><p className="text-xs text-gray-500">Students Enrolled</p></div>
             <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>96%</p><p className="text-xs text-gray-500">Completion Rate</p></div>
             <div><p className="text-2xl font-bold" style={{ color: '#333333' }}>4.9★</p><p className="text-xs text-gray-500">Avg. Rating</p></div>
           </div>
@@ -1907,8 +1907,8 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
             </div>
           </div>
           <div className="absolute -top-4 -right-4 rounded-xl shadow-xl p-4" style={{ backgroundColor: '#f7530b' }}>
-            <p className="text-white text-sm font-bold">3 Month</p>
-            <p className="text-white/70 text-xs">Duration</p>
+            <p className="text-white text-sm font-bold">Best Platform</p>
+            <p className="text-white/70 text-xs">Certified </p>
           </div>
         </div>
       </section>
@@ -2066,7 +2066,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
             <li className="flex items-center gap-2 text-gray-700"><CheckCircle className="w-4 h-4" style={{ color: '#f7530b' }} /> Friendly Environment & Expert Teachers</li>
           </ul>
           <button onClick={onAuth} className="inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-lg hover:opacity-90 transition-colors" style={{ backgroundColor: '#f7530b', color: '#ffffff' }}>
-            Explore Our Courses <ArrowRight className="w-4 h-4" />
+            REGISTER NOW <ArrowRight className="w-4 h-4" />
           </button>
         </div>
         <div className="relative">
@@ -2380,7 +2380,7 @@ function PublicCourseDetailPage({ course, onNavigate }: { course: Course | null;
                 <div className="flex flex-wrap items-center gap-6 mt-4 text-sm text-gray-500">
                   <span><i className="fa-regular fa-clock mr-2"></i> {course.duration_months || 3} months</span>
                   <span><i className="fa-regular fa-user mr-2"></i> 100+ students</span>
-                  <span><i className="fa-solid fa-star mr-1 text-yellow-400"></i> 4.9 (200+ reviews)</span>
+                 
                 </div>
                 <p className="text-gray-700 text-base mt-6 leading-relaxed">
                   {course.description} This comprehensive course will equip you with the skills you need to excel.
@@ -2409,7 +2409,7 @@ function PublicCourseDetailPage({ course, onNavigate }: { course: Course | null;
                   <span><i className="fa-regular fa-clock mr-2"></i>Duration</span>
                   <span className="text-gray-700 font-medium">{course.duration_months || 3} months</span>
                 </div>
-                <div className="flex justify-between">
+                 <div className="flex justify-between">
                   <span><i className="fa-regular fa-file-lines mr-2"></i>Lessons</span>
                   <span className="text-gray-700 font-medium">~20</span>
                 </div>
@@ -2419,8 +2419,7 @@ function PublicCourseDetailPage({ course, onNavigate }: { course: Course | null;
                 </div>
                 <div className="flex justify-between">
                   <span><i className="fa-regular fa-star mr-1 text-yellow-400"></i>Rating</span>
-                  <span className="text-gray-700 font-medium">4.9 (200+)</span>
-                </div>
+                  
                 <div className="flex justify-between">
                   <span><i className="fa-regular fa-layer-group mr-2"></i>Level</span>
                   <span className="text-gray-700 font-medium">All Levels</span>
@@ -2428,9 +2427,7 @@ function PublicCourseDetailPage({ course, onNavigate }: { course: Course | null;
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-200">
-                <p className="text-xs text-gray-400 text-center">
-                  <i className="fa-solid fa-lock mr-1"></i> Secure enrollment. 30‑day money‑back guarantee.
-                </p>
+               
               </div>
             </div>
           </div>
