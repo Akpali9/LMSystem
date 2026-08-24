@@ -1850,7 +1850,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#eeeeee', fontFamily: "'Poppins', sans-serif" }}>
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 backdrop-blur-md pt-10  rounded-b-lg  " >
+      <nav className="sticky top-0 z-40 backdrop-blur-md pt-6  rounded-b-lg  " >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onNavigate("landing")}>
             <img src="https://i.postimg.cc/Qd3jCBQp/PRUTALOGO.png" className="h-12 w-22 rounded object-contain" />
