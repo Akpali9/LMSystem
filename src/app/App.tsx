@@ -2418,9 +2418,6 @@ function PublicCourseDetailPage({ course, onNavigate }: { course: Course | null;
                   <span className="text-gray-700 font-medium">100+</span>
                 </div>
                 <div className="flex justify-between">
-                  <span><i className="fa-regular fa-star mr-1 text-yellow-400"></i>Rating</span>
-                </div>
-                <div className="flex justify-between">
                   <span><i className="fa-regular fa-layer-group mr-2"></i>Level</span>
                   <span className="text-gray-700 font-medium">All Levels</span>
                 </div>
