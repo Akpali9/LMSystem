@@ -2449,17 +2449,17 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
       author: "Nelson Mandela",
     },
     {
-      image: "https://i.postimg.cc/Y0dgN0YW/Screenshot-2026-07-28-162236.jpg",
+      image: "https://i.postimg.cc/6pmYYr4b/2.jpg",
       quote: "The beautiful thing about learning is that nobody can take it away from you.",
       author: "B.B. King",
     },
     {
-      image: "https://i.postimg.cc/XvBTTyv6/Screenshot-2026-07-28-163157.jpg",
+      image: "https://i.postimg.cc/Fs1SG2yT/3.jpg",
       quote: "Live as if you were to die tomorrow. Learn as if you were to live forever.",
       author: "Mahatma Gandhi",
     },
     {
-      image: "https://i.postimg.cc/gkBtmk5C/Screenshot-2026-07-28-163547.jpg",
+      image: "https://i.postimg.cc/HxZxykhJ/4.jpg",
       quote: "The capacity to learn is a gift; the ability to learn is a skill; the willingness to learn is a choice.",
       author: "Brian Herbert",
     },
