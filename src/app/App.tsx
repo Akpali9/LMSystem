@@ -82,7 +82,7 @@ const STATIC_COURSES: Course[] = [
       price: 150000,
       category: "Data Science",
       duration_months: 3,
-      thumbnail_url: "https://i.postimg.cc/0y5Z1j7L/Screenshot-2026-07-29-110227.jpg",
+      thumbnail_url: "https://i.postimg.cc/WbzHpkXr/DATA-ANALYSIS.jpg",
     },
     {
       id: 2,
@@ -91,7 +91,7 @@ const STATIC_COURSES: Course[] = [
       price: 150000,
       category: "Website Design",
       duration_months: 2,
-      thumbnail_url: "https://i.postimg.cc/6qJJMn44/Screenshot-2026-07-29-110633.jpg",
+      thumbnail_url: "https://i.postimg.cc/ZnwsFrxv/WEB-DEVELOPMENT.jpg",
     },
     {
       id: 3,
@@ -100,7 +100,7 @@ const STATIC_COURSES: Course[] = [
       price: 250000,
       category: "Website Design",
       duration_months: 4,
-      thumbnail_url: "https://i.postimg.cc/0y5Z1j7L/Screenshot-2026-07-29-110227.jpg",
+      thumbnail_url: "https://i.postimg.cc/zBJktyBR/WEB-DEVELOPMENT-2.jpg",
     },
      {
       id: 4,
@@ -109,7 +109,7 @@ const STATIC_COURSES: Course[] = [
       price: 100000,
       category: "WordPress",
       duration_months: 2,
-      thumbnail_url: "https://i.postimg.cc/Gt7PcJPB/Screenshot-2026-07-29-110817.jpg",
+      thumbnail_url: "https://i.postimg.cc/3rqgpSg0/WORDPRESS.jpg",
     },
     {
       id: 5,
@@ -118,7 +118,7 @@ const STATIC_COURSES: Course[] = [
       price: 70000,
       category: "Graphics Design",
       duration_months: 2,
-      thumbnail_url: "https://i.postimg.cc/9fDQSP0J/Screenshot-2026-07-29-111020.jpg",
+      thumbnail_url: "https://i.postimg.cc/rmMLfNxS/BASIC-GRAPHICS-DESIGN.jpg",
     },
       {
       id: 6,
