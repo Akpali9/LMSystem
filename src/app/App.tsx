@@ -127,7 +127,7 @@ const STATIC_COURSES: Course[] = [
       price: 100000,
       category: "Graphics Design",
       duration_months: 2,
-      thumbnail_url: "https://i.postimg.cc/3wTtf1nz/Screenshot-2026-07-29-111239.jpg",
+      thumbnail_url: "https://i.postimg.cc/XqDqMzgZ/ADVANCED-GRAPHICS-DESIGN.jpg",
     },
       {
       id: 7,
@@ -136,7 +136,7 @@ const STATIC_COURSES: Course[] = [
       price: 70000,
       category: "UI/UX Design",
       duration_months: 2,
-      thumbnail_url: "https://i.postimg.cc/pdb7Jt9W/Screenshot-2026-07-29-111503.jpg",
+      thumbnail_url: "https://i.postimg.cc/jjSnwPkk/UI-UX.jpg",
     },
     {
       id: 8,
@@ -145,7 +145,7 @@ const STATIC_COURSES: Course[] = [
       price: 150000,
       category: "Video Editing",
       duration_months: 3,
-      thumbnail_url: "https://i.postimg.cc/LsWV3tQL/Screenshot-2026-07-29-111809.jpg",
+      thumbnail_url: "https://i.postimg.cc/vmWvQWkg/VIDEO-EDITING.jpg",
     },
       {
       id: 9,
@@ -154,7 +154,7 @@ const STATIC_COURSES: Course[] = [
       price: 70000,
       category: "Digital Marketing",
       duration_months: "per month ",
-      thumbnail_url: "https://i.postimg.cc/4xDdvnvD/Screenshot-2026-07-29-112024.jpg",
+      thumbnail_url: "https://i.postimg.cc/vZdm9fDQ/DIGITAL-MARKETING.jpg",
     }
   
   
@@ -1895,7 +1895,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
         </div>
         <div className="relative">
           <div className="rounded-2xl overflow-hidden shadow-2xl border" style={{ borderColor: '#e0e0e0' }}>
-            <img src="https://i.postimg.cc/Y0dgN0YW/Screenshot-2026-07-28-162236.jpg" alt="Students learning" className="w-full object-cover" />
+            <img src="https://i.postimg.cc/RhBMfzVT/1.jpg" alt="Students learning" className="w-full object-cover" />
           </div>
           <div className="absolute -bottom-6 -left-6 bg-white rounded-xl border shadow-xl p-4 flex items-center gap-3" style={{ borderColor: '#e0e0e0' }}>
             <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
@@ -1936,7 +1936,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
       {/* ABOUT US */}
       <section id="about" ref={aboutRef} data-section="about" className={cn("py-20 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center transition-all duration-1000", visible.about ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
         <div className="relative">
-          <img src="https://i.postimg.cc/gkBtmk5C/Screenshot-2026-07-28-163547.jpg" alt="About us" className="rounded-2xl shadow-xl w-full object-cover" />
+          <img src="https://i.postimg.cc/NM1tQP72/2.jpg" alt="About us" className="rounded-2xl shadow-xl w-full object-cover" />
           
         </div>
         <div className="space-y-6">
@@ -2070,7 +2070,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
           </button>
         </div>
         <div className="relative">
-          <img src="https://i.postimg.cc/XvBTTyv6/Screenshot-2026-07-28-163157.jpg" alt="Promo" className="rounded-2xl shadow-xl w-full object-cover" />
+          <img src="https://i.postimg.cc/rFwBHp36/3.jpg" alt="Promo" className="rounded-2xl shadow-xl w-full object-cover" />
         </div>
       </section>
 
@@ -2444,7 +2444,7 @@ function AuthPage({ onLogin }: { onLogin: (profile: Profile) => void }) {
   // Slides data (same as before)
   const slides = [
     {
-      image: "https://i.postimg.cc/7LSH8RB7/Screenshot-2026-07-28-161405.jpg",
+      image: "https://i.postimg.cc/qB3QQ6pb/1.jpg",
       quote: "Education is the most powerful weapon you can use to change the world.",
       author: "Nelson Mandela",
     },
