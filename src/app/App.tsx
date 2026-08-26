@@ -1875,9 +1875,7 @@ const handleNewsletterSubmit = async (e: React.FormEvent) => {
           <h1 className="text-5xl lg:text-6xl font-bold leading-[1.1]" style={{ color: '#333333' }}>
             Better <span className="italic" style={{ color: '#f7530b' }}>Learning Future</span> Starts With Pruta Academy
           </h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl">
-            It is a long established fact that reader will be distracted readable content of a page when.
-          </p>
+           
           <div className="flex flex-wrap gap-4">
             <button
                onClick={() => onNavigate("public-courses")}
